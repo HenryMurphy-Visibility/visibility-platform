@@ -1,0 +1,673 @@
+Event Record for TranID: 11
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-04 00:00:00
+settledate: 01/04/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: ABC1
+payment_currency: USD
+location: Goldman
+strategy: Growth
+tranid: 11
+transaction: BuyLong
+quantity: 26000.0
+total_amount: 1134000.0
+total_amount_base: 1134000.0
+
+Associated Journal Entries:
+   Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity      Local       Book  Tran ID Transaction  RunningQty  RunningLocal  RunningBook
+0           0  MyPortfolio 2022-01-04       ABC1  2022-01-04 00:00:00  l  Goldman              Cost     26000  1134000.0  1134000.0     11.0     BuyLong       26000     1134000.0    1134000.0
+1           1  MyPortfolio 2022-01-04        USD                   11  s  Goldman           Payable  -1134000 -1134000.0 -1134000.0     11.0     BuyLong    -1134000    -1134000.0   -1134000.0
+2           2  MyPortfolio 2022-01-04        USD                   11  s  Goldman           Payable   1134000  1134000.0  1134000.0     11.0  Settlement           0           0.0          0.0
+3           3  MyPortfolio 2022-01-04        USD                    0  n  Goldman              Cost  -1134000 -1134000.0 -1134000.0     11.0  Settlement    -1134000    -1134000.0   -1134000.0
+
+-------------------------
+Event Record for TranID: 60
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-05 00:00:00
+settledate: 01/06/2022:00:00:00
+kdbegin: 01/05/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: ABC4
+payment_currency: USD
+location: Goldman
+strategy: Growth
+tranid: 60
+transaction: BuyLong
+quantity: 100000.0
+total_amount: 570700.0
+total_amount_base: 570700.0
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity     Local      Book  Tran ID Transaction  RunningQty  RunningLocal  RunningBook
+43          43  MyPortfolio 2022-01-05       ABC4  2022-01-05 00:00:00  l  Goldman              Cost    100000  570700.0  570700.0     60.0     BuyLong      100000      570700.0     570700.0
+44          44  MyPortfolio 2022-01-05        USD                   60  s  Goldman           Payable   -570700 -570700.0 -570700.0     60.0     BuyLong     -570700     -570700.0    -570700.0
+45          45  MyPortfolio 2022-01-06        USD                   60  s  Goldman           Payable    570700  570700.0  570700.0     60.0  Settlement     -406500     -406500.0    -406500.0
+46          46  MyPortfolio 2022-01-06        USD                    0  n  Goldman              Cost   -570700 -570700.0 -570700.0     60.0  Settlement   198295300   198295300.0  198295300.0
+
+-------------------------
+Event Record for TranID: 67
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-10 00:00:00
+settledate: 01/12/2022:00:00:00
+kdbegin: 01/10/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: ABC4
+payment_currency: USD
+location: Goldman
+strategy: Growth
+tranid: 67
+transaction: BuyLong
+quantity: 28400.0
+total_amount: 311900.0
+total_amount_base: 311900.0
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity     Local      Book  Tran ID Transaction  RunningQty  RunningLocal  RunningBook
+165         165  MyPortfolio 2022-01-10       ABC4  2022-01-10 00:00:00  l  Goldman              Cost     28400  311900.0  311900.0     67.0     BuyLong      128400      882600.0     882600.0
+166         166  MyPortfolio 2022-01-10        USD                   67  s  Goldman           Payable   -311900 -311900.0 -311900.0     67.0     BuyLong     -311900     -311900.0    -311900.0
+
+-------------------------
+Event Record for TranID: 91
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-05 00:00:00
+settledate: 01/07/2022:00:00:00
+kdbegin: 01/05/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: ABC5
+payment_currency: USD
+location: Goldman
+strategy: Growth
+tranid: 91
+transaction: BuyLong
+quantity: 37200.0
+total_amount: 406500.0
+total_amount_base: 406500.0
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity     Local      Book  Tran ID Transaction  RunningQty  RunningLocal  RunningBook
+50          50  MyPortfolio 2022-01-07        USD                    0  n  Goldman              Cost   -406500 -406500.0 -406500.0     91.0  Settlement   197888800   197888800.0  197888800.0
+49          49  MyPortfolio 2022-01-07        USD                   91  s  Goldman           Payable    406500  406500.0  406500.0     91.0  Settlement           0           0.0          0.0
+47          47  MyPortfolio 2022-01-05       ABC5  2022-01-05 00:00:00  l  Goldman              Cost     37200  406500.0  406500.0     91.0     BuyLong       37200      406500.0     406500.0
+48          48  MyPortfolio 2022-01-05        USD                   91  s  Goldman           Payable   -406500 -406500.0 -406500.0     91.0     BuyLong     -977200     -977200.0    -977200.0
+
+-------------------------
+Event Record for TranID: 153
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-04 00:00:00
+settledate: 01/06/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: XYZ3
+payment_currency: EUR
+location: Goldman
+strategy: Growth
+tranid: 153
+transaction: BuyLong
+quantity: 83700.0
+total_amount: 120500.0
+total_amount_base: 134838.6292304613
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+26          26  MyPortfolio 2022-01-06        EUR                    0  n  Goldman               Cost   -120500 -120500.0 -133097.825053    153.0  Settlement     -120500     -120500.0 -133097.825053
+25          25  MyPortfolio 2022-01-06        EUR                    0  n  Goldman  FXGainTradeSettle         0       0.0   -1740.804177    153.0  Settlement           0           0.0   -1740.804177
+24          24  MyPortfolio 2022-01-06        EUR                  153  s  Goldman            Payable    120500  120500.0  134838.629230    153.0  Settlement     -607100     -607100.0 -679340.512911
+23          23  MyPortfolio 2022-01-04        EUR                  153  s  Goldman            Payable   -120500 -120500.0 -134838.629230    153.0     BuyLong     -120500     -120500.0 -134838.629230
+22          22  MyPortfolio 2022-01-04       XYZ3  2022-01-04 00:00:00  l  Goldman               Cost     83700  120500.0  134838.629230    153.0     BuyLong       83700      120500.0  134838.629230
+
+-------------------------
+Event Record for TranID: 174
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-05 00:00:00
+settledate: 01/07/2022:00:00:00
+kdbegin: 01/05/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: XYZ4
+payment_currency: EUR
+location: Goldman
+strategy: Growth
+tranid: 174
+transaction: BuyLong
+quantity: 59600.0
+total_amount: 607100.0
+total_amount_base: 679340.5129113119
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+55          55  MyPortfolio 2022-01-07        EUR                    0  n  Goldman               Cost   -607100 -607100.0 -667087.759235    174.0  Settlement     -727600     -727600.0 -800185.584288
+53          53  MyPortfolio 2022-01-07        EUR                  174  s  Goldman            Payable    607100  607100.0  679340.512911    174.0  Settlement           0           0.0       0.000000
+54          54  MyPortfolio 2022-01-07        EUR                    0  n  Goldman  FXGainTradeSettle         0       0.0  -12252.753676    174.0  Settlement           0           0.0  -13993.557853
+51          51  MyPortfolio 2022-01-05       XYZ4  2022-01-05 00:00:00  l  Goldman               Cost     59600  607100.0  679340.512911    174.0     BuyLong       59600      607100.0  679340.512911
+52          52  MyPortfolio 2022-01-05        EUR                  174  s  Goldman            Payable   -607100 -607100.0 -679340.512911    174.0     BuyLong     -727600     -727600.0 -814179.142142
+
+-------------------------
+Event Record for TranID: 253
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-06 00:00:00
+settledate: 01/08/2022:00:00:00
+kdbegin: 01/06/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: UUU3
+payment_currency: JPY
+location: Goldman
+strategy: Growth
+tranid: 253
+transaction: BuyLong
+quantity: 99500.0
+total_amount: 119352000.0
+total_amount_base: 864710.2880023968
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account   Quantity        Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+84          84  MyPortfolio 2022-01-06        JPY                  253  s  Goldman            Payable -119352000 -119352000.0 -864710.288002    253.0     BuyLong  -119352000  -119352000.0 -864710.288002
+85          85  MyPortfolio 2022-01-08        JPY                  253  s  Goldman            Payable  119352000  119352000.0  864710.288002    253.0  Settlement           0           0.0       0.000000
+86          86  MyPortfolio 2022-01-08        JPY                    0  n  Goldman  FXGainTradeSettle          0          0.0  -11343.607354    253.0  Settlement           0           0.0  -11343.607354
+87          87  MyPortfolio 2022-01-08        JPY                    0  n  Goldman               Cost -119352000 -119352000.0 -853366.680648    253.0  Settlement  -119352000  -119352000.0 -853366.680648
+83          83  MyPortfolio 2022-01-06       UUU3  2022-01-06 00:00:00  l  Goldman               Cost      99500  119352000.0  864710.288002    253.0     BuyLong       99500   119352000.0  864710.288002
+
+-------------------------
+Event Record for TranID: 301
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-04 00:00:00
+settledate: 01/07/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: RRR1
+payment_currency: GBP
+location: Goldman
+strategy: Growth
+tranid: 301
+transaction: BuyLong
+quantity: 38900.0
+total_amount: 664900.0
+total_amount_base: 884405.1681256344
+
+Associated Journal Entries:
+   Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+6           6  MyPortfolio 2022-01-07        GBP                  301  s  Goldman            Payable    664900  664900.0  884405.168126    301.0  Settlement           0           0.0  1.164153e-10
+7           7  MyPortfolio 2022-01-07        GBP                    0  n  Goldman  FXGainTradeSettle         0       0.0  -27599.172920    301.0  Settlement           0           0.0 -2.754917e+04
+8           8  MyPortfolio 2022-01-07        GBP                    0  n  Goldman               Cost   -664900 -664900.0 -856805.995205    301.0  Settlement     -878400     -878400.0 -1.140839e+06
+5           5  MyPortfolio 2022-01-04        GBP                  301  s  Goldman            Payable   -664900 -664900.0 -884405.168126    301.0     BuyLong     -664900     -664900.0 -8.844052e+05
+4           4  MyPortfolio 2022-01-04       RRR1  2022-01-04 00:00:00  l  Goldman               Cost     38900  664900.0  884405.168126    301.0     BuyLong       38900      664900.0  8.844052e+05
+
+-------------------------
+Event Record for TranID: 312
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-04 00:00:00
+settledate: 01/06/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: RRR1
+payment_currency: GBP
+location: Goldman
+strategy: Growth
+tranid: 312
+transaction: BuyLong
+quantity: 73900.0
+total_amount: 213500.0
+total_amount_base: 283983.3108660294
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+10          10  MyPortfolio 2022-01-04        GBP                  312  s  Goldman            Payable   -213500 -213500.0 -283983.310866    312.0     BuyLong     -878400     -878400.0 -1.168388e+06
+9            9  MyPortfolio 2022-01-04       RRR1  2022-01-04 00:00:00  l  Goldman               Cost     73900  213500.0  283983.310866    312.0     BuyLong      112800      878400.0  1.168388e+06
+11          11  MyPortfolio 2022-01-06        GBP                  312  s  Goldman            Payable    213500  213500.0  283983.310866    312.0  Settlement     -664900     -664900.0 -8.844052e+05
+12          12  MyPortfolio 2022-01-06        GBP                    0  n  Goldman  FXGainTradeSettle         0       0.0      50.000934    312.0  Settlement           0           0.0  5.000093e+01
+13          13  MyPortfolio 2022-01-06        GBP                    0  n  Goldman               Cost   -213500 -213500.0 -284033.311800    312.0  Settlement     -213500     -213500.0 -2.840333e+05
+
+-------------------------
+Event Record for TranID: 337
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-07 00:00:00
+settledate: 01/10/2022:00:00:00
+kdbegin: 01/07/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: RRR2
+payment_currency: GBP
+location: Goldman
+strategy: Growth
+tranid: 337
+transaction: BuyLong
+quantity: 31700.0
+total_amount: 741700.0
+total_amount_base: 986559.3520811897
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+116         116  MyPortfolio 2022-01-07       RRR2  2022-01-07 00:00:00  l  Goldman               Cost     31700  741700.0  986559.352081    337.0     BuyLong       31700      741700.0  9.865594e+05
+119         119  MyPortfolio 2022-01-10        GBP                    0  n  Goldman  FXGainTradeSettle         0       0.0    5749.186984    337.0  Settlement           0           0.0 -2.179999e+04
+118         118  MyPortfolio 2022-01-10        GBP                  337  s  Goldman            Payable    741700  741700.0  986559.352081    337.0  Settlement     -815400     -815400.0 -1.084590e+06
+117         117  MyPortfolio 2022-01-07        GBP                  337  s  Goldman            Payable   -741700 -741700.0 -986559.352081    337.0     BuyLong     -741700     -741700.0 -9.865594e+05
+120         120  MyPortfolio 2022-01-10        GBP                    0  n  Goldman               Cost   -741700 -741700.0 -992308.539066    337.0  Settlement    -1620100    -1620100.0 -2.133148e+06
+
+-------------------------
+Event Record for TranID: 390
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-07 00:00:00
+settledate: 01/10/2022:00:00:00
+kdbegin: 01/07/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: RRR5
+payment_currency: GBP
+location: Goldman
+strategy: Growth
+tranid: 390
+transaction: BuyLong
+quantity: 36200.0
+total_amount: 815400.0
+total_amount_base: 1084590.124965622
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+121         121  MyPortfolio 2022-01-07       RRR5  2022-01-07 00:00:00  l  Goldman               Cost     36200  815400.0  1.084590e+06    390.0     BuyLong       36200      815400.0  1.084590e+06
+123         123  MyPortfolio 2022-01-10        GBP                  390  s  Goldman            Payable    815400  815400.0  1.084590e+06    390.0  Settlement           0           0.0  0.000000e+00
+122         122  MyPortfolio 2022-01-07        GBP                  390  s  Goldman            Payable   -815400 -815400.0 -1.084590e+06    390.0     BuyLong    -1557100    -1557100.0 -2.071149e+06
+125         125  MyPortfolio 2022-01-10        GBP                    0  n  Goldman               Cost   -815400 -815400.0 -1.090911e+06    390.0  Settlement    -2435500    -2435500.0 -3.224058e+06
+124         124  MyPortfolio 2022-01-10        GBP                    0  n  Goldman  FXGainTradeSettle         0       0.0  6.320463e+03    390.0  Settlement           0           0.0 -1.547952e+04
+
+-------------------------
+Event Record for TranID: 400
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-10 00:00:00
+settledate: 01/11/2022:00:00:00
+kdbegin: 01/10/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: TTT1
+payment_currency: AUD
+location: Goldman
+strategy: Growth
+tranid: 400
+transaction: BuyLong
+quantity: 33500.0
+total_amount: 223100.0
+total_amount_base: 147776.2269975005
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+168         168  MyPortfolio 2022-01-10        AUD                  400  s  Goldman           Payable   -223100 -223100.0 -147776.226998    400.0     BuyLong     -223100     -223100.0 -147776.226998
+167         167  MyPortfolio 2022-01-10       TTT1  2022-01-10 00:00:00  l  Goldman              Cost     33500  223100.0  147776.226998    400.0     BuyLong       33500      223100.0  147776.226998
+
+-------------------------
+Event Record for TranID: 436
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-04 00:00:00
+settledate: 01/05/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: TTT2
+payment_currency: AUD
+location: Goldman
+strategy: Growth
+tranid: 436
+transaction: BuyLong
+quantity: 46100.0
+total_amount: 268300.0
+total_amount_base: 177715.6508445961
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+16          16  MyPortfolio 2022-01-05        AUD                  436  s  Goldman            Payable    268300  268300.0  177715.650845    436.0  Settlement           0           0.0       0.000000
+15          15  MyPortfolio 2022-01-04        AUD                  436  s  Goldman            Payable   -268300 -268300.0 -177715.650845    436.0     BuyLong     -268300     -268300.0 -177715.650845
+14          14  MyPortfolio 2022-01-04       TTT2  2022-01-04 00:00:00  l  Goldman               Cost     46100  268300.0  177715.650845    436.0     BuyLong       46100      268300.0  177715.650845
+18          18  MyPortfolio 2022-01-05        AUD                    0  n  Goldman               Cost   -268300 -268300.0 -179698.221825    436.0  Settlement     -268300     -268300.0 -179698.221825
+17          17  MyPortfolio 2022-01-05        AUD                    0  n  Goldman  FXGainTradeSettle         0       0.0    1982.570980    436.0  Settlement           0           0.0    1982.570980
+
+-------------------------
+Event Record for TranID: 441
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-07 00:00:00
+settledate: 01/09/2022:00:00:00
+kdbegin: 01/07/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: TTT3
+payment_currency: AUD
+location: Goldman
+strategy: Growth
+tranid: 441
+transaction: BuyLong
+quantity: 75700.0
+total_amount: 206000.0
+total_amount_base: 136449.5865597719
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+128         128  MyPortfolio 2022-01-09        AUD                  441  s  Goldman            Payable    206000  206000.0  136449.586560    441.0  Settlement           0           0.0       0.000000
+127         127  MyPortfolio 2022-01-07        AUD                  441  s  Goldman            Payable   -206000 -206000.0 -136449.586560    441.0     BuyLong     -715000     -715000.0 -473599.293156
+129         129  MyPortfolio 2022-01-09        AUD                    0  n  Goldman  FXGainTradeSettle         0       0.0    4372.071326    441.0  Settlement           0           0.0    -483.847917
+130         130  MyPortfolio 2022-01-09        AUD                    0  n  Goldman               Cost   -206000 -206000.0 -140821.657886    441.0  Settlement     -983300     -983300.0 -650831.096084
+126         126  MyPortfolio 2022-01-07       TTT3  2022-01-07 00:00:00  l  Goldman               Cost     75700  206000.0  136449.586560    441.0     BuyLong       75700      206000.0  136449.586560
+
+-------------------------
+Event Record for TranID: 458
+portfolio: MyPortfolio
+method: buy
+source: trading
+tradedate: 2022-01-06 00:00:00
+settledate: 01/07/2022:00:00:00
+kdbegin: 01/06/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: TTT4
+payment_currency: AUD
+location: Goldman
+strategy: Growth
+tranid: 458
+transaction: BuyLong
+quantity: 42800.0
+total_amount: 509000.0
+total_amount_base: 337149.7065967179
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location  Financial Account  Quantity     Local           Book  Tran ID Transaction  RunningQty  RunningLocal    RunningBook
+81          81  MyPortfolio 2022-01-07        AUD                    0  n  Goldman  FXGainTradeSettle         0       0.0   -6838.490223    458.0  Settlement           0           0.0   -4855.919243
+78          78  MyPortfolio 2022-01-06       TTT4  2022-01-06 00:00:00  l  Goldman               Cost     42800  509000.0  337149.706597    458.0     BuyLong       42800      509000.0  337149.706597
+82          82  MyPortfolio 2022-01-07        AUD                    0  n  Goldman               Cost   -509000 -509000.0 -330311.216374    458.0  Settlement     -777300     -777300.0 -510009.438199
+79          79  MyPortfolio 2022-01-06        AUD                  458  s  Goldman            Payable   -509000 -509000.0 -337149.706597    458.0     BuyLong     -509000     -509000.0 -337149.706597
+80          80  MyPortfolio 2022-01-07        AUD                  458  s  Goldman            Payable    509000  509000.0  337149.706597    458.0  Settlement     -206000     -206000.0 -136449.586560
+
+-------------------------
+Event Record for TranID: 499
+portfolio: MyPortfolio
+method: deposit
+source: treasury
+tradedate: 2022-01-04 00:00:00
+settledate: 01/04/2022:00:00:00
+kdbegin: 01/04/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: USD
+payment_currency: USD
+location: Goldman
+strategy: Growth
+tranid: 499
+transaction: Deposit
+quantity: 200000000.0
+total_amount: 200000000.0
+total_amount_base: 200000000.0
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment Tax Date LS Location Financial Account   Quantity        Local         Book  Tran ID Transaction  RunningQty  RunningLocal  RunningBook
+21          21  MyPortfolio 2022-01-04        USD        0  n  Goldman   ContributedCost -200000000 -200000000.0 -200000000.0    499.0     Deposit  -200000000  -200000000.0 -200000000.0
+20          20  MyPortfolio 2022-01-04        USD        0  n  Goldman              Cost  198866000  198866000.0  198866000.0    499.0     Deposit   198866000   198866000.0  198866000.0
+19          19  MyPortfolio 2022-01-04        USD        0  n  Goldman              Cost    1134000    1134000.0    1134000.0    499.0     Deposit           0           0.0          0.0
+
+-------------------------
+Event Record for TranID: 502
+portfolio: MyPortfolio
+method: mark
+source: accounting
+tradedate: 2022-01-04 00:00:00
+settledate: 01/31/2022:00:00:00
+kdbegin: 01/31/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: nan
+payment_currency: nan
+location: nan
+strategy: nan
+tranid: 502
+transaction: Mark-to-Market
+quantity: nan
+total_amount: nan
+total_amount_base: nan
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity         Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+27          27  MyPortfolio 2022-01-04       ABC1  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.287470e+06  1.287470e+06    502.0    PerfMark           0  1.287470e+06  1.287470e+06
+32          32  MyPortfolio 2022-01-04        GBP                    0  n  Goldman          MktValRE         0  8.784000e+05  1.136330e+06    502.0    PerfMark           0  8.784000e+05  1.136330e+06
+30          30  MyPortfolio 2022-01-04       RRR1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -2.037791e+06 -2.636161e+06    502.0    PerfMark           0 -2.037791e+06 -2.636161e+06
+31          31  MyPortfolio 2022-01-04        GBP                    0  n  Goldman            MktVal         0 -8.784000e+05 -1.136330e+06    502.0    PerfMark           0 -8.784000e+05 -1.136330e+06
+29          29  MyPortfolio 2022-01-04       RRR1  2022-01-04 00:00:00  l  Goldman            MktVal         0  2.037791e+06  2.636161e+06    502.0    PerfMark           0  2.037791e+06  2.636161e+06
+28          28  MyPortfolio 2022-01-04       ABC1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.287470e+06 -1.287470e+06    502.0    PerfMark           0 -1.287470e+06 -1.287470e+06
+34          34  MyPortfolio 2022-01-04       TTT2  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.359210e+06 -8.784942e+05    502.0    PerfMark           0 -1.359210e+06 -8.784942e+05
+42          42  MyPortfolio 2022-01-04        EUR                    0  n  Goldman          MktValRE         0  1.205000e+05  1.292108e+05    502.0    PerfMark           0  1.205000e+05  1.292108e+05
+35          35  MyPortfolio 2022-01-04        AUD                    0  n  Goldman            MktVal         0 -2.683000e+05 -1.734095e+05    502.0    PerfMark           0 -2.683000e+05 -1.734095e+05
+40          40  MyPortfolio 2022-01-04       XYZ3  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -5.463740e+06 -5.858706e+06    502.0    PerfMark           0 -5.463740e+06 -5.858706e+06
+39          39  MyPortfolio 2022-01-04       XYZ3  2022-01-04 00:00:00  l  Goldman            MktVal         0  5.463740e+06  5.858706e+06    502.0    PerfMark           0  5.463740e+06  5.858706e+06
+38          38  MyPortfolio 2022-01-04        USD                    0  n  Goldman          MktValRE         0 -1.988660e+08 -1.988660e+08    502.0    PerfMark           0 -1.988660e+08 -1.988660e+08
+37          37  MyPortfolio 2022-01-04        USD                    0  n  Goldman            MktVal         0  1.988660e+08  1.988660e+08    502.0    PerfMark           0  1.988660e+08  1.988660e+08
+36          36  MyPortfolio 2022-01-04        AUD                    0  n  Goldman          MktValRE         0  2.683000e+05  1.734095e+05    502.0    PerfMark           0  2.683000e+05  1.734095e+05
+33          33  MyPortfolio 2022-01-04       TTT2  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.359210e+06  8.784942e+05    502.0    PerfMark           0  1.359210e+06  8.784942e+05
+41          41  MyPortfolio 2022-01-04        EUR                    0  n  Goldman            MktVal         0 -1.205000e+05 -1.292108e+05    502.0    PerfMark           0 -1.205000e+05 -1.292108e+05
+
+-------------------------
+Event Record for TranID: 503
+portfolio: MyPortfolio
+method: mark
+source: accounting
+tradedate: 2022-01-05 00:00:00
+settledate: 02/28/2022:00:00:00
+kdbegin: 02/28/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: nan
+payment_currency: nan
+location: nan
+strategy: nan
+tranid: 503
+transaction: Mark-to-Market
+quantity: nan
+total_amount: nan
+total_amount_base: nan
+
+Associated Journal Entries:
+    Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity         Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+70          70  MyPortfolio 2022-01-05        EUR                    0  n  Goldman            MktVal         0 -7.276000e+05 -7.942623e+05    503.0    PerfMark           0 -8.481000e+05 -9.234731e+05
+68          68  MyPortfolio 2022-01-05       XYZ3  2022-01-04 00:00:00  l  Goldman            MktVal         0  5.244514e+06  5.725013e+06    503.0    PerfMark           0  1.070825e+07  1.158372e+07
+69          69  MyPortfolio 2022-01-05       XYZ3  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -5.244514e+06 -5.725013e+06    503.0    PerfMark           0 -1.070825e+07 -1.158372e+07
+71          71  MyPortfolio 2022-01-05        EUR                    0  n  Goldman          MktValRE         0  7.276000e+05  7.942623e+05    503.0    PerfMark           0  8.481000e+05  9.234731e+05
+66          66  MyPortfolio 2022-01-05        USD                    0  n  Goldman            MktVal         0  1.978888e+08  1.978888e+08    503.0    PerfMark           0  3.967548e+08  3.967548e+08
+73          73  MyPortfolio 2022-01-05       ABC4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -8.489121e+06 -8.489121e+06    503.0    PerfMark           0 -8.489121e+06 -8.489121e+06
+74          74  MyPortfolio 2022-01-05       ABC5  2022-01-05 00:00:00  l  Goldman            MktVal         0  3.399172e+06  3.399172e+06    503.0    PerfMark           0  3.399172e+06  3.399172e+06
+65          65  MyPortfolio 2022-01-05        AUD                    0  n  Goldman          MktValRE         0  2.683000e+05  1.796982e+05    503.0    PerfMark           0  5.366000e+05  3.531077e+05
+72          72  MyPortfolio 2022-01-05       ABC4  2022-01-05 00:00:00  l  Goldman            MktVal         0  8.489121e+06  8.489121e+06    503.0    PerfMark           0  8.489121e+06  8.489121e+06
+63          63  MyPortfolio 2022-01-05       TTT2  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.440234e+06 -9.646198e+05    503.0    PerfMark           0 -2.799444e+06 -1.843114e+06
+75          75  MyPortfolio 2022-01-05       ABC5  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -3.399172e+06 -3.399172e+06    503.0    PerfMark           0 -3.399172e+06 -3.399172e+06
+77          77  MyPortfolio 2022-01-05       XYZ4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -9.695226e+05 -1.058350e+06    503.0    PerfMark           0 -9.695226e+05 -1.058350e+06
+62          62  MyPortfolio 2022-01-05       TTT2  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.440234e+06  9.646198e+05    503.0    PerfMark           0  2.799444e+06  1.843114e+06
+61          61  MyPortfolio 2022-01-05        GBP                    0  n  Goldman          MktValRE         0  8.784000e+05  1.091087e+06    503.0    PerfMark           0  1.756800e+06  2.227417e+06
+60          60  MyPortfolio 2022-01-05        GBP                    0  n  Goldman            MktVal         0 -8.784000e+05 -1.091087e+06    503.0    PerfMark           0 -1.756800e+06 -2.227417e+06
+59          59  MyPortfolio 2022-01-05       RRR1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -2.028523e+06 -2.519689e+06    503.0    PerfMark           0 -4.066314e+06 -5.155850e+06
+58          58  MyPortfolio 2022-01-05       RRR1  2022-01-04 00:00:00  l  Goldman            MktVal         0  2.028523e+06  2.519689e+06    503.0    PerfMark           0  4.066314e+06  5.155850e+06
+57          57  MyPortfolio 2022-01-05       ABC1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.224567e+06 -1.224567e+06    503.0    PerfMark           0 -2.512037e+06 -2.512037e+06
+56          56  MyPortfolio 2022-01-05       ABC1  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.224567e+06  1.224567e+06    503.0    PerfMark           0  2.512037e+06  2.512037e+06
+76          76  MyPortfolio 2022-01-05       XYZ4  2022-01-05 00:00:00  l  Goldman            MktVal         0  9.695226e+05  1.058350e+06    503.0    PerfMark           0  9.695226e+05  1.058350e+06
+64          64  MyPortfolio 2022-01-05        AUD                    0  n  Goldman            MktVal         0 -2.683000e+05 -1.796982e+05    503.0    PerfMark           0 -5.366000e+05 -3.531077e+05
+67          67  MyPortfolio 2022-01-05        USD                    0  n  Goldman          MktValRE         0 -1.978888e+08 -1.978888e+08    503.0    PerfMark           0 -3.967548e+08 -3.967548e+08
+
+-------------------------
+Event Record for TranID: 504
+portfolio: MyPortfolio
+method: mark
+source: accounting
+tradedate: 2022-01-06 00:00:00
+settledate: 01/06/2022:00:00:00
+kdbegin: 01/06/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: nan
+payment_currency: nan
+location: nan
+strategy: nan
+tranid: 504
+transaction: Mark-to-Market
+quantity: nan
+total_amount: nan
+total_amount_base: nan
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity         Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+100         100  MyPortfolio 2022-01-06       XYZ3  2022-01-04 00:00:00  l  Goldman            MktVal         0  4.896761e+06  5.408699e+06    504.0    PerfMark           0  1.560501e+07  1.699242e+07
+109         109  MyPortfolio 2022-01-06       XYZ4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -9.491794e+05 -1.048413e+06    504.0    PerfMark           0 -1.918702e+06 -2.106762e+06
+99           99  MyPortfolio 2022-01-06        USD                    0  n  Goldman          MktValRE         0 -1.978888e+08 -1.978888e+08    504.0    PerfMark           0 -5.946436e+08 -5.946436e+08
+108         108  MyPortfolio 2022-01-06       XYZ4  2022-01-05 00:00:00  l  Goldman            MktVal         0  9.491794e+05  1.048413e+06    504.0    PerfMark           0  1.918702e+06  2.106762e+06
+106         106  MyPortfolio 2022-01-06       ABC5  2022-01-05 00:00:00  l  Goldman            MktVal         0  3.445522e+06  3.445522e+06    504.0    PerfMark           0  6.844695e+06  6.844695e+06
+101         101  MyPortfolio 2022-01-06       XYZ3  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -4.896761e+06 -5.408699e+06    504.0    PerfMark           0 -1.560501e+07 -1.699242e+07
+104         104  MyPortfolio 2022-01-06       ABC4  2022-01-05 00:00:00  l  Goldman            MktVal         0  8.088360e+06  8.088360e+06    504.0    PerfMark           0  1.657748e+07  1.657748e+07
+103         103  MyPortfolio 2022-01-06        EUR                    0  n  Goldman          MktValRE         0  7.276000e+05  8.036679e+05    504.0    PerfMark           0  1.575700e+06  1.727141e+06
+102         102  MyPortfolio 2022-01-06        EUR                    0  n  Goldman            MktVal         0 -7.276000e+05 -8.036679e+05    504.0    PerfMark           0 -1.575700e+06 -1.727141e+06
+98           98  MyPortfolio 2022-01-06        USD                    0  n  Goldman            MktVal         0  1.978888e+08  1.978888e+08    504.0    PerfMark           0  5.946436e+08  5.946436e+08
+88           88  MyPortfolio 2022-01-06       ABC1  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.275280e+06  1.275280e+06    504.0    PerfMark           0  3.787317e+06  3.787317e+06
+107         107  MyPortfolio 2022-01-06       ABC5  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -3.445522e+06 -3.445522e+06    504.0    PerfMark           0 -6.844695e+06 -6.844695e+06
+97           97  MyPortfolio 2022-01-06        AUD                    0  n  Goldman          MktValRE         0  7.773000e+05  5.061613e+05    504.0    PerfMark           0  1.313900e+06  8.592690e+05
+92           92  MyPortfolio 2022-01-06        GBP                    0  n  Goldman            MktVal         0 -8.784000e+05 -1.168594e+06    504.0    PerfMark           0 -2.635200e+06 -3.396011e+06
+95           95  MyPortfolio 2022-01-06       TTT2  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.445506e+06 -9.412826e+05    504.0    PerfMark           0 -4.244950e+06 -2.784397e+06
+96           96  MyPortfolio 2022-01-06        AUD                    0  n  Goldman            MktVal         0 -7.773000e+05 -5.061613e+05    504.0    PerfMark           0 -1.313900e+06 -8.592690e+05
+113         113  MyPortfolio 2022-01-06       UUU3  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -1.011706e+07 -7.235051e+04    504.0    PerfMark           0 -1.011706e+07 -7.235051e+04
+115         115  MyPortfolio 2022-01-06        JPY                    0  n  Goldman          MktValRE         0  1.193520e+08  8.535261e+05    504.0    PerfMark           0  1.193520e+08  8.535261e+05
+112         112  MyPortfolio 2022-01-06       UUU3  2022-01-06 00:00:00  l  Goldman            MktVal         0  1.011706e+07  7.235051e+04    504.0    PerfMark           0  1.011706e+07  7.235051e+04
+105         105  MyPortfolio 2022-01-06       ABC4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -8.088360e+06 -8.088360e+06    504.0    PerfMark           0 -1.657748e+07 -1.657748e+07
+110         110  MyPortfolio 2022-01-06       TTT4  2022-01-06 00:00:00  l  Goldman            MktVal         0  4.275969e+06  2.784420e+06    504.0    PerfMark           0  4.275969e+06  2.784420e+06
+114         114  MyPortfolio 2022-01-06        JPY                    0  n  Goldman            MktVal         0 -1.193520e+08 -8.535261e+05    504.0    PerfMark           0 -1.193520e+08 -8.535261e+05
+91           91  MyPortfolio 2022-01-06       RRR1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -2.132240e+06 -2.836662e+06    504.0    PerfMark           0 -6.198555e+06 -7.992511e+06
+90           90  MyPortfolio 2022-01-06       RRR1  2022-01-04 00:00:00  l  Goldman            MktVal         0  2.132240e+06  2.836662e+06    504.0    PerfMark           0  6.198555e+06  7.992511e+06
+89           89  MyPortfolio 2022-01-06       ABC1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.275280e+06 -1.275280e+06    504.0    PerfMark           0 -3.787317e+06 -3.787317e+06
+93           93  MyPortfolio 2022-01-06        GBP                    0  n  Goldman          MktValRE         0  8.784000e+05  1.168594e+06    504.0    PerfMark           0  2.635200e+06  3.396011e+06
+94           94  MyPortfolio 2022-01-06       TTT2  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.445506e+06  9.412826e+05    504.0    PerfMark           0  4.244950e+06  2.784397e+06
+111         111  MyPortfolio 2022-01-06       TTT4  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -4.275969e+06 -2.784420e+06    504.0    PerfMark           0 -4.275969e+06 -2.784420e+06
+
+-------------------------
+Event Record for TranID: 505
+portfolio: MyPortfolio
+method: mark
+source: accounting
+tradedate: 2022-01-07 00:00:00
+settledate: 01/07/2022:00:00:00
+kdbegin: 01/07/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: nan
+payment_currency: nan
+location: nan
+strategy: nan
+tranid: 505
+transaction: Mark-to-Market
+quantity: nan
+total_amount: nan
+total_amount_base: nan
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity         Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+135         135  MyPortfolio 2022-01-07        GBP                    0  n  Goldman            MktVal         0 -2.435500e+06 -3.138443e+06    505.0    PerfMark           0 -5.070700e+06 -6.534455e+06
+133         133  MyPortfolio 2022-01-07       RRR1  2022-01-04 00:00:00  l  Goldman            MktVal         0  2.342664e+06  3.018812e+06    505.0    PerfMark           0  8.541218e+06  1.101132e+07
+134         134  MyPortfolio 2022-01-07       RRR1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -2.342664e+06 -3.018812e+06    505.0    PerfMark           0 -8.541218e+06 -1.101132e+07
+136         136  MyPortfolio 2022-01-07        GBP                    0  n  Goldman          MktValRE         0  2.435500e+06  3.138443e+06    505.0    PerfMark           0  5.070700e+06  6.534455e+06
+137         137  MyPortfolio 2022-01-07       TTT2  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.336014e+06  8.669948e+05    505.0    PerfMark           0  5.580964e+06  3.651391e+06
+138         138  MyPortfolio 2022-01-07       TTT2  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.336014e+06 -8.669948e+05    505.0    PerfMark           0 -5.580964e+06 -3.651391e+06
+140         140  MyPortfolio 2022-01-07        AUD                    0  n  Goldman          MktValRE         0  9.833000e+05  6.381042e+05    505.0    PerfMark           0  2.297200e+06  1.497373e+06
+146         146  MyPortfolio 2022-01-07        EUR                    0  n  Goldman          MktValRE         0  7.276000e+05  7.994944e+05    505.0    PerfMark           0  2.303300e+06  2.526635e+06
+142         142  MyPortfolio 2022-01-07        USD                    0  n  Goldman          MktValRE         0 -1.978888e+08 -1.978888e+08    505.0    PerfMark           0 -7.925324e+08 -7.925324e+08
+147         147  MyPortfolio 2022-01-07       ABC4  2022-01-05 00:00:00  l  Goldman            MktVal         0  7.285893e+06  7.285893e+06    505.0    PerfMark           0  2.386337e+07  2.386337e+07
+143         143  MyPortfolio 2022-01-07       XYZ3  2022-01-04 00:00:00  l  Goldman            MktVal         0  5.169221e+06  5.679993e+06    505.0    PerfMark           0  2.077424e+07  2.267241e+07
+144         144  MyPortfolio 2022-01-07       XYZ3  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -5.169221e+06 -5.679993e+06    505.0    PerfMark           0 -2.077424e+07 -2.267241e+07
+145         145  MyPortfolio 2022-01-07        EUR                    0  n  Goldman            MktVal         0 -7.276000e+05 -7.994944e+05    505.0    PerfMark           0 -2.303300e+06 -2.526635e+06
+139         139  MyPortfolio 2022-01-07        AUD                    0  n  Goldman            MktVal         0 -9.833000e+05 -6.381042e+05    505.0    PerfMark           0 -2.297200e+06 -1.497373e+06
+141         141  MyPortfolio 2022-01-07        USD                    0  n  Goldman            MktVal         0  1.978888e+08  1.978888e+08    505.0    PerfMark           0  7.925324e+08  7.925324e+08
+131         131  MyPortfolio 2022-01-07       ABC1  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.282363e+06  1.282363e+06    505.0    PerfMark           0  5.069679e+06  5.069679e+06
+132         132  MyPortfolio 2022-01-07       ABC1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.282363e+06 -1.282363e+06    505.0    PerfMark           0 -5.069679e+06 -5.069679e+06
+148         148  MyPortfolio 2022-01-07       ABC4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -7.285893e+06 -7.285893e+06    505.0    PerfMark           0 -2.386337e+07 -2.386337e+07
+149         149  MyPortfolio 2022-01-07       ABC5  2022-01-05 00:00:00  l  Goldman            MktVal         0  3.429358e+06  3.429358e+06    505.0    PerfMark           0  1.027405e+07  1.027405e+07
+152         152  MyPortfolio 2022-01-07       XYZ4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -8.648368e+05 -9.502917e+05    505.0    PerfMark           0 -2.783539e+06 -3.057054e+06
+156         156  MyPortfolio 2022-01-07       UUU3  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -9.390406e+06 -6.770672e+04    505.0    PerfMark           0 -1.950747e+07 -1.400572e+05
+153         153  MyPortfolio 2022-01-07       TTT4  2022-01-06 00:00:00  l  Goldman            MktVal         0  4.635958e+06  3.008465e+06    505.0    PerfMark           0  8.911926e+06  5.792885e+06
+155         155  MyPortfolio 2022-01-07       UUU3  2022-01-06 00:00:00  l  Goldman            MktVal         0  9.390406e+06  6.770672e+04    505.0    PerfMark           0  1.950747e+07  1.400572e+05
+157         157  MyPortfolio 2022-01-07        JPY                    0  n  Goldman            MktVal         0 -1.193520e+08 -8.605519e+05    505.0    PerfMark           0 -2.387040e+08 -1.714078e+06
+162         162  MyPortfolio 2022-01-07       RRR5  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -3.230793e+06 -4.163276e+06    505.0    PerfMark           0 -3.230793e+06 -4.163276e+06
+154         154  MyPortfolio 2022-01-07       TTT4  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -4.635958e+06 -3.008465e+06    505.0    PerfMark           0 -8.911926e+06 -5.792885e+06
+160         160  MyPortfolio 2022-01-07       RRR2  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -2.456851e+07 -3.165957e+07    505.0    PerfMark           0 -2.456851e+07 -3.165957e+07
+163         163  MyPortfolio 2022-01-07       TTT3  2022-01-07 00:00:00  l  Goldman            MktVal         0  2.445579e+07  1.587038e+07    505.0    PerfMark           0  2.445579e+07  1.587038e+07
+164         164  MyPortfolio 2022-01-07       TTT3  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -2.445579e+07 -1.587038e+07    505.0    PerfMark           0 -2.445579e+07 -1.587038e+07
+151         151  MyPortfolio 2022-01-07       XYZ4  2022-01-05 00:00:00  l  Goldman            MktVal         0  8.648368e+05  9.502917e+05    505.0    PerfMark           0  2.783539e+06  3.057054e+06
+158         158  MyPortfolio 2022-01-07        JPY                    0  n  Goldman          MktValRE         0  1.193520e+08  8.605519e+05    505.0    PerfMark           0  2.387040e+08  1.714078e+06
+150         150  MyPortfolio 2022-01-07       ABC5  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -3.429358e+06 -3.429358e+06    505.0    PerfMark           0 -1.027405e+07 -1.027405e+07
+161         161  MyPortfolio 2022-01-07       RRR5  2022-01-07 00:00:00  l  Goldman            MktVal         0  3.230793e+06  4.163276e+06    505.0    PerfMark           0  3.230793e+06  4.163276e+06
+159         159  MyPortfolio 2022-01-07       RRR2  2022-01-07 00:00:00  l  Goldman            MktVal         0  2.456851e+07  3.165957e+07    505.0    PerfMark           0  2.456851e+07  3.165957e+07
+
+-------------------------
+Event Record for TranID: 506
+portfolio: MyPortfolio
+method: mark
+source: accounting
+tradedate: 2022-01-10 00:00:00
+settledate: 01/10/2022:00:00:00
+kdbegin: 01/10/2022:00:00:00
+kdend: 12/31/2099:00:00:00
+investment: nan
+payment_currency: nan
+location: nan
+strategy: nan
+tranid: 506
+transaction: Mark-to-Market
+quantity: nan
+total_amount: nan
+total_amount_base: nan
+
+Associated Journal Entries:
+     Unnamed: 0    Portfolio  IBOR Date Investment             Tax Date LS Location Financial Account  Quantity         Local          Book  Tran ID Transaction  RunningQty  RunningLocal   RunningBook
+174         174  MyPortfolio 2022-01-10        GBP                    0  n  Goldman          MktValRE         0  2.435500e+06  3.258416e+06    506.0    PerfMark           0  7.506200e+06  9.792871e+06
+209         209  MyPortfolio 2022-01-10        AUD                  400  s  Goldman            MktVal         0 -2.231000e+05 -1.509066e+05    506.0    PerfMark           0 -2.231000e+05 -1.509066e+05
+169         169  MyPortfolio 2022-01-10       ABC1  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.204532e+06  1.204532e+06    506.0    PerfMark           0  6.274211e+06  6.274211e+06
+170         170  MyPortfolio 2022-01-10       ABC1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.204532e+06 -1.204532e+06    506.0    PerfMark           0 -6.274211e+06 -6.274211e+06
+171         171  MyPortfolio 2022-01-10       RRR1  2022-01-04 00:00:00  l  Goldman            MktVal         0  2.340772e+06  3.131682e+06    506.0    PerfMark           0  1.088199e+07  1.414301e+07
+172         172  MyPortfolio 2022-01-10       RRR1  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -2.340772e+06 -3.131682e+06    506.0    PerfMark           0 -1.088199e+07 -1.414301e+07
+173         173  MyPortfolio 2022-01-10        GBP                    0  n  Goldman            MktVal         0 -2.435500e+06 -3.258416e+06    506.0    PerfMark           0 -7.506200e+06 -9.792871e+06
+175         175  MyPortfolio 2022-01-10       TTT2  2022-01-04 00:00:00  l  Goldman            MktVal         0  1.453916e+06  9.834403e+05    506.0    PerfMark           0  7.034880e+06  4.634832e+06
+184         184  MyPortfolio 2022-01-10        EUR                    0  n  Goldman          MktValRE         0  7.276000e+05  7.895802e+05    506.0    PerfMark           0  3.030900e+06  3.316216e+06
+176         176  MyPortfolio 2022-01-10       TTT2  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -1.453916e+06 -9.834403e+05    506.0    PerfMark           0 -7.034880e+06 -4.634832e+06
+178         178  MyPortfolio 2022-01-10        AUD                    0  n  Goldman          MktValRE         0  9.833000e+05  6.651119e+05    506.0    PerfMark           0  3.280500e+06  2.162485e+06
+179         179  MyPortfolio 2022-01-10        USD                    0  n  Goldman            MktVal         0  1.978888e+08  1.978888e+08    506.0    PerfMark           0  9.904212e+08  9.904212e+08
+181         181  MyPortfolio 2022-01-10       XYZ3  2022-01-04 00:00:00  l  Goldman            MktVal         0  5.609745e+06  6.087608e+06    506.0    PerfMark           0  2.638398e+07  2.876002e+07
+182         182  MyPortfolio 2022-01-10       XYZ3  2022-01-04 00:00:00  l  Goldman          MktValRE         0 -5.609745e+06 -6.087608e+06    506.0    PerfMark           0 -2.638398e+07 -2.876002e+07
+183         183  MyPortfolio 2022-01-10        EUR                    0  n  Goldman            MktVal         0 -7.276000e+05 -7.895802e+05    506.0    PerfMark           0 -3.030900e+06 -3.316216e+06
+187         187  MyPortfolio 2022-01-10       ABC5  2022-01-05 00:00:00  l  Goldman            MktVal         0  3.738475e+06  3.738475e+06    506.0    PerfMark           0  1.401253e+07  1.401253e+07
+185         185  MyPortfolio 2022-01-10       ABC4  2022-01-05 00:00:00  l  Goldman            MktVal         0  7.191091e+06  7.191091e+06    506.0    PerfMark           0  3.105447e+07  3.105447e+07
+186         186  MyPortfolio 2022-01-10       ABC4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -7.191091e+06 -7.191091e+06    506.0    PerfMark           0 -3.105447e+07 -3.105447e+07
+188         188  MyPortfolio 2022-01-10       ABC5  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -3.738475e+06 -3.738475e+06    506.0    PerfMark           0 -1.401253e+07 -1.401253e+07
+180         180  MyPortfolio 2022-01-10        USD                    0  n  Goldman          MktValRE         0 -1.978888e+08 -1.978888e+08    506.0    PerfMark           0 -9.904212e+08 -9.904212e+08
+203         203  MyPortfolio 2022-01-10       ABC4  2022-01-10 00:00:00  l  Goldman            MktVal         0  2.042270e+06  2.042270e+06    506.0    PerfMark           0  3.309674e+07  3.309674e+07
+199         199  MyPortfolio 2022-01-10       RRR5  2022-01-07 00:00:00  l  Goldman            MktVal         0  3.219832e+06  4.307761e+06    506.0    PerfMark           0  6.450624e+06  8.471038e+06
+177         177  MyPortfolio 2022-01-10        AUD                    0  n  Goldman            MktVal         0 -9.833000e+05 -6.651119e+05    506.0    PerfMark           0 -3.280500e+06 -2.162485e+06
+196         196  MyPortfolio 2022-01-10        JPY                    0  n  Goldman          MktValRE         0  1.193520e+08  8.521929e+05    506.0    PerfMark           0  3.580560e+08  2.566271e+06
+195         195  MyPortfolio 2022-01-10        JPY                    0  n  Goldman            MktVal         0 -1.193520e+08 -8.521929e+05    506.0    PerfMark           0 -3.580560e+08 -2.566271e+06
+191         191  MyPortfolio 2022-01-10       TTT4  2022-01-06 00:00:00  l  Goldman            MktVal         0  5.015221e+06  3.392335e+06    506.0    PerfMark           0  1.392715e+07  9.185221e+06
+193         193  MyPortfolio 2022-01-10       UUU3  2022-01-06 00:00:00  l  Goldman            MktVal         0  8.935655e+06  6.380204e+04    506.0    PerfMark           0  2.844312e+07  2.038593e+05
+192         192  MyPortfolio 2022-01-10       TTT4  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -5.015221e+06 -3.392335e+06    506.0    PerfMark           0 -1.392715e+07 -9.185221e+06
+197         197  MyPortfolio 2022-01-10       RRR2  2022-01-07 00:00:00  l  Goldman            MktVal         0  2.493273e+07  3.335709e+07    506.0    PerfMark           0  4.950124e+07  6.501667e+07
+194         194  MyPortfolio 2022-01-10       UUU3  2022-01-06 00:00:00  l  Goldman          MktValRE         0 -8.935655e+06 -6.380204e+04    506.0    PerfMark           0 -2.844312e+07 -2.038593e+05
+189         189  MyPortfolio 2022-01-10       XYZ4  2022-01-05 00:00:00  l  Goldman            MktVal         0  7.975752e+05  8.655162e+05    506.0    PerfMark           0  3.581114e+06  3.922570e+06
+198         198  MyPortfolio 2022-01-10       RRR2  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -2.493273e+07 -3.335709e+07    506.0    PerfMark           0 -4.950124e+07 -6.501667e+07
+200         200  MyPortfolio 2022-01-10       RRR5  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -3.219832e+06 -4.307761e+06    506.0    PerfMark           0 -6.450624e+06 -8.471038e+06
+201         201  MyPortfolio 2022-01-10       TTT3  2022-01-07 00:00:00  l  Goldman            MktVal         0  2.394087e+07  1.619379e+07    506.0    PerfMark           0  4.839666e+07  3.206417e+07
+202         202  MyPortfolio 2022-01-10       TTT3  2022-01-07 00:00:00  l  Goldman          MktValRE         0 -2.394087e+07 -1.619379e+07    506.0    PerfMark           0 -4.839666e+07 -3.206417e+07
+204         204  MyPortfolio 2022-01-10       ABC4  2022-01-10 00:00:00  l  Goldman          MktValRE         0 -2.042270e+06 -2.042270e+06    506.0    PerfMark           0 -3.309674e+07 -3.309674e+07
+205         205  MyPortfolio 2022-01-10        USD                   67  s  Goldman            MktVal         0 -3.119000e+05 -3.119000e+05    506.0    PerfMark           0 -3.119000e+05 -3.119000e+05
+206         206  MyPortfolio 2022-01-10        USD                   67  s  Goldman          MktValRE         0  3.119000e+05  3.119000e+05    506.0    PerfMark           0  3.119000e+05  3.119000e+05
+190         190  MyPortfolio 2022-01-10       XYZ4  2022-01-05 00:00:00  l  Goldman          MktValRE         0 -7.975752e+05 -8.655162e+05    506.0    PerfMark           0 -3.581114e+06 -3.922570e+06
+208         208  MyPortfolio 2022-01-10       TTT1  2022-01-10 00:00:00  l  Goldman          MktValRE         0 -2.374315e+06 -1.606005e+06    506.0    PerfMark           0 -2.374315e+06 -1.606005e+06
+207         207  MyPortfolio 2022-01-10       TTT1  2022-01-10 00:00:00  l  Goldman            MktVal         0  2.374315e+06  1.606005e+06    506.0    PerfMark           0  2.374315e+06  1.606005e+06
+210         210  MyPortfolio 2022-01-10        AUD                  400  s  Goldman          MktValRE         0  2.231000e+05  1.509066e+05    506.0    PerfMark           0  2.231000e+05  1.509066e+05
+
+-------------------------

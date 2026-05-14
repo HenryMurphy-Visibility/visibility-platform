@@ -1,0 +1,14 @@
+matplotlib - DEBUG - matplotlib data path: C:\Users\hjmne\AppData\Local\Programs\Python\Python311\Lib\site-packages\matplotlib\mpl-data
+matplotlib - DEBUG - CONFIGDIR=C:\Users\hjmne\.matplotlib
+matplotlib - DEBUG - interactive is False
+matplotlib - DEBUG - platform is win32
+matplotlib - DEBUG - CACHEDIR=C:\Users\hjmne\.matplotlib
+matplotlib.font_manager - DEBUG - Using fontManager instance from C:\Users\hjmne\.matplotlib\fontlist-v330.json
+root - INFO - Starting system with data: {'current_period_start': '2022-01-01:00:00:00', 'current_period_cutoff': '2022-01-31:23:59:59', 'current_period_knowledge': '2022-01-31:23:59:59', 'prior_period_start': '2022-01-01:00:00:00', 'prior_period_cutoff': '2022-01-31:23:59:59', 'prior_period_knowledge': '2022-01-31:23:59:59', 'compare_to_prior_period': False, 'performance_checkbox_value': False}
+root - INFO - Processing Mode: Default Mode
+root - INFO - Adding shards
+root - INFO - Starting shard processes
+root - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio120.csv
+root - INFO - Extracted portfolio name: ATestPortfolio120
+root - INFO - Processing portfolio: ATestPortfolio120
+root - INFO - System processing completed.

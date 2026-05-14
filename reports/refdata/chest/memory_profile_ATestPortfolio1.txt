@@ -1,0 +1,11 @@
+[ Top 10 memory-consuming lines ]
+C:\Users\hjmne\AppData\Local\Programs\Python\Python311\Lib\site-packages\pandas\core\arrays\datetimes.py:548: size=15.7 MiB, count=128852, average=128 B
+C:\Users\hjmne\PycharmProjects\chest\bookkeeping.py:475: size=12.1 MiB, count=158774, average=80 B
+C:\Users\hjmne\AppData\Local\Programs\Python\Python311\Lib\csv.py:111: size=9629 KiB, count=176806, average=56 B
+C:\Users\hjmne\PycharmProjects\chest\equity_domain.py:259: size=8938 KiB, count=133025, average=69 B
+C:\Users\hjmne\PycharmProjects\chest\bookkeeping.py:473: size=8683 KiB, count=158774, average=56 B
+C:\Users\hjmne\PycharmProjects\chest\currency_domain.py:106: size=7691 KiB, count=79815, average=99 B
+C:\Users\hjmne\PycharmProjects\chest\currency_domain.py:129: size=7067 KiB, count=53211, average=136 B
+C:\Users\hjmne\PycharmProjects\chest\equity_domain.py:252: size=7067 KiB, count=53210, average=136 B
+C:\Users\hjmne\PycharmProjects\chest\currency_domain.py:96: size=7067 KiB, count=53210, average=136 B
+C:\Users\hjmne\AppData\Local\Programs\Python\Python311\Lib\_strptime.py:578: size=4687 KiB, count=119992, average=40 B

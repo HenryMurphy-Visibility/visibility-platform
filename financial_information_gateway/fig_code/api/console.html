@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visibility — Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;5000&display=swap');
+
+  :root {
+    --bg:        #07080f;
+    --surface:   #0d0f1a;
+    --border:    #1a1e2e;
+    --accent:    #2E5FA3;
+    --accent2:   #4a7fc1;
+    --text:      #d8dce8;
+    --muted:     #5a6080;
+    --success:   #2a7a4a;
+    --success-t: #3dba70;
+    --fail:      #7a2a2a;
+    --fail-t:    #e05555;
+    --mono:      'JetBrains Mono', monospace;
+    --serif:     'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  /* ── HEADER ── */
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+  }
+  header h1 {
+    font-family: var(--serif);
+    font-size: 1.2em;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #fff;
+    transition: color 0.15s;
+    cursor: default;
+  }
+  header h1:hover { color: var(--accent2); }
+  header span {
+    font-family: var(--mono);
+    font-size: 0.7em;
+    color: var(--muted);
+    letter-spacing: 1px;
+    transition: color 0.15s;
+  }
+  header span:hover { color: var(--text); }
+  .header-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-left: auto;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── SIDEBAR ── */
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+  .nav-section {
+    padding: 6px 20px 4px;
+    font-family: var(--mono);
+    font-size: 0.6em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #8a90a8;
+    transition: color 0.15s;
+    cursor: default;
+  }
+  .nav-section:hover { color: var(--accent2); }
+  .nav-item {
+    display: block;
+    padding: 9px 20px;
+    font-family: var(--mono);
+    font-size: 0.78em;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
+  .nav-item.active {
+    color: #fff;
+    border-left-color: var(--accent);
+    background: rgba(46,95,163,0.12);
+  }
+
+  /* ── MAIN ── */
+  main {
+    padding: 32px 36px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  /* ── PANEL ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+  }
+  .panel-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-title {
+    font-family: var(--mono);
+    font-size: 0.8em;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: #fff;
+  }
+  .panel-desc {
+    font-size: 0.85em;
+    color: var(--muted);
+    margin-left: auto;
+    font-style: italic;
+  }
+  .panel-body { padding: 20px; }
+
+  /* ── FORM ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label {
+    font-family: var(--mono);
+    font-size: 0.65em;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  input, select {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.82em;
+    padding: 8px 10px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+
+  .field-hint {
+    font-family: var(--mono);
+    font-size: 0.62em;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-top: 3px;
+  }
+  .field-hint span { color: var(--accent2); }
+
+  /* ── BUTTONS ── */
+  .btn-row { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    font-family: var(--mono);
+    font-size: 0.75em;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 9px 22px;
+    border: 1px solid;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    border-color: var(--border);
+    color: var(--muted);
+    display: none;
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .btn-secondary.visible { display: inline-block; }
+  .status {
+    font-family: var(--mono);
+    font-size: 0.72em;
+    color: var(--muted);
+    margin-left: auto;
+  }
+
+  /* ── ALL CLEAR BANNER ── */
+  .all-clear-banner {
+    display: none;
+    padding: 18px 24px;
+    border-radius: 2px;
+    font-family: var(--mono);
+    align-items: center;
+    gap: 16px;
+  }
+  .all-clear-banner.show { display: flex; }
+  .all-clear-banner.pass {
+    background: rgba(42,122,74,0.15);
+    border: 1px solid var(--success);
+    color: var(--success-t);
+  }
+  .all-clear-banner.fail {
+    background: rgba(122,42,42,0.15);
+    border: 1px solid var(--fail);
+    color: var(--fail-t);
+  }
+  .badge {
+    font-size: 1.3em;
+    font-weight: 600;
+    letter-spacing: 3px;
+  }
+  .all-clear-detail {
+    font-size: 0.78em;
+    opacity: 0.85;
+  }
+
+  /* ── PERFORMANCE BLOCK ── */
+  .perf-block {
+    display: none;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    padding: 14px 16px;
+    font-family: var(--mono);
+    font-size: 0.72em;
+    color: var(--muted);
+    gap: 28px;
+    flex-wrap: wrap;
+  }
+  .perf-block.show { display: flex; }
+  .perf-item { display: flex; flex-direction: column; gap: 3px; }
+  .perf-label { font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase; }
+  .perf-value { color: var(--text); font-size: 1.1em; }
+
+  /* ── TABLE ── */
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--mono);
+    font-size: 0.72em;
+  }
+  th {
+    background: var(--bg);
+    color: var(--muted);
+    font-weight: 400;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 7px 12px;
+    border-bottom: 1px solid rgba(26,30,46,0.6);
+    white-space: nowrap;
+    color: var(--text);
+  }
+  tr:hover td { background: rgba(46,95,163,0.05); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.pass { color: var(--success-t); }
+  td.fail { color: var(--fail-t); }
+  .row-count {
+    font-family: var(--mono);
+    font-size: 0.68em;
+    color: var(--muted);
+    padding: 8px 16px 12px;
+  }
+
+  /* ── SPINNER ── */
+  .spinner {
+    display: none;
+    width: 14px; height: 14px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+  }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visibility</h1>
+  <span>Financial Information Gateway · Console</span>
+  <div class="header-dot"></div>
+</header>
+
+<nav>
+  <div class="nav-section">Reports</div>
+  <div class="nav-item active" onclick="selectEndpoint('appraisal', this)">Appraisal</div>
+  <div class="nav-item" onclick="selectEndpoint('ledger', this)">Accounting Ledger</div>
+  <div class="nav-item" onclick="selectEndpoint('position-ledger', this)">Position Ledger</div>
+
+  <div class="nav-section" style="margin-top:12px">Performance</div>
+  <div class="nav-item" onclick="selectEndpoint('performance', this)">Performance</div>
+
+  <div class="nav-section" style="margin-top:12px">Balance Sheet Constituents</div>
+  <div class="nav-item" onclick="selectEndpoint('balance-sheet', this)">Cost Basis</div>
+  <div class="nav-item" onclick="selectEndpoint('income', this)">Income</div>
+  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
+  <div class="nav-item" onclick="selectEndpoint('realized-gains', this)">Realized Gains</div>
+  <div class="nav-item" onclick="selectEndpoint('unrealized', this)">Unrealized</div>
+
+  <div class="nav-section" style="margin-top:12px">Reconciliation</div>
+  <div class="nav-item" onclick="selectEndpoint('recon', this)">Master Recon</div>
+</nav>
+
+<main>
+
+  <!-- PARAMETER PANEL -->
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title" id="endpoint-title">Appraisal</div>
+      <div class="panel-desc" id="endpoint-desc">Point-in-time portfolio appraisal</div>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="f-portfolio" value="Portfolio1">
+        </div>
+
+        <div class="form-group">
+          <label>Calendar</label>
+          <input id="f-calendar" value="Monthly">
+          <div class="field-hint">
+            <span>Monthly</span> · <span>Daily</span> · <span>Quarterly</span> · <span>Yearly</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Period Start</label>
+          <input id="f-period-start" value="2021-01">
+          <div class="field-hint" id="period-hint">
+            Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>
+            Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Period End</label>
+          <input id="f-period-end" value="2021-01">
+          <div class="field-hint">Same format as Period Start</div>
+        </div>
+
+        <div class="form-group">
+          <label>Investment (optional)</label>
+          <input id="f-investment" value="GOOG" placeholder="e.g. GOOG">
+          <div class="field-hint">Leave blank for full portfolio</div>
+        </div>
+
+        <div class="form-group" id="fg-mode" style="display:none">
+          <label>Mode</label>
+          <select id="f-mode">
+            <option value="period_close">Period Close</option>
+            <option value="period_open">Period Open</option>
+          </select>
+          <div class="field-hint"><span>period_close</span> = as of end · <span>period_open</span> = as of start</div>
+        </div>
+
+        <div class="form-group" id="fg-level" style="display:none">
+          <label>Level</label>
+          <select id="f-level">
+            <option value="investment">Investment</option>
+            <option value="sector">Sector</option>
+            <option value="analyst">Analyst</option>
+            <option value="country">Country</option>
+            <option value="currency">Currency</option>
+            <option value="portfolio">Portfolio</option>
+          </select>
+          <div class="field-hint">Grouping level for returns</div>
+        </div>
+
+        <div class="form-group" id="fg-cadence" style="display:none">
+          <label>Cadence</label>
+          <select id="f-cadence">
+            <option value="">Full Range</option>
+            <option value="D">Daily</option>
+            <option value="M">Monthly</option>
+            <option value="Q">Quarterly</option>
+            <option value="Y">Yearly</option>
+          </select>
+          <div class="field-hint">Presentation period for returns</div>
+        </div>
+
+        <div class="form-group" id="fg-shape" style="display:none">
+          <label>Shape</label>
+          <select id="f-shape">
+            <option value="summary">Summary</option>
+            <option value="detail">Detail</option>
+            <option value="total">Total</option>
+          </select>
+          <div class="field-hint"><span>summary</span> = by type · <span>detail</span> = every entry</div>
+        </div>
+
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-execute" onclick="execute()">Execute</button>
+        <button class="btn btn-secondary" id="btn-csv" onclick="downloadCSV()">Download CSV</button>
+        <div class="spinner" id="spinner"></div>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ALL CLEAR BANNER -->
+  <div class="all-clear-banner" id="all-clear-banner">
+    <span class="badge" id="all-clear-text"></span>
+    <span class="all-clear-detail" id="all-clear-detail"></span>
+  </div>
+
+  <!-- PERFORMANCE BLOCK -->
+  <div class="perf-block" id="perf-block">
+    <div class="perf-item">
+      <div class="perf-label">Response Time</div>
+      <div class="perf-value" id="perf-time">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Rows</div>
+      <div class="perf-value" id="perf-rows">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Investments</div>
+      <div class="perf-value" id="perf-investments">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Hardware</div>
+      <div class="perf-value" id="perf-hw">—</div>
+    </div>
+  </div>
+
+  <!-- RESULTS -->
+  <div class="panel" id="results-panel" style="display:none">
+    <div class="panel-head">
+      <div class="panel-title">Results</div>
+      <div class="panel-desc" id="results-desc"></div>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="results-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="row-count" id="row-count"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = '';
+
+const ENDPOINTS = {
+  'appraisal': {
+    title: 'Appraisal',
+    desc: 'Point-in-time portfolio appraisal at tax lot level',
+    path: '/api/v1/appraisal',
+    csvPath: '/api/v1/appraisal/csv',
+    extras: ['mode'],
+  },
+  'ledger': {
+    title: 'Accounting Ledger',
+    desc: 'Complete financial state — every account, every lot',
+    path: '/api/v1/ledger',
+    csvPath: '/api/v1/ledger/csv',
+    extras: [],
+  },
+  'position-ledger': {
+    title: 'Position Ledger',
+    desc: 'Tax lots collapsed to investment level',
+    path: '/api/v1/position-ledger',
+    csvPath: '/api/v1/position-ledger/csv',
+    extras: [],
+  },
+  'performance': {
+    title: 'Performance',
+    desc: 'Chained TWR — any range, level, and cadence',
+    path: '/api/v1/performance',
+    csvPath: '/api/v1/performance/csv',
+    extras: ['level', 'cadence'],
+  },
+  'balance-sheet': {
+    title: 'Cost Basis',
+    desc: 'Opening · Movement · Closing for every cost basis account',
+    path: '/api/v1/balance-sheet',
+    csvPath: '/api/v1/balance-sheet/csv',
+    extras: [],
+  },
+  'income': {
+    title: 'Income',
+    desc: 'Revenue and expense account movements',
+    path: '/api/v1/income',
+    csvPath: '/api/v1/income/csv',
+    extras: ['shape'],
+  },
+  'capital': {
+    title: 'Capital',
+    desc: 'External capital flows — contributions and withdrawals',
+    path: '/api/v1/capital',
+    csvPath: '/api/v1/capital/csv',
+    extras: [],
+  },
+  'realized-gains': {
+    title: 'Realized Gains',
+    desc: 'Lot-level realized price and FX gains',
+    path: '/api/v1/realized-gains',
+    csvPath: '/api/v1/realized-gains/csv',
+    extras: [],
+  },
+  'unrealized': {
+    title: 'Unrealized',
+    desc: 'Journal roll-up vs state snapshot — two methods, one result',
+    path: '/api/v1/unrealized',
+    csvPath: '/api/v1/unrealized/csv',
+    extras: [],
+  },
+  'recon': {
+    title: 'Master Reconciliation',
+    desc: 'Three views · One truth · One all_clear',
+    path: '/api/v1/recon',
+    csvPath: null,
+    extras: [],
+    isRecon: true,
+  },
+};
+
+let currentEndpoint = 'appraisal';
+
+// ── CALENDAR → PERIOD FORMAT SYNC ─────────────────────────
+function updatePeriodHints() {
+  const cal  = document.getElementById('f-calendar').value.trim().toLowerCase();
+  const ps   = document.getElementById('f-period-start');
+  const pe   = document.getElementById('f-period-end');
+  const hint = document.getElementById('period-hint');
+
+  if (cal === 'yearly') {
+    ps.value = '2021';
+    pe.value = '2021';
+    hint.innerHTML = 'Yearly: <span>2021</span>';
+  } else if (cal === 'quarterly') {
+    ps.value = '2021-Q1';
+    pe.value = '2021-Q1';
+    hint.innerHTML = 'Quarterly: <span>2021-Q1</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+  } else if (cal === 'daily') {
+    ps.value = '2021-01-08';
+    pe.value = '2021-01-29';
+    hint.innerHTML = 'Daily: <span>2021-01-08</span>';
+  } else {
+    ps.value = '2021-01';
+    pe.value = '2021-01';
+    hint.innerHTML = 'Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+  }
+}
+
+document.getElementById('f-calendar').addEventListener('change', updatePeriodHints);
+document.getElementById('f-calendar').addEventListener('blur',   updatePeriodHints);
+
+// ── ENDPOINT SELECTION ────────────────────────────────────
+function selectEndpoint(key, el) {
+  currentEndpoint = key;
+  const ep = ENDPOINTS[key];
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  document.getElementById('endpoint-title').textContent = ep.title;
+  document.getElementById('endpoint-desc').textContent  = ep.desc;
+
+  ['mode','level','cadence','shape'].forEach(f => {
+    document.getElementById('fg-' + f).style.display =
+      ep.extras.includes(f) ? '' : 'none';
+  });
+
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('all-clear-banner').classList.remove('show');
+  document.getElementById('perf-block').classList.remove('show');
+  document.getElementById('btn-csv').classList.remove('visible');
+  document.getElementById('status').textContent = '';
+}
+
+// ── BUILD URL ─────────────────────────────────────────────
+function buildUrl(path) {
+  const p   = document.getElementById('f-portfolio').value.trim();
+  const c   = document.getElementById('f-calendar').value.trim();
+  const ps  = document.getElementById('f-period-start').value.trim();
+  const pe  = document.getElementById('f-period-end').value.trim();
+  const inv = document.getElementById('f-investment').value.trim();
+
+  let url = `${BASE}${path}?portfolio=${p}&calendar=${c}&period_start=${ps}&period_end=${pe}`;
+  if (inv) url += `&investment=${encodeURIComponent(inv)}`;
+
+  const ep = ENDPOINTS[currentEndpoint];
+  if (ep.extras.includes('mode'))
+    url += `&mode=${document.getElementById('f-mode').value}`;
+  if (ep.extras.includes('level'))
+    url += `&level=${document.getElementById('f-level').value}`;
+  if (ep.extras.includes('cadence')) {
+    const cad = document.getElementById('f-cadence').value;
+    if (cad) url += `&cadence=${cad}`;
+  }
+  if (ep.extras.includes('shape'))
+    url += `&shape=${document.getElementById('f-shape').value}`;
+
+  url += `&page_size=5000`;
+  return url;
+}
+
+// ── EXECUTE ───────────────────────────────────────────────
+async function execute() {
+  const ep     = ENDPOINTS[currentEndpoint];
+  const btn    = document.getElementById('btn-execute');
+  const spin   = document.getElementById('spinner');
+  const status = document.getElementById('status');
+
+  btn.disabled = true;
+  spin.classList.add('show');
+  status.textContent = 'Executing…';
+
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('all-clear-banner').classList.remove('show');
+  document.getElementById('perf-block').classList.remove('show');
+  document.getElementById('btn-csv').classList.remove('visible');
+
+  const t0 = performance.now();
+
+  try {
+    const url = buildUrl(ep.path);
+    const res  = await fetch(url);
+    const json = await res.json();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
+
+    if (!res.ok) {
+      status.textContent = `Error ${res.status}: ${json.detail || 'Unknown'}`;
+      btn.disabled = false;
+      spin.classList.remove('show');
+      return;
+    }
+
+    const rows = json.data || [];
+    const perf = json.performance || {};
+
+    // Performance block
+    document.getElementById('perf-time').textContent =
+      perf.v_side_readable || elapsed;
+    document.getElementById('perf-rows').textContent =
+      (perf.pagination?.total_rows ?? rows.length).toLocaleString();
+    document.getElementById('perf-investments').textContent =
+      perf.processed?.investments ?? '—';
+    document.getElementById('perf-hw').textContent =
+      perf.hardware ? 'Laptop · No DB · Pure Python' : '—';
+    document.getElementById('perf-block').classList.add('show');
+
+    // All-clear banner for recon
+    if (ep.isRecon) {
+      const allClear = perf.all_clear ?? json.valid;
+      const banner   = document.getElementById('all-clear-banner');
+      banner.classList.add('show');
+      if (allClear) {
+        banner.className = 'all-clear-banner show pass';
+        document.getElementById('all-clear-text').textContent    = '✓  ALL CLEAR';
+        document.getElementById('all-clear-detail').textContent  =
+          'Every view · Every investment · Every account ties.';
+      } else {
+        banner.className = 'all-clear-banner show fail';
+        document.getElementById('all-clear-text').textContent    = '✗  FAILURES DETECTED';
+        document.getElementById('all-clear-detail').textContent  =
+          (json.errors || []).slice(0,3).join('  ·  ');
+      }
+    }
+
+    // Table
+    if (rows.length > 0) {
+      const cols = Object.keys(rows[0]);
+
+      document.getElementById('table-head').innerHTML =
+        '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
+
+      document.getElementById('table-body').innerHTML =
+        rows.slice(0,5000).map(row =>
+          '<tr>' + cols.map(col => {
+            const v   = row[col];
+            const num = typeof v === 'number';
+            let cls   = num ? 'num' : '';
+            if (['ties','all_clear','nav_ties'].includes(col))
+              cls += v === true ? ' pass' : v === false ? ' fail' : '';
+            const disp = v == null ? '' : num
+              ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})
+              : String(v);
+            return `<td class="${cls.trim()}">${disp}</td>`;
+          }).join('') + '</tr>'
+        ).join('');
+
+      document.getElementById('results-panel').style.display = '';
+      document.getElementById('results-desc').textContent = `${rows.length.toLocaleString()} rows`;
+      document.getElementById('row-count').textContent = rows.length > 5000
+        ? `Showing first 5000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
+        : `${rows.length.toLocaleString()} rows`;
+    }
+
+    if (ep.csvPath)
+      document.getElementById('btn-csv').classList.add('visible');
+
+    status.textContent = `${elapsed} · ${rows.length} rows`;
+
+  } catch(e) {
+    status.textContent = 'Connection error — is the server running?';
+  }
+
+  btn.disabled = false;
+  spin.classList.remove('show');
+}
+
+// ── CSV DOWNLOAD ──────────────────────────────────────────
+function downloadCSV() {
+  const ep = ENDPOINTS[currentEndpoint];
+  if (!ep.csvPath) return;
+  window.location.href = buildUrl(ep.csvPath);
+}
+</script>
+</body>
+</html>

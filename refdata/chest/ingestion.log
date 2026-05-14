@@ -1,0 +1,543 @@
+2024-07-21 20:02:57,049 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio1.csv
+2024-07-21 20:02:57,049 - INFO - Extracted portfolio name: ATestPortfolio1 (type: <class 'str'>)
+2024-07-21 20:02:57,049 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio1.csv
+2024-07-21 20:02:57,198 - INFO - Processing portfolio: ATestPortfolio1
+2024-07-21 20:02:57,199 - INFO - Processing events for fund: ATestPortfolio1
+2024-07-21 20:02:57,199 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio1.csv
+2024-07-21 20:02:57,334 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio10.csv
+2024-07-21 20:02:57,334 - INFO - Extracted portfolio name: ATestPortfolio10 (type: <class 'str'>)
+2024-07-21 20:02:57,334 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio10.csv
+2024-07-21 20:02:57,471 - INFO - Processing portfolio: ATestPortfolio10
+2024-07-21 20:02:57,472 - INFO - Processing events for fund: ATestPortfolio10
+2024-07-21 20:02:57,472 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio10.csv
+2024-07-21 20:02:57,635 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio100.csv
+2024-07-21 20:02:57,635 - INFO - Extracted portfolio name: ATestPortfolio100 (type: <class 'str'>)
+2024-07-21 20:02:57,635 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio100.csv
+2024-07-21 20:02:57,778 - INFO - Processing portfolio: ATestPortfolio100
+2024-07-21 20:02:57,778 - INFO - Processing events for fund: ATestPortfolio100
+2024-07-21 20:02:57,778 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio100.csv
+2024-07-21 20:02:57,915 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio101.csv
+2024-07-21 20:02:57,915 - INFO - Extracted portfolio name: ATestPortfolio101 (type: <class 'str'>)
+2024-07-21 20:02:57,915 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio101.csv
+2024-07-21 20:02:58,060 - INFO - Processing portfolio: ATestPortfolio101
+2024-07-21 20:02:58,060 - INFO - Processing events for fund: ATestPortfolio101
+2024-07-21 20:02:58,060 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio101.csv
+2024-07-21 20:02:58,198 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio102.csv
+2024-07-21 20:02:58,199 - INFO - Extracted portfolio name: ATestPortfolio102 (type: <class 'str'>)
+2024-07-21 20:02:58,199 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio102.csv
+2024-07-21 20:02:58,340 - INFO - Processing portfolio: ATestPortfolio102
+2024-07-21 20:02:58,341 - INFO - Processing events for fund: ATestPortfolio102
+2024-07-21 20:02:58,341 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio102.csv
+2024-07-21 20:02:58,482 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio103.csv
+2024-07-21 20:02:58,482 - INFO - Extracted portfolio name: ATestPortfolio103 (type: <class 'str'>)
+2024-07-21 20:02:58,482 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio103.csv
+2024-07-21 20:02:58,619 - INFO - Processing portfolio: ATestPortfolio103
+2024-07-21 20:02:58,620 - INFO - Processing events for fund: ATestPortfolio103
+2024-07-21 20:02:58,620 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio103.csv
+2024-07-21 20:02:58,757 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio104.csv
+2024-07-21 20:02:58,758 - INFO - Extracted portfolio name: ATestPortfolio104 (type: <class 'str'>)
+2024-07-21 20:02:58,758 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio104.csv
+2024-07-21 20:02:58,896 - INFO - Processing portfolio: ATestPortfolio104
+2024-07-21 20:02:58,896 - INFO - Processing events for fund: ATestPortfolio104
+2024-07-21 20:02:58,896 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio104.csv
+2024-07-21 20:02:59,035 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio105.csv
+2024-07-21 20:02:59,035 - INFO - Extracted portfolio name: ATestPortfolio105 (type: <class 'str'>)
+2024-07-21 20:02:59,035 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio105.csv
+2024-07-21 20:02:59,175 - INFO - Processing portfolio: ATestPortfolio105
+2024-07-21 20:02:59,175 - INFO - Processing events for fund: ATestPortfolio105
+2024-07-21 20:02:59,175 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio105.csv
+2024-07-21 20:02:59,313 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio106.csv
+2024-07-21 20:02:59,314 - INFO - Extracted portfolio name: ATestPortfolio106 (type: <class 'str'>)
+2024-07-21 20:02:59,314 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio106.csv
+2024-07-21 20:02:59,451 - INFO - Processing portfolio: ATestPortfolio106
+2024-07-21 20:02:59,451 - INFO - Processing events for fund: ATestPortfolio106
+2024-07-21 20:02:59,451 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio106.csv
+2024-07-21 20:02:59,589 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio107.csv
+2024-07-21 20:02:59,589 - INFO - Extracted portfolio name: ATestPortfolio107 (type: <class 'str'>)
+2024-07-21 20:02:59,589 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio107.csv
+2024-07-21 20:02:59,734 - INFO - Processing portfolio: ATestPortfolio107
+2024-07-21 20:02:59,734 - INFO - Processing events for fund: ATestPortfolio107
+2024-07-21 20:02:59,734 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio107.csv
+2024-07-21 20:02:59,879 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio11.csv
+2024-07-21 20:02:59,879 - INFO - Extracted portfolio name: ATestPortfolio11 (type: <class 'str'>)
+2024-07-21 20:02:59,880 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio11.csv
+2024-07-21 20:03:00,027 - INFO - Processing portfolio: ATestPortfolio11
+2024-07-21 20:03:00,027 - INFO - Processing events for fund: ATestPortfolio11
+2024-07-21 20:03:00,027 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio11.csv
+2024-07-21 20:03:00,181 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio12.csv
+2024-07-21 20:03:00,182 - INFO - Extracted portfolio name: ATestPortfolio12 (type: <class 'str'>)
+2024-07-21 20:03:00,182 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio12.csv
+2024-07-21 20:03:00,325 - INFO - Processing portfolio: ATestPortfolio12
+2024-07-21 20:03:00,325 - INFO - Processing events for fund: ATestPortfolio12
+2024-07-21 20:03:00,325 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio12.csv
+2024-07-21 20:03:00,462 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio13.csv
+2024-07-21 20:03:00,462 - INFO - Extracted portfolio name: ATestPortfolio13 (type: <class 'str'>)
+2024-07-21 20:03:00,463 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio13.csv
+2024-07-21 20:03:00,601 - INFO - Processing portfolio: ATestPortfolio13
+2024-07-21 20:03:00,603 - INFO - Processing events for fund: ATestPortfolio13
+2024-07-21 20:03:00,603 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio13.csv
+2024-07-21 20:03:00,745 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio14.csv
+2024-07-21 20:03:00,746 - INFO - Extracted portfolio name: ATestPortfolio14 (type: <class 'str'>)
+2024-07-21 20:03:00,746 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio14.csv
+2024-07-21 20:03:00,890 - INFO - Processing portfolio: ATestPortfolio14
+2024-07-21 20:03:00,890 - INFO - Processing events for fund: ATestPortfolio14
+2024-07-21 20:03:00,890 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio14.csv
+2024-07-21 20:03:01,035 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio15.csv
+2024-07-21 20:03:01,035 - INFO - Extracted portfolio name: ATestPortfolio15 (type: <class 'str'>)
+2024-07-21 20:03:01,035 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio15.csv
+2024-07-21 20:03:01,180 - INFO - Processing portfolio: ATestPortfolio15
+2024-07-21 20:03:01,180 - INFO - Processing events for fund: ATestPortfolio15
+2024-07-21 20:03:01,180 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio15.csv
+2024-07-21 20:03:01,332 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio16.csv
+2024-07-21 20:03:01,332 - INFO - Extracted portfolio name: ATestPortfolio16 (type: <class 'str'>)
+2024-07-21 20:03:01,332 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio16.csv
+2024-07-21 20:03:01,494 - INFO - Processing portfolio: ATestPortfolio16
+2024-07-21 20:03:01,495 - INFO - Processing events for fund: ATestPortfolio16
+2024-07-21 20:03:01,496 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio16.csv
+2024-07-21 20:03:01,665 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio17.csv
+2024-07-21 20:03:01,665 - INFO - Extracted portfolio name: ATestPortfolio17 (type: <class 'str'>)
+2024-07-21 20:03:01,665 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio17.csv
+2024-07-21 20:03:01,805 - INFO - Processing portfolio: ATestPortfolio17
+2024-07-21 20:03:01,806 - INFO - Processing events for fund: ATestPortfolio17
+2024-07-21 20:03:01,806 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio17.csv
+2024-07-21 20:03:02,052 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio18.csv
+2024-07-21 20:03:02,052 - INFO - Extracted portfolio name: ATestPortfolio18 (type: <class 'str'>)
+2024-07-21 20:03:02,052 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio18.csv
+2024-07-21 20:03:02,190 - INFO - Processing portfolio: ATestPortfolio18
+2024-07-21 20:03:02,191 - INFO - Processing events for fund: ATestPortfolio18
+2024-07-21 20:03:02,191 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio18.csv
+2024-07-21 20:03:02,336 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio19.csv
+2024-07-21 20:03:02,337 - INFO - Extracted portfolio name: ATestPortfolio19 (type: <class 'str'>)
+2024-07-21 20:03:02,337 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio19.csv
+2024-07-21 20:03:02,449 - INFO - Processing portfolio: ATestPortfolio19
+2024-07-21 20:03:02,449 - INFO - Processing events for fund: ATestPortfolio19
+2024-07-21 20:03:02,449 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio19.csv
+2024-07-21 20:03:02,555 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio2.csv
+2024-07-21 20:03:02,556 - INFO - Extracted portfolio name: ATestPortfolio2 (type: <class 'str'>)
+2024-07-21 20:03:02,556 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio2.csv
+2024-07-21 20:03:02,695 - INFO - Processing portfolio: ATestPortfolio2
+2024-07-21 20:03:02,696 - INFO - Processing events for fund: ATestPortfolio2
+2024-07-21 20:03:02,696 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio2.csv
+2024-07-21 20:03:02,854 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio20.csv
+2024-07-21 20:03:02,855 - INFO - Extracted portfolio name: ATestPortfolio20 (type: <class 'str'>)
+2024-07-21 20:03:02,855 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio20.csv
+2024-07-21 20:03:02,998 - INFO - Processing portfolio: ATestPortfolio20
+2024-07-21 20:03:02,998 - INFO - Processing events for fund: ATestPortfolio20
+2024-07-21 20:03:02,998 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio20.csv
+2024-07-21 20:03:03,145 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio21.csv
+2024-07-21 20:03:03,145 - INFO - Extracted portfolio name: ATestPortfolio21 (type: <class 'str'>)
+2024-07-21 20:03:03,145 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio21.csv
+2024-07-21 20:03:03,188 - INFO - Processing portfolio: ATestPortfolio21
+2024-07-21 20:03:03,189 - INFO - Processing events for fund: ATestPortfolio21
+2024-07-21 20:03:03,189 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio21.csv
+2024-07-21 20:03:03,244 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio22.csv
+2024-07-21 20:03:03,244 - INFO - Extracted portfolio name: ATestPortfolio22 (type: <class 'str'>)
+2024-07-21 20:03:03,244 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio22.csv
+2024-07-21 20:03:03,388 - INFO - Processing portfolio: ATestPortfolio22
+2024-07-21 20:03:03,389 - INFO - Processing events for fund: ATestPortfolio22
+2024-07-21 20:03:03,389 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio22.csv
+2024-07-21 20:03:03,541 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio23.csv
+2024-07-21 20:03:03,541 - INFO - Extracted portfolio name: ATestPortfolio23 (type: <class 'str'>)
+2024-07-21 20:03:03,541 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio23.csv
+2024-07-21 20:03:03,683 - INFO - Processing portfolio: ATestPortfolio23
+2024-07-21 20:03:03,683 - INFO - Processing events for fund: ATestPortfolio23
+2024-07-21 20:03:03,683 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio23.csv
+2024-07-21 20:03:03,830 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio24.csv
+2024-07-21 20:03:03,830 - INFO - Extracted portfolio name: ATestPortfolio24 (type: <class 'str'>)
+2024-07-21 20:03:03,830 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio24.csv
+2024-07-21 20:03:03,975 - INFO - Processing portfolio: ATestPortfolio24
+2024-07-21 20:03:03,975 - INFO - Processing events for fund: ATestPortfolio24
+2024-07-21 20:03:03,975 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio24.csv
+2024-07-21 20:03:04,117 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio25.csv
+2024-07-21 20:03:04,117 - INFO - Extracted portfolio name: ATestPortfolio25 (type: <class 'str'>)
+2024-07-21 20:03:04,117 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio25.csv
+2024-07-21 20:03:04,156 - INFO - Processing portfolio: ATestPortfolio25
+2024-07-21 20:03:04,156 - INFO - Processing events for fund: ATestPortfolio25
+2024-07-21 20:03:04,156 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio25.csv
+2024-07-21 20:03:04,211 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio26.csv
+2024-07-21 20:03:04,211 - INFO - Extracted portfolio name: ATestPortfolio26 (type: <class 'str'>)
+2024-07-21 20:03:04,211 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio26.csv
+2024-07-21 20:03:04,358 - INFO - Processing portfolio: ATestPortfolio26
+2024-07-21 20:03:04,358 - INFO - Processing events for fund: ATestPortfolio26
+2024-07-21 20:03:04,358 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio26.csv
+2024-07-21 20:03:04,524 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio27.csv
+2024-07-21 20:03:04,524 - INFO - Extracted portfolio name: ATestPortfolio27 (type: <class 'str'>)
+2024-07-21 20:03:04,524 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio27.csv
+2024-07-21 20:03:04,689 - INFO - Processing portfolio: ATestPortfolio27
+2024-07-21 20:03:04,690 - INFO - Processing events for fund: ATestPortfolio27
+2024-07-21 20:03:04,690 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio27.csv
+2024-07-21 20:03:04,846 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio28.csv
+2024-07-21 20:03:04,847 - INFO - Extracted portfolio name: ATestPortfolio28 (type: <class 'str'>)
+2024-07-21 20:03:04,847 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio28.csv
+2024-07-21 20:03:04,990 - INFO - Processing portfolio: ATestPortfolio28
+2024-07-21 20:03:04,991 - INFO - Processing events for fund: ATestPortfolio28
+2024-07-21 20:03:04,991 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio28.csv
+2024-07-21 20:03:05,144 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio29.csv
+2024-07-21 20:03:05,144 - INFO - Extracted portfolio name: ATestPortfolio29 (type: <class 'str'>)
+2024-07-21 20:03:05,144 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio29.csv
+2024-07-21 20:03:05,282 - INFO - Processing portfolio: ATestPortfolio29
+2024-07-21 20:03:05,283 - INFO - Processing events for fund: ATestPortfolio29
+2024-07-21 20:03:05,283 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio29.csv
+2024-07-21 20:03:05,436 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio3.csv
+2024-07-21 20:03:05,437 - INFO - Extracted portfolio name: ATestPortfolio3 (type: <class 'str'>)
+2024-07-21 20:03:05,437 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio3.csv
+2024-07-21 20:03:05,570 - INFO - Processing portfolio: ATestPortfolio3
+2024-07-21 20:03:05,570 - INFO - Processing events for fund: ATestPortfolio3
+2024-07-21 20:03:05,570 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio3.csv
+2024-07-21 20:03:05,716 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio30.csv
+2024-07-21 20:03:05,716 - INFO - Extracted portfolio name: ATestPortfolio30 (type: <class 'str'>)
+2024-07-21 20:03:05,716 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio30.csv
+2024-07-21 20:03:05,852 - INFO - Processing portfolio: ATestPortfolio30
+2024-07-21 20:03:05,852 - INFO - Processing events for fund: ATestPortfolio30
+2024-07-21 20:03:05,853 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio30.csv
+2024-07-21 20:03:06,007 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio31.csv
+2024-07-21 20:03:06,007 - INFO - Extracted portfolio name: ATestPortfolio31 (type: <class 'str'>)
+2024-07-21 20:03:06,007 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio31.csv
+2024-07-21 20:03:06,143 - INFO - Processing portfolio: ATestPortfolio31
+2024-07-21 20:03:06,144 - INFO - Processing events for fund: ATestPortfolio31
+2024-07-21 20:03:06,144 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio31.csv
+2024-07-21 20:03:06,534 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio33.csv
+2024-07-21 20:03:06,535 - INFO - Extracted portfolio name: ATestPortfolio33 (type: <class 'str'>)
+2024-07-21 20:03:06,535 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio33.csv
+2024-07-21 20:03:06,831 - INFO - Processing portfolio: ATestPortfolio33
+2024-07-21 20:03:06,831 - INFO - Processing events for fund: ATestPortfolio33
+2024-07-21 20:03:06,831 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio33.csv
+2024-07-21 20:03:07,149 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio34.csv
+2024-07-21 20:03:07,149 - INFO - Extracted portfolio name: ATestPortfolio34 (type: <class 'str'>)
+2024-07-21 20:03:07,149 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio34.csv
+2024-07-21 20:03:07,489 - INFO - Processing portfolio: ATestPortfolio34
+2024-07-21 20:03:07,490 - INFO - Processing events for fund: ATestPortfolio34
+2024-07-21 20:03:07,490 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio34.csv
+2024-07-21 20:03:07,895 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio35.csv
+2024-07-21 20:03:07,895 - INFO - Extracted portfolio name: ATestPortfolio35 (type: <class 'str'>)
+2024-07-21 20:03:07,896 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio35.csv
+2024-07-21 20:03:08,315 - INFO - Processing portfolio: ATestPortfolio35
+2024-07-21 20:03:08,315 - INFO - Processing events for fund: ATestPortfolio35
+2024-07-21 20:03:08,315 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio35.csv
+2024-07-21 20:03:08,704 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio36.csv
+2024-07-21 20:03:08,705 - INFO - Extracted portfolio name: ATestPortfolio36 (type: <class 'str'>)
+2024-07-21 20:03:08,705 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio36.csv
+2024-07-21 20:03:08,995 - INFO - Processing portfolio: ATestPortfolio36
+2024-07-21 20:03:08,995 - INFO - Processing events for fund: ATestPortfolio36
+2024-07-21 20:03:08,995 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio36.csv
+2024-07-21 20:03:09,383 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio37.csv
+2024-07-21 20:03:09,383 - INFO - Extracted portfolio name: ATestPortfolio37 (type: <class 'str'>)
+2024-07-21 20:03:09,384 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio37.csv
+2024-07-21 20:03:09,756 - INFO - Processing portfolio: ATestPortfolio37
+2024-07-21 20:03:09,757 - INFO - Processing events for fund: ATestPortfolio37
+2024-07-21 20:03:09,757 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio37.csv
+2024-07-21 20:03:10,177 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio38.csv
+2024-07-21 20:03:10,178 - INFO - Extracted portfolio name: ATestPortfolio38 (type: <class 'str'>)
+2024-07-21 20:03:10,178 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio38.csv
+2024-07-21 20:03:10,731 - INFO - Processing portfolio: ATestPortfolio38
+2024-07-21 20:03:10,732 - INFO - Processing events for fund: ATestPortfolio38
+2024-07-21 20:03:10,732 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio38.csv
+2024-07-21 20:03:11,098 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio39.csv
+2024-07-21 20:03:11,098 - INFO - Extracted portfolio name: ATestPortfolio39 (type: <class 'str'>)
+2024-07-21 20:03:11,098 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio39.csv
+2024-07-21 20:03:11,451 - INFO - Processing portfolio: ATestPortfolio39
+2024-07-21 20:03:11,452 - INFO - Processing events for fund: ATestPortfolio39
+2024-07-21 20:03:11,452 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio39.csv
+2024-07-21 20:03:11,935 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio4.csv
+2024-07-21 20:03:11,936 - INFO - Extracted portfolio name: ATestPortfolio4 (type: <class 'str'>)
+2024-07-21 20:03:11,936 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio4.csv
+2024-07-21 20:03:12,246 - INFO - Processing portfolio: ATestPortfolio4
+2024-07-21 20:03:12,247 - INFO - Processing events for fund: ATestPortfolio4
+2024-07-21 20:03:12,247 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio4.csv
+2024-07-21 20:03:12,617 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio40.csv
+2024-07-21 20:03:12,617 - INFO - Extracted portfolio name: ATestPortfolio40 (type: <class 'str'>)
+2024-07-21 20:03:12,617 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio40.csv
+2024-07-21 20:03:12,991 - INFO - Processing portfolio: ATestPortfolio40
+2024-07-21 20:03:12,991 - INFO - Processing events for fund: ATestPortfolio40
+2024-07-21 20:03:12,991 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio40.csv
+2024-07-21 20:03:13,521 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio41.csv
+2024-07-21 20:03:13,522 - INFO - Extracted portfolio name: ATestPortfolio41 (type: <class 'str'>)
+2024-07-21 20:03:13,522 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio41.csv
+2024-07-21 20:03:13,895 - INFO - Processing portfolio: ATestPortfolio41
+2024-07-21 20:03:13,895 - INFO - Processing events for fund: ATestPortfolio41
+2024-07-21 20:03:13,895 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio41.csv
+2024-07-21 20:03:14,183 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio42.csv
+2024-07-21 20:03:14,183 - INFO - Extracted portfolio name: ATestPortfolio42 (type: <class 'str'>)
+2024-07-21 20:03:14,184 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio42.csv
+2024-07-21 20:03:14,470 - INFO - Processing portfolio: ATestPortfolio42
+2024-07-21 20:03:14,471 - INFO - Processing events for fund: ATestPortfolio42
+2024-07-21 20:03:14,471 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio42.csv
+2024-07-21 20:03:14,731 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio43.csv
+2024-07-21 20:03:14,731 - INFO - Extracted portfolio name: ATestPortfolio43 (type: <class 'str'>)
+2024-07-21 20:03:14,731 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio43.csv
+2024-07-21 20:03:15,154 - INFO - Processing portfolio: ATestPortfolio43
+2024-07-21 20:03:15,155 - INFO - Processing events for fund: ATestPortfolio43
+2024-07-21 20:03:15,155 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio43.csv
+2024-07-21 20:03:15,559 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio44.csv
+2024-07-21 20:03:15,559 - INFO - Extracted portfolio name: ATestPortfolio44 (type: <class 'str'>)
+2024-07-21 20:03:15,559 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio44.csv
+2024-07-21 20:03:15,944 - INFO - Processing portfolio: ATestPortfolio44
+2024-07-21 20:03:15,946 - INFO - Processing events for fund: ATestPortfolio44
+2024-07-21 20:03:15,946 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio44.csv
+2024-07-21 20:03:16,330 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio45.csv
+2024-07-21 20:03:16,331 - INFO - Extracted portfolio name: ATestPortfolio45 (type: <class 'str'>)
+2024-07-21 20:03:16,331 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio45.csv
+2024-07-21 20:03:16,820 - INFO - Processing portfolio: ATestPortfolio45
+2024-07-21 20:03:16,821 - INFO - Processing events for fund: ATestPortfolio45
+2024-07-21 20:03:16,821 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio45.csv
+2024-07-21 20:03:17,176 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio46.csv
+2024-07-21 20:03:17,176 - INFO - Extracted portfolio name: ATestPortfolio46 (type: <class 'str'>)
+2024-07-21 20:03:17,176 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio46.csv
+2024-07-21 20:03:17,457 - INFO - Processing portfolio: ATestPortfolio46
+2024-07-21 20:03:17,458 - INFO - Processing events for fund: ATestPortfolio46
+2024-07-21 20:03:17,458 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio46.csv
+2024-07-21 20:03:17,744 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio47.csv
+2024-07-21 20:03:17,745 - INFO - Extracted portfolio name: ATestPortfolio47 (type: <class 'str'>)
+2024-07-21 20:03:17,745 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio47.csv
+2024-07-21 20:03:18,051 - INFO - Processing portfolio: ATestPortfolio47
+2024-07-21 20:03:18,052 - INFO - Processing events for fund: ATestPortfolio47
+2024-07-21 20:03:18,052 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio47.csv
+2024-07-21 20:03:18,425 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio48.csv
+2024-07-21 20:03:18,425 - INFO - Extracted portfolio name: ATestPortfolio48 (type: <class 'str'>)
+2024-07-21 20:03:18,425 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio48.csv
+2024-07-21 20:03:18,702 - INFO - Processing portfolio: ATestPortfolio48
+2024-07-21 20:03:18,703 - INFO - Processing events for fund: ATestPortfolio48
+2024-07-21 20:03:18,703 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio48.csv
+2024-07-21 20:03:19,033 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio49.csv
+2024-07-21 20:03:19,033 - INFO - Extracted portfolio name: ATestPortfolio49 (type: <class 'str'>)
+2024-07-21 20:03:19,033 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio49.csv
+2024-07-21 20:03:19,331 - INFO - Processing portfolio: ATestPortfolio49
+2024-07-21 20:03:19,332 - INFO - Processing events for fund: ATestPortfolio49
+2024-07-21 20:03:19,332 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio49.csv
+2024-07-21 20:03:19,591 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio5.csv
+2024-07-21 20:03:19,591 - INFO - Extracted portfolio name: ATestPortfolio5 (type: <class 'str'>)
+2024-07-21 20:03:19,591 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio5.csv
+2024-07-21 20:03:19,861 - INFO - Processing portfolio: ATestPortfolio5
+2024-07-21 20:03:19,862 - INFO - Processing events for fund: ATestPortfolio5
+2024-07-21 20:03:19,862 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio5.csv
+2024-07-21 20:03:20,125 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio50.csv
+2024-07-21 20:03:20,125 - INFO - Extracted portfolio name: ATestPortfolio50 (type: <class 'str'>)
+2024-07-21 20:03:20,125 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio50.csv
+2024-07-21 20:03:20,472 - INFO - Processing portfolio: ATestPortfolio50
+2024-07-21 20:03:20,473 - INFO - Processing events for fund: ATestPortfolio50
+2024-07-21 20:03:20,474 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio50.csv
+2024-07-21 20:03:20,920 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio51.csv
+2024-07-21 20:03:20,921 - INFO - Extracted portfolio name: ATestPortfolio51 (type: <class 'str'>)
+2024-07-21 20:03:20,921 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio51.csv
+2024-07-21 20:03:21,265 - INFO - Processing portfolio: ATestPortfolio51
+2024-07-21 20:03:21,265 - INFO - Processing events for fund: ATestPortfolio51
+2024-07-21 20:03:21,265 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio51.csv
+2024-07-21 20:03:21,644 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio52.csv
+2024-07-21 20:03:21,645 - INFO - Extracted portfolio name: ATestPortfolio52 (type: <class 'str'>)
+2024-07-21 20:03:21,645 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio52.csv
+2024-07-21 20:03:22,018 - INFO - Processing portfolio: ATestPortfolio52
+2024-07-21 20:03:22,019 - INFO - Processing events for fund: ATestPortfolio52
+2024-07-21 20:03:22,019 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio52.csv
+2024-07-21 20:03:22,268 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio53.csv
+2024-07-21 20:03:22,268 - INFO - Extracted portfolio name: ATestPortfolio53 (type: <class 'str'>)
+2024-07-21 20:03:22,268 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio53.csv
+2024-07-21 20:03:22,548 - INFO - Processing portfolio: ATestPortfolio53
+2024-07-21 20:03:22,549 - INFO - Processing events for fund: ATestPortfolio53
+2024-07-21 20:03:22,549 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio53.csv
+2024-07-21 20:03:22,801 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio54.csv
+2024-07-21 20:03:22,802 - INFO - Extracted portfolio name: ATestPortfolio54 (type: <class 'str'>)
+2024-07-21 20:03:22,802 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio54.csv
+2024-07-21 20:03:23,088 - INFO - Processing portfolio: ATestPortfolio54
+2024-07-21 20:03:23,089 - INFO - Processing events for fund: ATestPortfolio54
+2024-07-21 20:03:23,089 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio54.csv
+2024-07-21 20:03:23,356 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio55.csv
+2024-07-21 20:03:23,357 - INFO - Extracted portfolio name: ATestPortfolio55 (type: <class 'str'>)
+2024-07-21 20:03:23,357 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio55.csv
+2024-07-21 20:03:23,764 - INFO - Processing portfolio: ATestPortfolio55
+2024-07-21 20:03:23,766 - INFO - Processing events for fund: ATestPortfolio55
+2024-07-21 20:03:23,766 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio55.csv
+2024-07-21 20:03:24,066 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio56.csv
+2024-07-21 20:03:24,066 - INFO - Extracted portfolio name: ATestPortfolio56 (type: <class 'str'>)
+2024-07-21 20:03:24,067 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio56.csv
+2024-07-21 20:03:24,336 - INFO - Processing portfolio: ATestPortfolio56
+2024-07-21 20:03:24,336 - INFO - Processing events for fund: ATestPortfolio56
+2024-07-21 20:03:24,336 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio56.csv
+2024-07-21 20:03:24,614 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio57.csv
+2024-07-21 20:03:24,614 - INFO - Extracted portfolio name: ATestPortfolio57 (type: <class 'str'>)
+2024-07-21 20:03:24,614 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio57.csv
+2024-07-21 20:03:24,903 - INFO - Processing portfolio: ATestPortfolio57
+2024-07-21 20:03:24,904 - INFO - Processing events for fund: ATestPortfolio57
+2024-07-21 20:03:24,904 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio57.csv
+2024-07-21 20:03:25,326 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio58.csv
+2024-07-21 20:03:25,326 - INFO - Extracted portfolio name: ATestPortfolio58 (type: <class 'str'>)
+2024-07-21 20:03:25,326 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio58.csv
+2024-07-21 20:03:25,595 - INFO - Processing portfolio: ATestPortfolio58
+2024-07-21 20:03:25,595 - INFO - Processing events for fund: ATestPortfolio58
+2024-07-21 20:03:25,595 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio58.csv
+2024-07-21 20:03:26,024 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio59.csv
+2024-07-21 20:03:26,025 - INFO - Extracted portfolio name: ATestPortfolio59 (type: <class 'str'>)
+2024-07-21 20:03:26,025 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio59.csv
+2024-07-21 20:03:26,382 - INFO - Processing portfolio: ATestPortfolio59
+2024-07-21 20:03:26,383 - INFO - Processing events for fund: ATestPortfolio59
+2024-07-21 20:03:26,383 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio59.csv
+2024-07-21 20:03:26,848 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio6.csv
+2024-07-21 20:03:26,848 - INFO - Extracted portfolio name: ATestPortfolio6 (type: <class 'str'>)
+2024-07-21 20:03:26,849 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio6.csv
+2024-07-21 20:03:27,231 - INFO - Processing portfolio: ATestPortfolio6
+2024-07-21 20:03:27,231 - INFO - Processing events for fund: ATestPortfolio6
+2024-07-21 20:03:27,231 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio6.csv
+2024-07-21 20:03:27,565 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio60.csv
+2024-07-21 20:03:27,566 - INFO - Extracted portfolio name: ATestPortfolio60 (type: <class 'str'>)
+2024-07-21 20:03:27,566 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio60.csv
+2024-07-21 20:03:27,978 - INFO - Processing portfolio: ATestPortfolio60
+2024-07-21 20:03:27,979 - INFO - Processing events for fund: ATestPortfolio60
+2024-07-21 20:03:27,979 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio60.csv
+2024-07-21 20:03:28,411 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio61.csv
+2024-07-21 20:03:28,411 - INFO - Extracted portfolio name: ATestPortfolio61 (type: <class 'str'>)
+2024-07-21 20:03:28,411 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio61.csv
+2024-07-21 20:03:28,776 - INFO - Processing portfolio: ATestPortfolio61
+2024-07-21 20:03:28,777 - INFO - Processing events for fund: ATestPortfolio61
+2024-07-21 20:03:28,777 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio61.csv
+2024-07-21 20:03:29,122 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio62.csv
+2024-07-21 20:03:29,122 - INFO - Extracted portfolio name: ATestPortfolio62 (type: <class 'str'>)
+2024-07-21 20:03:29,122 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio62.csv
+2024-07-21 20:03:29,423 - INFO - Processing portfolio: ATestPortfolio62
+2024-07-21 20:03:29,424 - INFO - Processing events for fund: ATestPortfolio62
+2024-07-21 20:03:29,424 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio62.csv
+2024-07-21 20:03:29,858 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio63.csv
+2024-07-21 20:03:29,858 - INFO - Extracted portfolio name: ATestPortfolio63 (type: <class 'str'>)
+2024-07-21 20:03:29,858 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio63.csv
+2024-07-21 20:03:30,144 - INFO - Processing portfolio: ATestPortfolio63
+2024-07-21 20:03:30,145 - INFO - Processing events for fund: ATestPortfolio63
+2024-07-21 20:03:30,145 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio63.csv
+2024-07-21 20:03:30,429 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio64.csv
+2024-07-21 20:03:30,429 - INFO - Extracted portfolio name: ATestPortfolio64 (type: <class 'str'>)
+2024-07-21 20:03:30,429 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio64.csv
+2024-07-21 20:03:30,755 - INFO - Processing portfolio: ATestPortfolio64
+2024-07-21 20:03:30,756 - INFO - Processing events for fund: ATestPortfolio64
+2024-07-21 20:03:30,757 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio64.csv
+2024-07-21 20:03:31,052 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio65.csv
+2024-07-21 20:03:31,052 - INFO - Extracted portfolio name: ATestPortfolio65 (type: <class 'str'>)
+2024-07-21 20:03:31,052 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio65.csv
+2024-07-21 20:03:31,370 - INFO - Processing portfolio: ATestPortfolio65
+2024-07-21 20:03:31,370 - INFO - Processing events for fund: ATestPortfolio65
+2024-07-21 20:03:31,370 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio65.csv
+2024-07-21 20:03:31,655 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio66.csv
+2024-07-21 20:03:31,655 - INFO - Extracted portfolio name: ATestPortfolio66 (type: <class 'str'>)
+2024-07-21 20:03:31,655 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio66.csv
+2024-07-21 20:03:31,970 - INFO - Processing portfolio: ATestPortfolio66
+2024-07-21 20:03:31,971 - INFO - Processing events for fund: ATestPortfolio66
+2024-07-21 20:03:31,971 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio66.csv
+2024-07-21 20:03:32,239 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio67.csv
+2024-07-21 20:03:32,239 - INFO - Extracted portfolio name: ATestPortfolio67 (type: <class 'str'>)
+2024-07-21 20:03:32,239 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio67.csv
+2024-07-21 20:03:32,510 - INFO - Processing portfolio: ATestPortfolio67
+2024-07-21 20:03:32,510 - INFO - Processing events for fund: ATestPortfolio67
+2024-07-21 20:03:32,510 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio67.csv
+2024-07-21 20:03:32,753 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio68.csv
+2024-07-21 20:03:32,753 - INFO - Extracted portfolio name: ATestPortfolio68 (type: <class 'str'>)
+2024-07-21 20:03:32,753 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio68.csv
+2024-07-21 20:03:33,101 - INFO - Processing portfolio: ATestPortfolio68
+2024-07-21 20:03:33,103 - INFO - Processing events for fund: ATestPortfolio68
+2024-07-21 20:03:33,103 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio68.csv
+2024-07-21 20:03:33,602 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio69.csv
+2024-07-21 20:03:33,602 - INFO - Extracted portfolio name: ATestPortfolio69 (type: <class 'str'>)
+2024-07-21 20:03:33,602 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio69.csv
+2024-07-21 20:03:33,997 - INFO - Processing portfolio: ATestPortfolio69
+2024-07-21 20:03:33,998 - INFO - Processing events for fund: ATestPortfolio69
+2024-07-21 20:03:33,998 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio69.csv
+2024-07-21 20:03:34,381 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio7.csv
+2024-07-21 20:03:34,381 - INFO - Extracted portfolio name: ATestPortfolio7 (type: <class 'str'>)
+2024-07-21 20:03:34,381 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio7.csv
+2024-07-21 20:03:34,749 - INFO - Processing portfolio: ATestPortfolio7
+2024-07-21 20:03:34,752 - INFO - Processing events for fund: ATestPortfolio7
+2024-07-21 20:03:34,752 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio7.csv
+2024-07-21 20:03:35,067 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio70.csv
+2024-07-21 20:03:35,067 - INFO - Extracted portfolio name: ATestPortfolio70 (type: <class 'str'>)
+2024-07-21 20:03:35,068 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio70.csv
+2024-07-21 20:03:35,324 - INFO - Processing portfolio: ATestPortfolio70
+2024-07-21 20:03:35,325 - INFO - Processing events for fund: ATestPortfolio70
+2024-07-21 20:03:35,325 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio70.csv
+2024-07-21 20:03:35,575 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio71.csv
+2024-07-21 20:03:35,575 - INFO - Extracted portfolio name: ATestPortfolio71 (type: <class 'str'>)
+2024-07-21 20:03:35,575 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio71.csv
+2024-07-21 20:03:35,875 - INFO - Processing portfolio: ATestPortfolio71
+2024-07-21 20:03:35,875 - INFO - Processing events for fund: ATestPortfolio71
+2024-07-21 20:03:35,875 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio71.csv
+2024-07-21 20:03:36,214 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio72.csv
+2024-07-21 20:03:36,214 - INFO - Extracted portfolio name: ATestPortfolio72 (type: <class 'str'>)
+2024-07-21 20:03:36,214 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio72.csv
+2024-07-21 20:03:36,472 - INFO - Processing portfolio: ATestPortfolio72
+2024-07-21 20:03:36,472 - INFO - Processing events for fund: ATestPortfolio72
+2024-07-21 20:03:36,472 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio72.csv
+2024-07-21 20:03:36,726 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio73.csv
+2024-07-21 20:03:36,727 - INFO - Extracted portfolio name: ATestPortfolio73 (type: <class 'str'>)
+2024-07-21 20:03:36,727 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio73.csv
+2024-07-21 20:03:36,998 - INFO - Processing portfolio: ATestPortfolio73
+2024-07-21 20:03:36,999 - INFO - Processing events for fund: ATestPortfolio73
+2024-07-21 20:03:36,999 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio73.csv
+2024-07-21 20:03:37,255 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio74.csv
+2024-07-21 20:03:37,255 - INFO - Extracted portfolio name: ATestPortfolio74 (type: <class 'str'>)
+2024-07-21 20:03:37,255 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio74.csv
+2024-07-21 20:03:37,599 - INFO - Processing portfolio: ATestPortfolio74
+2024-07-21 20:03:37,600 - INFO - Processing events for fund: ATestPortfolio74
+2024-07-21 20:03:37,600 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio74.csv
+2024-07-21 20:03:37,860 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio75.csv
+2024-07-21 20:03:37,860 - INFO - Extracted portfolio name: ATestPortfolio75 (type: <class 'str'>)
+2024-07-21 20:03:37,861 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio75.csv
+2024-07-21 20:03:38,150 - INFO - Processing portfolio: ATestPortfolio75
+2024-07-21 20:03:38,152 - INFO - Processing events for fund: ATestPortfolio75
+2024-07-21 20:03:38,152 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio75.csv
+2024-07-21 20:03:38,514 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio76.csv
+2024-07-21 20:03:38,514 - INFO - Extracted portfolio name: ATestPortfolio76 (type: <class 'str'>)
+2024-07-21 20:03:38,515 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio76.csv
+2024-07-21 20:03:39,041 - INFO - Processing portfolio: ATestPortfolio76
+2024-07-21 20:03:39,043 - INFO - Processing events for fund: ATestPortfolio76
+2024-07-21 20:03:39,043 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio76.csv
+2024-07-21 20:03:39,501 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio77.csv
+2024-07-21 20:03:39,501 - INFO - Extracted portfolio name: ATestPortfolio77 (type: <class 'str'>)
+2024-07-21 20:03:39,501 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio77.csv
+2024-07-21 20:03:39,900 - INFO - Processing portfolio: ATestPortfolio77
+2024-07-21 20:03:39,900 - INFO - Processing events for fund: ATestPortfolio77
+2024-07-21 20:03:39,900 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio77.csv
+2024-07-21 20:03:40,162 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio78.csv
+2024-07-21 20:03:40,162 - INFO - Extracted portfolio name: ATestPortfolio78 (type: <class 'str'>)
+2024-07-21 20:03:40,162 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio78.csv
+2024-07-21 20:03:40,441 - INFO - Processing portfolio: ATestPortfolio78
+2024-07-21 20:03:40,441 - INFO - Processing events for fund: ATestPortfolio78
+2024-07-21 20:03:40,441 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio78.csv
+2024-07-21 20:03:40,697 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio79.csv
+2024-07-21 20:03:40,697 - INFO - Extracted portfolio name: ATestPortfolio79 (type: <class 'str'>)
+2024-07-21 20:03:40,697 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio79.csv
+2024-07-21 20:03:41,024 - INFO - Processing portfolio: ATestPortfolio79
+2024-07-21 20:03:41,025 - INFO - Processing events for fund: ATestPortfolio79
+2024-07-21 20:03:41,025 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio79.csv
+2024-07-21 20:03:41,314 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio8.csv
+2024-07-21 20:03:41,315 - INFO - Extracted portfolio name: ATestPortfolio8 (type: <class 'str'>)
+2024-07-21 20:03:41,315 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio8.csv
+2024-07-21 20:03:41,560 - INFO - Processing portfolio: ATestPortfolio8
+2024-07-21 20:03:41,561 - INFO - Processing events for fund: ATestPortfolio8
+2024-07-21 20:03:41,561 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio8.csv
+2024-07-21 20:03:41,818 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio80.csv
+2024-07-21 20:03:41,818 - INFO - Extracted portfolio name: ATestPortfolio80 (type: <class 'str'>)
+2024-07-21 20:03:41,818 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio80.csv
+2024-07-21 20:03:42,073 - INFO - Processing portfolio: ATestPortfolio80
+2024-07-21 20:03:42,074 - INFO - Processing events for fund: ATestPortfolio80
+2024-07-21 20:03:42,074 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio80.csv
+2024-07-21 20:03:42,333 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio81.csv
+2024-07-21 20:03:42,333 - INFO - Extracted portfolio name: ATestPortfolio81 (type: <class 'str'>)
+2024-07-21 20:03:42,333 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio81.csv
+2024-07-21 20:03:42,591 - INFO - Processing portfolio: ATestPortfolio81
+2024-07-21 20:03:42,592 - INFO - Processing events for fund: ATestPortfolio81
+2024-07-21 20:03:42,592 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio81.csv
+2024-07-21 20:03:42,846 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio82.csv
+2024-07-21 20:03:42,846 - INFO - Extracted portfolio name: ATestPortfolio82 (type: <class 'str'>)
+2024-07-21 20:03:42,846 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio82.csv
+2024-07-21 20:03:43,139 - INFO - Processing portfolio: ATestPortfolio82
+2024-07-21 20:03:43,141 - INFO - Processing events for fund: ATestPortfolio82
+2024-07-21 20:03:43,141 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio82.csv
+2024-07-21 20:03:43,658 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio83.csv
+2024-07-21 20:03:43,659 - INFO - Extracted portfolio name: ATestPortfolio83 (type: <class 'str'>)
+2024-07-21 20:03:43,659 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio83.csv
+2024-07-21 20:03:44,110 - INFO - Processing portfolio: ATestPortfolio83
+2024-07-21 20:03:44,111 - INFO - Processing events for fund: ATestPortfolio83
+2024-07-21 20:03:44,111 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio83.csv
+2024-07-21 20:03:44,608 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio84.csv
+2024-07-21 20:03:44,608 - INFO - Extracted portfolio name: ATestPortfolio84 (type: <class 'str'>)
+2024-07-21 20:03:44,609 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio84.csv
+2024-07-21 20:03:45,074 - INFO - Processing portfolio: ATestPortfolio84
+2024-07-21 20:03:45,076 - INFO - Processing events for fund: ATestPortfolio84
+2024-07-21 20:03:45,076 - INFO - CSV file path: C:/Users/hjmne/PycharmProjects/chest/refdata/pooltest/ATestPortfolio84.csv
+2024-07-21 20:03:45,434 - INFO - Processing domain-specific events for portfolio file: C:/BASE_PATH/refdata/pooltest\ATestPortfolio85.csv
+2024-07-21 20:03:45,435 - INFO - Extracted portfolio name: ATestPortfolio85 (type: <class 'str'>)
+2024-07-21 20:03:45,435 - INFO - Portfolio file path: C:/BASE_PATH/refdata/pooltest\ATestPortfolio85.csv

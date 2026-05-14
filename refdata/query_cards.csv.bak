@@ -1,0 +1,11 @@
+CardName,Mode,ReportName,Filters,GroupBy,SortBy,FieldsToSummarize,VisibleColumns,JEActivityMode,BSActivityMode,AggregationMap
+Positions,ROLLFORWARD,Positions,"{""BS_GROUP_NAME"":""==001-ASSETS/LIABILITIES""}","[""SOURCE"", ""INVESTMENT""]","[""SOURCE"", ""INVESTMENT""]","[""QUANTITY"", ""LOCAL"",""BOOK""]","['INVESTMENT', 'QUANTITY', 'LOCAL','BOOK']",DETAIL,SUMMARY,
+RevenueExpenseDetail,JE_ONLY,RevenueExpenseDetail,"{""BS_GROUP_NAME"":""==002-REVENUE/EXPENSE""}",[],"[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT"",""FINANCIAL_ACCOUNT""]","[""QUANTITY"", ""LOCAL"",""BOOK""]",[],DETAIL,,
+RevenueExpenseInvFA,JE_ONLY,RevenueExpense,"{""BS_GROUP_NAME"":""==002-REVENUE/EXPENSE""}","[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT"",""FINANCIAL_ACCOUNT""]","[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT"",""FINANCIAL_ACCOUNT""]","[""QUANTITY"", ""LOCAL"",""BOOK""]",[],DETAIL,,
+TaxLots,BOTH_BS_PLUS_JE,Tax Lots,"{""BS_GROUP_NAME"":""==001-ASSETS/LIABILITIES""}","[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT"",""TAX_DATE""]","[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT""]","[""SOURCE"", ""BS_GROUP_NAME"",""INVESTMENT"",""FINANCIAL_ACCOUNT""]","['INVESTMENT', 'TAX_DATE', 'QUANTITY', 'LOCAL','BOOK']",SUMMARY,,"{""INVESTMENT"": [""QUANTITY"", ""LOCAL"",""BOOK""]}"
+TrialBalance,ROLLFORWARD,TrialBalance,"{""BS_GROUP_NAME"":""!=004-MV-REVAL""}","[""SOURCE"", ""BS_GROUP_NAME""]","[""SOURCE"", ""BS_GROUP_NAME""]","[""BOOK""]",[],DETAIL,SUMMARY,
+AnalystPerformance,PERF, AnalystPerformance,"{""LEVEL"": ""in ['Investment', 'Analyst']""}",,,,['ANALYST' 'EMV_BOOK' 'INCOME_BOOK' 'BOOKTODATE_PERCENT'],,, 
+FinancialAccounts,ROLLFORWARD,Positions,"{""BS_GROUP_NAME"":""!=004-MV-REVAL""}","[""SOURCE"", ""INVESTMENT"", ""FINANCIAL_ACCOUNT""]","[""SOURCE"", ""INVESTMENT"", ""FINANCIAL_ACCOUNT""]","[""BOOK""]",[],DETAIL,SUMMARY,
+TrialBalanceX,ROLLFORWARD,TrialBalance,{},[],[],[],[],DETAIL,SUMMARY,
+PositionsByAnalyst,ROLLFORWARD,PositionsByAnalyst,"{""BS_GROUP_NAME"":""==001-ASSETS/LIABILITIES""}","[""SOURCE"", ""INVESTMENT"",""ANALYST""]","[""SOURCE"", ""INVESTMENT"",""ANALYST""]","[""QUANTITY"", ""LOCAL"",""BOOK""]","['INVESTMENT', 'QUANTITY', 'LOCAL','BOOK']",DETAIL,SUMMARY,
+PerfSlicedAndDiced,PERF,PerformanceByCategory,{},,,,['ANALYST' 'EMV_BOOK' 'INCOME_BOOK' 'BOOKTODATE_PERCENT'],,, 
