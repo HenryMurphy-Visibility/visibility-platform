@@ -468,7 +468,7 @@ def load_events_pkl_to_app(path: str):
 
     return events
 
-def load_events_csv_to_app(path: str):
+def load_events_csv_to_app(path: str, allow_empty: bool = False):
     """
     Load EVENTS CSV and convert to application format.
 
@@ -489,7 +489,9 @@ def load_events_csv_to_app(path: str):
         rows = [dict(r) for r in reader]
 
     if not rows:
-        raise RuntimeError(f"[INGEST ERROR] Event file empty: {path}")
+        if allow_empty:
+            return []
+        raise RuntimeError(f"[INGEST ERROR] No events survived cutoff: {path}")
 
     EVENT_DATE_COLS = (
         "tradedate",
@@ -519,11 +521,7 @@ def load_events_csv_to_app(path: str):
             r["tranid"] = int(r["tranid"])
     return rows
 
-def load_events_csv_to_app_with_cutoff(
-    path: str,
-    *,
-    knowledge_cutoff_date,
-):
+def load_events_csv_to_app_with_cutoff(path: str, *, knowledge_cutoff_date, allow_empty: bool = False):
     """
     Load EVENTS CSV and apply knowledge cutoff BEFORE full normalization.
 
@@ -583,6 +581,8 @@ def load_events_csv_to_app_with_cutoff(
             rows.append(r)
 
     if not rows:
+        if allow_empty:
+            return []
         raise RuntimeError(f"[INGEST ERROR] No events survived cutoff: {path}")
 
     return rows

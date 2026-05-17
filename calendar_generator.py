@@ -161,7 +161,9 @@ def _build_records(periods: list, now: datetime) -> list:
             "period_status":            "Pending",
             "current_period_start":     _fmt(_dt(period_start,  0,  0,  0)),
             "current_period_cutoff":    _fmt(_dt(period_cutoff, 23, 59, 59)),
-            "current_period_knowledge": _fmt(now),
+            "current_period_knowledge": _fmt(_dt(period_cutoff, 23, 59, 59))
+            if period_cutoff < date.today()
+            else _fmt(now),
             "prior_period_start":       _fmt(_dt(prior_period_start,     0,  0,  0)),
             "prior_period_cutoff":      _fmt(_dt(prior_period_cutoff,    23, 59, 59)
                                              if prior_period_cutoff != period_start

@@ -51,6 +51,9 @@ from ops_routes import ops_router
 
 from oversight_routes import oversight_router
 
+from tips_routes import tips_router
+
+
 
 # ============================================================
 # PERIOD FORMAT GUIDE
@@ -183,6 +186,8 @@ app.include_router(cph_router)# After existing include_router lines
 app.include_router(ops_router)
 
 app.include_router(oversight_router)
+
+app.include_router(tips_router)
 
 
 

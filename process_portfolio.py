@@ -21,7 +21,7 @@ import csv
 import pickle
 import time
 from pathlib import Path
-from datetime import datetime
+from datetime import datetime, date
 from typing import Optional
 
 from v_config import BASE_PATH, FUNDS_PATH, REFDATA_PATH
@@ -52,15 +52,29 @@ def get_events_cached(portfolio: str) -> list:
     print(f">>> EVENT CACHE MISS | {portfolio} | loading from disk...")
 
     events_path = _events_path(portfolio)
-    marks_path  = _marks_path(portfolio)
+    marks_path = _marks_path(portfolio)
 
     if not events_path.exists():
         raise RuntimeError(f"Events file not found: {events_path}")
-    if not marks_path.exists():
-        raise RuntimeError(f"Marks file not found: {marks_path}")
+
+    # Marks — load if exists and has content, otherwise continue empty
+    if marks_path.exists():
+        with open(marks_path, newline="") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+        if rows:
+            mark_events = load_events_csv_to_app(str(marks_path))
+        else:
+            print(f">>> MARKS EMPTY | {portfolio} | continuing with no marks")
+            mark_events = []
+    else:
+        print(f">>> MARKS NOT FOUND | {portfolio} | continuing with no marks")
+        mark_events = []
 
     regular_events = load_events_csv_to_app(str(events_path))
-    mark_events    = load_events_csv_to_app(str(marks_path))
+    mark_events = load_events_csv_to_app(str(marks_path), allow_empty=True) \
+        if marks_path.exists() else []
+
     all_events     = regular_events + mark_events
 
     _EVENT_CACHE[portfolio] = all_events
@@ -134,6 +148,7 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
       2. Extract portfolio-specific IM from global master
       3. Extract portfolio-specific bond info from global bond info
       4. Save candidates.json
+      5. Create marks file from price/fx master
 
     Parameters
     ----------
@@ -163,8 +178,11 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
     if not events_path.exists():
         raise RuntimeError(f"Events file not found: {events_path}")
 
-    candidates = set()
+    candidates  = set()
     currencies  = set()
+
+    # Also track first trade date per investment for marks window
+    first_trade_dates = {}
 
     with open(events_path, newline="") as f:
         reader = csv.DictReader(f)
@@ -172,6 +190,16 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
             inv = (row.get("investment") or "").strip()
             if inv:
                 candidates.add(inv)
+                # Track earliest tradedate per investment
+                td_raw = (row.get("tradedate") or "").strip()
+                if td_raw:
+                    try:
+                        from kernel_utilities import from_csv_date_to_app_new
+                        td = from_csv_date_to_app_new(td_raw)
+                        if inv not in first_trade_dates or td < first_trade_dates[inv]:
+                            first_trade_dates[inv] = td
+                    except Exception:
+                        pass
 
             for col in ["payment_currency", "buy_currency", "sell_currency"]:
                 val = (row.get(col) or "").strip()
@@ -201,15 +229,79 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
             "currencies":   sorted(currencies),
         }, f, indent=2)
 
+    # ── 5. CREATE MARKS ───────────────────────────────────────────
+    marks_count = _create_marks(portfolio, first_trade_dates)
+
     print(f">>> BOOTSTRAP COMPLETE | {portfolio} | "
-          f"{investment_count} IM records | {bond_count} bond records")
+          f"{investment_count} IM records | {bond_count} bond records | "
+          f"{marks_count} marks created")
 
     return {
         "candidates":       candidates,
         "currencies":       currencies,
         "investment_count": investment_count,
         "bond_count":       bond_count,
+        "marks_count":      marks_count,
     }
+
+
+def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
+    """
+    Create the marks file for a portfolio from price/fx master.
+    Calls create_portfolio_marks from core_ingest_loaders.
+
+    Skips if marks file already has content (not just a header).
+    Use force=True in bootstrap_portfolio to rebuild.
+    """
+    marks_path = _marks_path(portfolio)
+
+    # Skip if marks already populated
+    if marks_path.exists():
+        with open(marks_path, newline="") as f:
+            reader = csv.DictReader(f)
+            rows = list(reader)
+            if rows:
+                print(f"    Marks: already present ({len(rows)} rows) — skipping")
+                return len(rows)
+
+    if not first_trade_dates:
+        print(f"    Marks: no events to derive marks from — skipping")
+        return 0
+
+    try:
+        from core_ingest_loaders import create_portfolio_marks
+
+        # Build candidates dict in format expected by create_portfolio_marks:
+        # {(portfolio, investment): first_trade_date}
+        candidates_dict = {
+            (portfolio, inv): td
+            for inv, td in first_trade_dates.items()
+        }
+
+        history_start = min(first_trade_dates.values())
+        history_end   = date.today()
+
+        print(f"    Marks: building from {history_start} → {history_end} "
+              f"for {len(candidates_dict)} investments...")
+
+        marks_count = create_portfolio_marks(
+            portfolio     = portfolio,
+            candidates    = candidates_dict,
+            history_start = history_start,
+            history_end   = history_end,
+        )
+
+        print(f"    Marks: {marks_count} marks created")
+        return marks_count
+
+    except ImportError as e:
+        print(f"    Marks: WARNING — could not import core_ingest_loaders: {e}")
+        return 0
+    except Exception as e:
+        print(f"    Marks: WARNING — marks creation failed: {e}")
+        import traceback
+        traceback.print_exc()
+        return 0
 
 
 def _extract_portfolio_im(portfolio: str, candidates: set) -> int:
@@ -415,11 +507,21 @@ def run_period(
     event_pool = [
         e for e in all_events
         if (
-            e["tradedate"] > replay_start
-            and e["kdbegin"] <= per_period_ctx["current_period_knowledge"]
-            and e["tradedate"] <= per_period_ctx["current_period_cutoff"]
+                e["tradedate"] > replay_start
+                and e["kdbegin"] <= per_period_ctx["current_period_knowledge"]
+                and e["tradedate"] <= per_period_ctx["current_period_cutoff"]
         )
     ]
+
+    # TEMP DEBUG
+    print(f">>> DEBUG | total events: {len(all_events)}")
+    print(f">>> DEBUG | replay_start: {replay_start}")
+    print(f">>> DEBUG | current_period_cutoff: {per_period_ctx['current_period_cutoff']}")
+    print(f">>> DEBUG | current_period_knowledge: {per_period_ctx['current_period_knowledge']}")
+    print(f">>> DEBUG | event_pool size: {len(event_pool)}")
+    if all_events:
+        print(f">>> DEBUG | first event tradedate: {all_events[0]['tradedate']}")
+        print(f">>> DEBUG | first event kdbegin: {all_events[0]['kdbegin']}")
 
     is_first = (period_name == calendar_records[0]["period_name"])
 
