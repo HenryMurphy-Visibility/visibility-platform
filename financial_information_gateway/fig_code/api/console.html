@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visibility — Console</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;5000&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
   :root {
     --bg:        #07080f;
@@ -37,7 +37,6 @@
     grid-template-rows: 56px 1fr;
   }
 
-  /* ── HEADER ── */
   header {
     grid-column: 1 / -1;
     background: var(--surface);
@@ -54,7 +53,6 @@
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #fff;
-    transition: color 0.15s;
     cursor: default;
   }
   header h1:hover { color: var(--accent2); }
@@ -63,7 +61,6 @@
     font-size: 0.7em;
     color: var(--muted);
     letter-spacing: 1px;
-    transition: color 0.15s;
   }
   header span:hover { color: var(--text); }
   .header-dot {
@@ -76,7 +73,6 @@
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* ── SIDEBAR ── */
   nav {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -90,7 +86,6 @@
     letter-spacing: 2px;
     text-transform: uppercase;
     color: #8a90a8;
-    transition: color 0.15s;
     cursor: default;
   }
   .nav-section:hover { color: var(--accent2); }
@@ -112,7 +107,6 @@
     background: rgba(46,95,163,0.12);
   }
 
-  /* ── MAIN ── */
   main {
     padding: 32px 36px;
     overflow-y: auto;
@@ -121,7 +115,6 @@
     gap: 24px;
   }
 
-  /* ── PANEL ── */
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -149,7 +142,6 @@
   }
   .panel-body { padding: 20px; }
 
-  /* ── FORM ── */
   .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -177,7 +169,6 @@
   }
   input:focus, select:focus { border-color: var(--accent); }
   input::placeholder { color: var(--muted); }
-
   .field-hint {
     font-family: var(--mono);
     font-size: 0.62em;
@@ -187,7 +178,6 @@
   }
   .field-hint span { color: var(--accent2); }
 
-  /* ── BUTTONS ── */
   .btn-row { display: flex; gap: 10px; align-items: center; }
   .btn {
     font-family: var(--mono);
@@ -200,29 +190,14 @@
     border-radius: 2px;
     transition: all 0.15s;
   }
-  .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-secondary {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--muted);
-    display: none;
-  }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); display: none; }
   .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
   .btn-secondary.visible { display: inline-block; }
-  .status {
-    font-family: var(--mono);
-    font-size: 0.72em;
-    color: var(--muted);
-    margin-left: auto;
-  }
+  .status { font-family: var(--mono); font-size: 0.72em; color: var(--muted); margin-left: auto; }
 
-  /* ── ALL CLEAR BANNER ── */
   .all-clear-banner {
     display: none;
     padding: 18px 24px;
@@ -232,27 +207,11 @@
     gap: 16px;
   }
   .all-clear-banner.show { display: flex; }
-  .all-clear-banner.pass {
-    background: rgba(42,122,74,0.15);
-    border: 1px solid var(--success);
-    color: var(--success-t);
-  }
-  .all-clear-banner.fail {
-    background: rgba(122,42,42,0.15);
-    border: 1px solid var(--fail);
-    color: var(--fail-t);
-  }
-  .badge {
-    font-size: 1.3em;
-    font-weight: 600;
-    letter-spacing: 3px;
-  }
-  .all-clear-detail {
-    font-size: 0.78em;
-    opacity: 0.85;
-  }
+  .all-clear-banner.pass { background: rgba(42,122,74,0.15); border: 1px solid var(--success); color: var(--success-t); }
+  .all-clear-banner.fail { background: rgba(122,42,42,0.15); border: 1px solid var(--fail); color: var(--fail-t); }
+  .badge { font-size: 1.3em; font-weight: 600; letter-spacing: 3px; }
+  .all-clear-detail { font-size: 0.78em; opacity: 0.85; }
 
-  /* ── PERFORMANCE BLOCK ── */
   .perf-block {
     display: none;
     background: var(--bg);
@@ -270,14 +229,8 @@
   .perf-label { font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase; }
   .perf-value { color: var(--text); font-size: 1.1em; }
 
-  /* ── TABLE ── */
   .table-wrap { overflow-x: auto; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 0.72em;
-  }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
   th {
     background: var(--bg);
     color: var(--muted);
@@ -299,14 +252,8 @@
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.pass { color: var(--success-t); }
   td.fail { color: var(--fail-t); }
-  .row-count {
-    font-family: var(--mono);
-    font-size: 0.68em;
-    color: var(--muted);
-    padding: 8px 16px 12px;
-  }
+  .row-count { font-family: var(--mono); font-size: 0.68em; color: var(--muted); padding: 8px 16px 12px; }
 
-  /* ── SPINNER ── */
   .spinner {
     display: none;
     width: 14px; height: 14px;
@@ -337,11 +284,11 @@
   <div class="nav-item" onclick="selectEndpoint('performance', this)">Performance</div>
 
   <div class="nav-section" style="margin-top:12px">Balance Sheet Constituents</div>
-  <div class="nav-item" onclick="selectEndpoint('balance-sheet', this)">Cost Basis</div>
+  <div class="nav-item" onclick="selectEndpoint('cost-basis', this)">Cost Basis</div>
   <div class="nav-item" onclick="selectEndpoint('income', this)">Income</div>
-  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
-  <div class="nav-item" onclick="selectEndpoint('realized-gains', this)">Realized Gains</div>
+  <div class="nav-item" onclick="selectEndpoint('realized', this)">Realized Gains</div>
   <div class="nav-item" onclick="selectEndpoint('unrealized', this)">Unrealized</div>
+  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
 
   <div class="nav-section" style="margin-top:12px">Reconciliation</div>
   <div class="nav-item" onclick="selectEndpoint('recon', this)">Master Recon</div>
@@ -349,7 +296,6 @@
 
 <main>
 
-  <!-- PARAMETER PANEL -->
   <div class="panel">
     <div class="panel-head">
       <div class="panel-title" id="endpoint-title">Appraisal</div>
@@ -426,16 +372,6 @@
           <div class="field-hint">Presentation period for returns</div>
         </div>
 
-        <div class="form-group" id="fg-shape" style="display:none">
-          <label>Shape</label>
-          <select id="f-shape">
-            <option value="summary">Summary</option>
-            <option value="detail">Detail</option>
-            <option value="total">Total</option>
-          </select>
-          <div class="field-hint"><span>summary</span> = by type · <span>detail</span> = every entry</div>
-        </div>
-
       </div>
 
       <div class="btn-row">
@@ -447,13 +383,11 @@
     </div>
   </div>
 
-  <!-- ALL CLEAR BANNER -->
   <div class="all-clear-banner" id="all-clear-banner">
     <span class="badge" id="all-clear-text"></span>
     <span class="all-clear-detail" id="all-clear-detail"></span>
   </div>
 
-  <!-- PERFORMANCE BLOCK -->
   <div class="perf-block" id="perf-block">
     <div class="perf-item">
       <div class="perf-label">Response Time</div>
@@ -473,7 +407,6 @@
     </div>
   </div>
 
-  <!-- RESULTS -->
   <div class="panel" id="results-panel" style="display:none">
     <div class="panel-head">
       <div class="panel-title">Results</div>
@@ -524,11 +457,11 @@ const ENDPOINTS = {
     csvPath: '/api/v1/performance/csv',
     extras: ['level', 'cadence'],
   },
-  'balance-sheet': {
+  'cost-basis': {
     title: 'Cost Basis',
-    desc: 'Opening · Movement · Closing for every cost basis account',
-    path: '/api/v1/balance-sheet',
-    csvPath: '/api/v1/balance-sheet/csv',
+    desc: 'Opening · Activity · Closing for every cost basis account',
+    path: '/api/v1/cost-basis',
+    csvPath: '/api/v1/cost-basis/csv',
     extras: [],
   },
   'income': {
@@ -536,27 +469,27 @@ const ENDPOINTS = {
     desc: 'Revenue and expense account movements',
     path: '/api/v1/income',
     csvPath: '/api/v1/income/csv',
-    extras: ['shape'],
+    extras: [],
+  },
+  'realized': {
+    title: 'Realized Gains',
+    desc: 'Realized price and FX gains on disposition',
+    path: '/api/v1/realized',
+    csvPath: '/api/v1/realized/csv',
+    extras: [],
+  },
+  'unrealized': {
+    title: 'Unrealized',
+    desc: 'Cumulative unrealized gain — Cost + Unrealized = MarketVal',
+    path: '/api/v1/unrealized',
+    csvPath: '/api/v1/unrealized/csv',
+    extras: [],
   },
   'capital': {
     title: 'Capital',
     desc: 'External capital flows — contributions and withdrawals',
     path: '/api/v1/capital',
     csvPath: '/api/v1/capital/csv',
-    extras: [],
-  },
-  'realized-gains': {
-    title: 'Realized Gains',
-    desc: 'Lot-level realized price and FX gains',
-    path: '/api/v1/realized-gains',
-    csvPath: '/api/v1/realized-gains/csv',
-    extras: [],
-  },
-  'unrealized': {
-    title: 'Unrealized',
-    desc: 'Journal roll-up vs state snapshot — two methods, one result',
-    path: '/api/v1/unrealized',
-    csvPath: '/api/v1/unrealized/csv',
     extras: [],
   },
   'recon': {
@@ -571,7 +504,6 @@ const ENDPOINTS = {
 
 let currentEndpoint = 'appraisal';
 
-// ── CALENDAR → PERIOD FORMAT SYNC ─────────────────────────
 function updatePeriodHints() {
   const cal  = document.getElementById('f-calendar').value.trim().toLowerCase();
   const ps   = document.getElementById('f-period-start');
@@ -579,20 +511,16 @@ function updatePeriodHints() {
   const hint = document.getElementById('period-hint');
 
   if (cal === 'yearly') {
-    ps.value = '2021';
-    pe.value = '2021';
+    ps.value = '2021'; pe.value = '2021';
     hint.innerHTML = 'Yearly: <span>2021</span>';
   } else if (cal === 'quarterly') {
-    ps.value = '2021-Q1';
-    pe.value = '2021-Q1';
+    ps.value = '2021-Q1'; pe.value = '2021-Q1';
     hint.innerHTML = 'Quarterly: <span>2021-Q1</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   } else if (cal === 'daily') {
-    ps.value = '2021-01-08';
-    pe.value = '2021-01-29';
+    ps.value = '2021-01-08'; pe.value = '2021-01-29';
     hint.innerHTML = 'Daily: <span>2021-01-08</span>';
   } else {
-    ps.value = '2021-01';
-    pe.value = '2021-01';
+    ps.value = '2021-01'; pe.value = '2021-01';
     hint.innerHTML = 'Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   }
 }
@@ -600,7 +528,6 @@ function updatePeriodHints() {
 document.getElementById('f-calendar').addEventListener('change', updatePeriodHints);
 document.getElementById('f-calendar').addEventListener('blur',   updatePeriodHints);
 
-// ── ENDPOINT SELECTION ────────────────────────────────────
 function selectEndpoint(key, el) {
   currentEndpoint = key;
   const ep = ENDPOINTS[key];
@@ -611,7 +538,7 @@ function selectEndpoint(key, el) {
   document.getElementById('endpoint-title').textContent = ep.title;
   document.getElementById('endpoint-desc').textContent  = ep.desc;
 
-  ['mode','level','cadence','shape'].forEach(f => {
+  ['mode','level','cadence'].forEach(f => {
     document.getElementById('fg-' + f).style.display =
       ep.extras.includes(f) ? '' : 'none';
   });
@@ -623,7 +550,6 @@ function selectEndpoint(key, el) {
   document.getElementById('status').textContent = '';
 }
 
-// ── BUILD URL ─────────────────────────────────────────────
 function buildUrl(path) {
   const p   = document.getElementById('f-portfolio').value.trim();
   const c   = document.getElementById('f-calendar').value.trim();
@@ -643,14 +569,11 @@ function buildUrl(path) {
     const cad = document.getElementById('f-cadence').value;
     if (cad) url += `&cadence=${cad}`;
   }
-  if (ep.extras.includes('shape'))
-    url += `&shape=${document.getElementById('f-shape').value}`;
 
   url += `&page_size=5000`;
   return url;
 }
 
-// ── EXECUTE ───────────────────────────────────────────────
 async function execute() {
   const ep     = ENDPOINTS[currentEndpoint];
   const btn    = document.getElementById('btn-execute');
@@ -669,7 +592,7 @@ async function execute() {
   const t0 = performance.now();
 
   try {
-    const url = buildUrl(ep.path);
+    const url  = buildUrl(ep.path);
     const res  = await fetch(url);
     const json = await res.json();
     const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
@@ -684,7 +607,6 @@ async function execute() {
     const rows = json.data || [];
     const perf = json.performance || {};
 
-    // Performance block
     document.getElementById('perf-time').textContent =
       perf.v_side_readable || elapsed;
     document.getElementById('perf-rows').textContent =
@@ -695,31 +617,27 @@ async function execute() {
       perf.hardware ? 'Laptop · No DB · Pure Python' : '—';
     document.getElementById('perf-block').classList.add('show');
 
-    // All-clear banner for recon
     if (ep.isRecon) {
       const allClear = perf.all_clear ?? json.valid;
       const banner   = document.getElementById('all-clear-banner');
       banner.classList.add('show');
       if (allClear) {
         banner.className = 'all-clear-banner show pass';
-        document.getElementById('all-clear-text').textContent    = '✓  ALL CLEAR';
-        document.getElementById('all-clear-detail').textContent  =
+        document.getElementById('all-clear-text').textContent   = '✓  ALL CLEAR';
+        document.getElementById('all-clear-detail').textContent =
           'Every view · Every investment · Every account ties.';
       } else {
         banner.className = 'all-clear-banner show fail';
-        document.getElementById('all-clear-text').textContent    = '✗  FAILURES DETECTED';
-        document.getElementById('all-clear-detail').textContent  =
+        document.getElementById('all-clear-text').textContent   = '✗  FAILURES DETECTED';
+        document.getElementById('all-clear-detail').textContent =
           (json.errors || []).slice(0,3).join('  ·  ');
       }
     }
 
-    // Table
     if (rows.length > 0) {
       const cols = Object.keys(rows[0]);
-
       document.getElementById('table-head').innerHTML =
         '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
-
       document.getElementById('table-body').innerHTML =
         rows.slice(0,5000).map(row =>
           '<tr>' + cols.map(col => {
@@ -738,7 +656,7 @@ async function execute() {
       document.getElementById('results-panel').style.display = '';
       document.getElementById('results-desc').textContent = `${rows.length.toLocaleString()} rows`;
       document.getElementById('row-count').textContent = rows.length > 5000
-        ? `Showing first 5000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
+        ? `Showing first 5,000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
         : `${rows.length.toLocaleString()} rows`;
     }
 
@@ -755,7 +673,6 @@ async function execute() {
   spin.classList.remove('show');
 }
 
-// ── CSV DOWNLOAD ──────────────────────────────────────────
 function downloadCSV() {
   const ep = ENDPOINTS[currentEndpoint];
   if (!ep.csvPath) return;

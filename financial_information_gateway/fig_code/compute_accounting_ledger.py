@@ -91,42 +91,28 @@ def _extract_structural(state, uber_filter=None):
                 "book":             book,
             })
 
-    # --------------------------------------------------
-    # REVENUE / EXPENSE
-    # --------------------------------------------------
-    entries = re_repo.entries
-
-    if isinstance(entries, dict):
-        iterable = entries.items()
-    else:
-        iterable = entries
-
-    for key, row in iterable:
-
-        if not isinstance(key, tuple) or len(key) < 7:
-            continue
-
-        (_, inv, lotid, tax_date, ls, loc, fa) = key
-
+    # REVENUE / EXPENSE — read from balance_spaces_library
+    for inv, bs in re_repo.balance_spaces_library.items():
         if not passes(inv):
             continue
-
-        qty, local, book = decode(row)
-
-        rows.append({
-            "investment":        inv,
-            "lotid":             lotid,
-            "tax_date":          tax_date,
-            "location":          loc,
-            "ls":                ls,
-            "financial_account": fa,
-            "quantity":          qty,
-            "local":             local,
-            "book":              book,
-        })
+        for key, row in bs["entries"].items():
+            if not isinstance(key, tuple) or len(key) < 7:
+                continue
+            (_, inv2, lotid, tax_date, ls, loc, fa) = key
+            qty, local, book = decode(row)
+            rows.append({
+                "investment": inv2,
+                "lotid": lotid,
+                "tax_date": tax_date,
+                "location": loc,
+                "ls": ls,
+                "financial_account": fa,
+                "quantity": qty,
+                "local": local,
+                "book": book,
+            })
 
     return rows
-
 
 # ============================================================
 # MATERIALIZE
@@ -196,7 +182,12 @@ def _materialize(prep, uber_filter=None, ppa_ibor_date=None):
         )
         closing_map[key] = r
 
+
     keys = set(opening_map) | set(closing_map)
+
+    # ── TEMP DEBUG ──────────────────────────────────────────
+    print(f">>> DEBUG opening_map={len(opening_map)} closing_map={len(closing_map)} keys={len(keys)}")
+    # ── END DEBUG ───────────────────────────────────────────
 
     balances = {}
 

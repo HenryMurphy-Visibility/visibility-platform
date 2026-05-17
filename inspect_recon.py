@@ -139,7 +139,7 @@ def inspect_unrealized(prep):
 
 def inspect_realized_gains(prep):
     section("REALIZED GAINS")
-    from financial_information_gateway.fig_code.compute_realized_gains import compute_realized_gains
+    from financial_information_gateway.fig_code.compute_realized import compute_realized_gains
     try:
         result = compute_realized_gains(
             portfolio=PORTFOLIO, calendar=CALENDAR,

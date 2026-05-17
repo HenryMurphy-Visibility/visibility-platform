@@ -399,3 +399,39 @@ def unknown_accounts(df) -> list[str]:
         if a not in ACCOUNT_CLASSIFICATION
         and a not in STAT_ONLY_ACCOUNTS
     ]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SUMMARY ROW HELPER
+# Appends investment subtotals and grand total to any category ledger DataFrame.
+# Called by all five compute functions after account filtering.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def add_summary_rows(df):
+    import pandas as pd
+    if df is None or df.empty:
+        return df
+
+    closing = df[df["event_type"] == "CLOSING"]
+    if closing.empty:
+        return df
+
+    # Investment subtotals — qty + local + book
+    inv_cols = [c for c in ["qty", "local", "book"] if c in df.columns]
+    subtotals = closing.groupby("investment")[inv_cols].sum().reset_index()
+    subtotals["event_type"] = "SUBTOTAL"
+    subtotals["financial_account"] = "── Investment Total"
+    for col in df.columns:
+        if col not in subtotals.columns:
+            subtotals[col] = ""
+
+    # Grand total — local and book only, no qty
+    grand_cols = [c for c in ["local", "book"] if c in df.columns]
+    grand = {col: "" for col in df.columns}
+    for c in grand_cols:
+        grand[c] = subtotals[c].sum()
+    grand["investment"] = "── GRAND TOTAL"
+    grand["event_type"] = "TOTAL"
+    grand["financial_account"] = ""
+
+    return pd.concat([df, subtotals, pd.DataFrame([grand])], ignore_index=True)

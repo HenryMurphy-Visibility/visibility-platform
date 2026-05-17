@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visibility — CPH</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #07080f;
+    --surface:   #0d0f1a;
+    --border:    #1a1e2e;
+    --accent:    #2E5FA3;
+    --accent2:   #4a7fc1;
+    --text:      #d8dce8;
+    --muted:     #5a6080;
+    --success:   #2a7a4a;
+    --success-t: #3dba70;
+    --fail:      #7a2a2a;
+    --fail-t:    #e05555;
+    --mono:      'JetBrains Mono', monospace;
+    --serif:     'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+  }
+  header h1 { font-family: var(--serif); font-size: 1.2em; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; color: #fff; cursor: default; }
+  header h1:hover { color: var(--accent2); }
+  header span { font-family: var(--mono); font-size: 0.7em; color: var(--muted); letter-spacing: 1px; }
+  .header-links { margin-left: auto; display: flex; gap: 16px; }
+  .header-link { font-family: var(--mono); font-size: 0.7em; color: var(--muted); text-decoration: none; letter-spacing: 1px; transition: color 0.15s; }
+  .header-link:hover { color: var(--accent2); }
+
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+  .nav-section { padding: 6px 20px 4px; font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px; text-transform: uppercase; color: #8a90a8; cursor: default; }
+  .nav-item { display: block; padding: 9px 20px; font-family: var(--mono); font-size: 0.78em; color: var(--muted); cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
+  .nav-item.active { color: #fff; border-left-color: var(--accent); background: rgba(46,95,163,0.12); }
+
+  main { padding: 28px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+
+  .widget { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; display: none; }
+  .widget.active { display: block; }
+  .widget-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .widget-title { font-family: var(--mono); font-size: 0.85em; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; }
+  .widget-desc { font-size: 0.85em; color: var(--muted); margin-left: auto; font-style: italic; }
+  .widget-body { padding: 24px; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  input, select { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 0.82em; padding: 8px 10px; border-radius: 2px; outline: none; transition: border-color 0.15s; }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .field-hint { font-family: var(--mono); font-size: 0.62em; color: var(--muted); margin-top: 3px; }
+  .field-hint span { color: var(--accent2); }
+
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: var(--mono); font-size: 0.75em; letter-spacing: 1.5px; text-transform: uppercase; padding: 9px 22px; border: 1px solid; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-danger { background: transparent; border-color: var(--fail); color: var(--fail-t); }
+  .btn-danger:hover { background: rgba(122,42,42,0.2); }
+  .status { font-family: var(--mono); font-size: 0.72em; margin-left: auto; }
+  .status.ok   { color: var(--success-t); }
+  .status.err  { color: var(--fail-t); }
+  .status.info { color: var(--muted); }
+
+  .result-box { display: none; margin-top: 20px; padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; font-family: var(--mono); font-size: 0.75em; white-space: pre-wrap; }
+  .result-box.show { display: block; }
+  .result-box.pass { border-color: var(--success); color: var(--success-t); }
+  .result-box.fail { border-color: var(--fail); color: var(--fail-t); }
+  .result-box.info { border-color: var(--border); color: var(--text); }
+
+  .spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Status card */
+  .status-card { background: var(--bg); border: 1px solid var(--border); border-radius: 2px; padding: 20px; font-family: var(--mono); font-size: 0.78em; }
+  .status-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(26,30,46,0.6); }
+  .status-row:last-child { border-bottom: none; }
+  .status-key { color: var(--muted); }
+  .status-val { color: var(--text); }
+  .status-val.green { color: var(--success-t); }
+  .status-val.red   { color: var(--fail-t); }
+
+  /* Period metrics table */
+  .metrics-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; margin-top: 16px; }
+  .metrics-table th { background: var(--bg); color: var(--muted); font-weight: 400; letter-spacing: 1px; text-transform: uppercase; padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+  .metrics-table td { padding: 7px 12px; border-bottom: 1px solid rgba(26,30,46,0.6); color: var(--text); }
+  .metrics-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .metrics-table tr:hover td { background: rgba(46,95,163,0.05); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visibility</h1>
+  <span>Central Processing Hub</span>
+  <div class="header-links">
+    <a href="/ops" class="header-link">Ops</a>
+    <a href="/fig" class="header-link">FIG</a>
+    <a href="/" class="header-link">Home</a>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-section">Portfolio</div>
+  <div class="nav-item active" onclick="show('status', this)">Status</div>
+  <div class="nav-item" onclick="show('bootstrap', this)">Bootstrap</div>
+
+  <div class="nav-section" style="margin-top:12px">Processing</div>
+  <div class="nav-item" onclick="show('process', this)">Process</div>
+
+  <div class="nav-section" style="margin-top:12px">Cache</div>
+  <div class="nav-item" onclick="show('cache', this)">Cache Control</div>
+</nav>
+
+<main>
+
+  <!-- ── STATUS ─────────────────────────────────────────────── -->
+  <div class="widget active" id="w-status">
+    <div class="widget-head">
+      <div class="widget-title">Portfolio Status</div>
+      <div class="widget-desc">Bootstrap and candidate status</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="st-portfolio" value="Portfolio1" placeholder="e.g. Portfolio1">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="loadStatus()">Check Status</button>
+        <div class="spinner" id="sp-st"></div>
+        <div class="status info" id="st-st"></div>
+      </div>
+      <div id="status-card" style="display:none;margin-top:20px">
+        <div class="status-card">
+          <div class="status-row">
+            <span class="status-key">Portfolio</span>
+            <span class="status-val" id="sc-portfolio">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">Bootstrapped</span>
+            <span class="status-val" id="sc-bootstrapped">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">Candidates</span>
+            <span class="status-val" id="sc-candidates">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">Currencies</span>
+            <span class="status-val" id="sc-currencies">—</span>
+          </div>
+          <div class="status-row">
+            <span class="status-key">Last Updated</span>
+            <span class="status-val" id="sc-updated">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── BOOTSTRAP ──────────────────────────────────────────── -->
+  <div class="widget" id="w-bootstrap">
+    <div class="widget-head">
+      <div class="widget-title">Bootstrap</div>
+      <div class="widget-desc">Build portfolio world from global master</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="bs-portfolio" value="Portfolio1" placeholder="e.g. Portfolio1">
+        </div>
+        <div class="form-group">
+          <label>Force Rebuild</label>
+          <select id="bs-force">
+            <option value="false">No — skip if already built</option>
+            <option value="true">Yes — rebuild from scratch</option>
+          </select>
+          <div class="field-hint">Use <span>Yes</span> after adding new investments</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="bootstrap()">Run Bootstrap</button>
+        <div class="spinner" id="sp-bs"></div>
+        <div class="status" id="st-bs"></div>
+      </div>
+      <div class="result-box" id="rb-bs"></div>
+    </div>
+  </div>
+
+  <!-- ── PROCESS ────────────────────────────────────────────── -->
+  <div class="widget" id="w-process">
+    <div class="widget-head">
+      <div class="widget-title">Process</div>
+      <div class="widget-desc">Run CPH for a portfolio and calendar</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="pr-portfolio" value="Portfolio1" placeholder="e.g. Portfolio1">
+        </div>
+        <div class="form-group">
+          <label>Calendar</label>
+          <input id="pr-calendar" value="Monthly">
+          <div class="field-hint"><span>Monthly</span> · <span>Daily</span> · <span>Quarterly</span> · <span>Yearly</span></div>
+        </div>
+        <div class="form-group">
+          <label>Period (optional)</label>
+          <input id="pr-period" placeholder="e.g. 2021-01">
+          <div class="field-hint">Leave blank to process all periods</div>
+        </div>
+        <div class="form-group">
+          <label>Force Bootstrap</label>
+          <select id="pr-bootstrap">
+            <option value="false">No</option>
+            <option value="true">Yes — rebuild before processing</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-process" onclick="runProcess()">Run Processing</button>
+        <div class="spinner" id="sp-pr"></div>
+        <div class="status" id="st-pr"></div>
+      </div>
+      <div class="result-box" id="rb-pr"></div>
+
+      <!-- Period metrics table -->
+      <table class="metrics-table" id="metrics-table" style="display:none">
+        <thead>
+          <tr>
+            <th>Period</th>
+            <th class="num">Regular JEs</th>
+            <th class="num">Adjusting JEs</th>
+            <th class="num">Time (s)</th>
+            <th>Passes</th>
+          </tr>
+        </thead>
+        <tbody id="metrics-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── CACHE ──────────────────────────────────────────────── -->
+  <div class="widget" id="w-cache">
+    <div class="widget-head">
+      <div class="widget-title">Cache Control</div>
+      <div class="widget-desc">Manage the in-memory event cache</div>
+    </div>
+    <div class="widget-body">
+      <p style="font-family:var(--mono);font-size:0.78em;color:var(--muted);margin-bottom:20px;line-height:1.8">
+        The event cache holds 704,000+ events in memory for fast processing.<br>
+        First call loads from disk. Subsequent calls are instant.<br>
+        Clear the cache when new events have been added to force a fresh load.
+      </p>
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio (optional)</label>
+          <input id="cc-portfolio" placeholder="Leave blank to clear all">
+          <div class="field-hint">Blank = clear all portfolios</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-danger" onclick="clearCache()">Clear Cache</button>
+        <div class="spinner" id="sp-cc"></div>
+        <div class="status" id="st-cc"></div>
+      </div>
+      <div class="result-box" id="rb-cc"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = '';
+
+function show(name, el) {
+  document.querySelectorAll('.widget').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('w-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── STATUS ─────────────────────────────────────────────────
+async function loadStatus() {
+  const portfolio = document.getElementById('st-portfolio').value.trim();
+  const sp = document.getElementById('sp-st');
+  const st = document.getElementById('st-st');
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+
+  sp.classList.add('show');
+  st.textContent = 'Checking...';
+  st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/cph/status/${portfolio}`);
+    const data = await res.json();
+
+    document.getElementById('sc-portfolio').textContent    = data.portfolio || '—';
+    document.getElementById('sc-candidates').textContent   = data.candidates || '0';
+    document.getElementById('sc-currencies').textContent   = (data.currencies || []).join(', ') || '—';
+    document.getElementById('sc-updated').textContent      = data.last_updated
+      ? data.last_updated.replace('T', ' ').substring(0, 19) : '—';
+
+    const bsEl = document.getElementById('sc-bootstrapped');
+    if (data.bootstrapped) {
+      bsEl.textContent = '✓ Yes';
+      bsEl.className = 'status-val green';
+    } else {
+      bsEl.textContent = '✗ Not bootstrapped';
+      bsEl.className = 'status-val red';
+    }
+
+    document.getElementById('status-card').style.display = '';
+    st.textContent = data.bootstrapped ? 'Bootstrapped' : 'Not bootstrapped';
+    st.className = data.bootstrapped ? 'status ok' : 'status err';
+
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+// ── BOOTSTRAP ──────────────────────────────────────────────
+async function bootstrap() {
+  const portfolio = document.getElementById('bs-portfolio').value.trim();
+  const force     = document.getElementById('bs-force').value;
+  const sp = document.getElementById('sp-bs');
+  const st = document.getElementById('st-bs');
+  const rb = document.getElementById('rb-bs');
+
+  if (!portfolio) { st.textContent = 'Portfolio required'; st.className = 'status err'; return; }
+
+  sp.classList.add('show');
+  st.textContent = 'Bootstrapping...';
+  st.className = 'status info';
+  rb.classList.remove('show');
+
+  try {
+    const res  = await fetch(
+      `${BASE}/api/v1/cph/bootstrap?portfolio=${portfolio}&force=${force}`,
+      { method: 'POST' }
+    );
+    const data = await res.json();
+
+    if (res.ok) {
+      st.textContent = '✓ Complete';
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `Portfolio:    ${data.portfolio}\n` +
+        `Investments:  ${data.investment_count}\n` +
+        `Bonds:        ${data.bond_count}\n` +
+        `Currencies:   ${(data.currencies || []).join(', ')}\n` +
+        `Candidates:   ${data.candidates}`;
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+// ── PROCESS ────────────────────────────────────────────────
+async function runProcess() {
+  const portfolio  = document.getElementById('pr-portfolio').value.trim();
+  const calendar   = document.getElementById('pr-calendar').value.trim();
+  const period     = document.getElementById('pr-period').value.trim();
+  const bootstrap  = document.getElementById('pr-bootstrap').value;
+  const btn = document.getElementById('btn-process');
+  const sp  = document.getElementById('sp-pr');
+  const st  = document.getElementById('st-pr');
+  const rb  = document.getElementById('rb-pr');
+  const tbl = document.getElementById('metrics-table');
+
+  if (!portfolio || !calendar) {
+    st.textContent = 'Portfolio and calendar required';
+    st.className = 'status err';
+    return;
+  }
+
+  btn.disabled = true;
+  sp.classList.add('show');
+  st.textContent = 'Processing...';
+  st.className = 'status info';
+  rb.classList.remove('show');
+  tbl.style.display = 'none';
+
+  const t0  = performance.now();
+  let url   = `${BASE}/api/v1/cph/process?portfolio=${portfolio}&calendar=${calendar}&bootstrap=${bootstrap}`;
+  if (period) url += `&period_name=${encodeURIComponent(period)}`;
+
+  try {
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
+
+    if (res.ok) {
+      st.textContent = `✓ ${data.periods_processed} period(s) · ${elapsed}`;
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `Portfolio:  ${portfolio}  ·  Calendar: ${calendar}\n` +
+        `Periods:    ${data.periods_processed}\n` +
+        `Regular JEs:   ${(data.total_regular_je || 0).toLocaleString()}\n` +
+        `Adjusting JEs: ${(data.total_adjusting_je || 0).toLocaleString()}\n` +
+        `CPH time:      ${data.total_time_seconds}s  ·  Wall time: ${elapsed}`;
+
+      // Period metrics table
+      const periods = data.periods || [];
+      if (periods.length > 0) {
+        document.getElementById('metrics-body').innerHTML = periods.map(p => `
+          <tr>
+            <td>${p.period_name}</td>
+            <td class="num">${(p.regular_je || 0).toLocaleString()}</td>
+            <td class="num">${(p.adjusting_je || 0).toLocaleString()}</td>
+            <td class="num">${p.time_seconds}</td>
+            <td>${(p.passes_executed || []).join(' · ')}</td>
+          </tr>
+        `).join('');
+        tbl.style.display = '';
+      }
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+
+  btn.disabled = false;
+  sp.classList.remove('show');
+}
+
+// ── CACHE ──────────────────────────────────────────────────
+async function clearCache() {
+  const portfolio = document.getElementById('cc-portfolio').value.trim();
+  const sp = document.getElementById('sp-cc');
+  const st = document.getElementById('st-cc');
+  const rb = document.getElementById('rb-cc');
+
+  sp.classList.add('show');
+  st.textContent = 'Clearing...';
+  st.className = 'status info';
+
+  let url = `${BASE}/api/v1/cph/cache/clear`;
+  if (portfolio) url += `?portfolio=${portfolio}`;
+
+  try {
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+
+    st.textContent = '✓ Cache cleared';
+    st.className = 'status ok';
+    rb.className = 'result-box show pass';
+    rb.textContent = `Cache cleared for: ${data.portfolio}\nNext processing call will reload from disk.`;
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+// Auto-load status on open
+loadStatus();
+</script>
+</body>
+</html>

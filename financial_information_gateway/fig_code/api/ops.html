@@ -1,0 +1,1287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visibility — Operations</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #07080f;
+    --surface:   #0d0f1a;
+    --border:    #1a1e2e;
+    --accent:    #2E5FA3;
+    --accent2:   #4a7fc1;
+    --text:      #d8dce8;
+    --muted:     #5a6080;
+    --success:   #2a7a4a;
+    --success-t: #3dba70;
+    --fail:      #7a2a2a;
+    --fail-t:    #e05555;
+    --mono:      'JetBrains Mono', monospace;
+    --serif:     'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 220px 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+  }
+  header h1 { font-family: var(--serif); font-size: 1.2em; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; color: #fff; cursor: default; }
+  header h1:hover { color: var(--accent2); }
+  header span { font-family: var(--mono); font-size: 0.7em; color: var(--muted); letter-spacing: 1px; }
+  .header-links { margin-left: auto; display: flex; gap: 16px; }
+  .header-link { font-family: var(--mono); font-size: 0.7em; color: var(--muted); text-decoration: none; letter-spacing: 1px; transition: color 0.15s; }
+  .header-link:hover { color: var(--accent2); }
+
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+  .nav-section { padding: 6px 20px 4px; font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px; text-transform: uppercase; color: #8a90a8; cursor: default; }
+  .nav-item { display: block; padding: 9px 20px; font-family: var(--mono); font-size: 0.78em; color: var(--muted); cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
+  .nav-item.active { color: #fff; border-left-color: var(--accent); background: rgba(46,95,163,0.12); }
+
+  main { padding: 28px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
+
+  .widget { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; display: none; }
+  .widget.active { display: block; }
+  .widget-head { padding: 14px 20px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 10px; }
+  .widget-title { font-family: var(--mono); font-size: 0.85em; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; }
+  .widget-desc { font-size: 0.85em; color: var(--muted); margin-left: auto; font-style: italic; }
+  .widget-body { padding: 24px; }
+
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 0.82em; padding: 8px 10px;
+    border-radius: 2px; outline: none; transition: border-color 0.15s;
+  }
+  input[type="date"] { color-scheme: dark; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .field-hint { font-family: var(--mono); font-size: 0.62em; color: var(--muted); margin-top: 3px; }
+  .field-hint span { color: var(--accent2); }
+
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: var(--mono); font-size: 0.75em; letter-spacing: 1.5px; text-transform: uppercase; padding: 9px 22px; border: 1px solid; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .status { font-family: var(--mono); font-size: 0.72em; margin-left: auto; }
+  .status.ok   { color: var(--success-t); }
+  .status.err  { color: var(--fail-t); }
+  .status.info { color: var(--muted); }
+
+  .result-box {
+    display: none; margin-top: 20px; padding: 16px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 2px; font-family: var(--mono); font-size: 0.75em;
+    white-space: pre-wrap;
+  }
+  .result-box.show { display: block; }
+  .result-box.pass { border-color: var(--success); color: var(--success-t); }
+  .result-box.fail { border-color: var(--fail); color: var(--fail-t); }
+  .result-box.info { border-color: var(--border); color: var(--text); }
+
+  .spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .method-fields { display: none; }
+  .method-fields.show { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
+
+  .portfolio-list { display: flex; flex-direction: column; gap: 8px; }
+  .portfolio-card {
+    padding: 12px 16px; background: var(--bg);
+    border: 1px solid var(--border); border-radius: 2px;
+    display: flex; align-items: center; gap: 16px;
+    font-family: var(--mono); font-size: 0.78em;
+  }
+  .portfolio-card .pid { color: #fff; font-size: 0.9em; }
+  .portfolio-card .pmeta { color: var(--muted); font-size: 0.85em; }
+  .portfolio-card .pstatus { margin-left: auto; color: var(--success-t); }
+
+  .checkbox-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
+  .checkbox-label { display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.78em; color: var(--text); text-transform: none; letter-spacing: 0; cursor: pointer; }
+  .checkbox-label input[type="checkbox"] { width: 14px; height: 14px; padding: 0; }
+
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
+  th { background: var(--bg); color: var(--muted); font-weight: 400; letter-spacing: 1px; text-transform: uppercase; padding: 8px 10px; text-align: left; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  td { padding: 6px 10px; border-bottom: 1px solid rgba(26,30,46,0.5); white-space: nowrap; color: var(--text); }
+  tr:hover td { background: rgba(46,95,163,0.05); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visibility</h1>
+  <span>Operations Console</span>
+  <div class="header-links">
+    <a href="/fig" class="header-link">FIG</a>
+    <a href="/cph" class="header-link">CPH</a>
+    <a href="/" class="header-link">Home</a>
+  </div>
+</header>
+
+<nav>
+  <div class="nav-section">Portfolio</div>
+  <div class="nav-item active" onclick="show('portfolios', this)">Portfolios</div>
+  <div class="nav-item" onclick="show('create-portfolio', this)">Create Portfolio</div>
+  <div class="nav-item" onclick="show('update-method', this)">Update Method</div>
+
+  <div class="nav-section" style="margin-top:12px">Investments</div>
+  <div class="nav-item" onclick="show('add-investment', this)">Add Investment</div>
+  <div class="nav-item" onclick="show('view-investments', this)">View Investments</div>
+
+  <div class="nav-section" style="margin-top:12px">Events</div>
+  <div class="nav-item" onclick="show('add-event', this)">Add Event</div>
+  <div class="nav-item" onclick="show('view-events', this)">View Events</div>
+
+  <div class="nav-section" style="margin-top:12px">Processing</div>
+  <div class="nav-item" onclick="show('process', this)">Process</div>
+</nav>
+
+<main>
+
+  <!-- ── PORTFOLIOS ─────────────────────────────────────────── -->
+  <div class="widget active" id="w-portfolios">
+    <div class="widget-head">
+      <div class="widget-title">Portfolios</div>
+      <div class="widget-desc">All registered portfolios</div>
+    </div>
+    <div class="widget-body">
+      <div class="btn-row" style="margin-bottom:16px">
+        <button class="btn btn-primary" onclick="loadPortfolios()">Refresh</button>
+        <div class="spinner" id="sp-portfolios"></div>
+        <div class="status info" id="st-portfolios"></div>
+      </div>
+      <div class="portfolio-list" id="portfolio-list">
+        <div style="font-family:var(--mono);font-size:0.78em;color:var(--muted)">Click Refresh to load portfolios</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── CREATE PORTFOLIO ───────────────────────────────────── -->
+  <div class="widget" id="w-create-portfolio">
+    <div class="widget-head">
+      <div class="widget-title">Create Portfolio</div>
+      <div class="widget-desc">Define a new portfolio</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Portfolio ID *</label>
+          <input id="cp-id" placeholder="e.g. Portfolio2">
+          <div class="field-hint">Unique identifier — no spaces</div>
+        </div>
+
+        <div class="form-group">
+          <label>Base Currency *</label>
+          <select id="cp-currency">
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+            <option value="GBP">GBP</option>
+            <option value="JPY">JPY</option>
+            <option value="CHF">CHF</option>
+            <option value="CAD">CAD</option>
+            <option value="AUD">AUD</option>
+          </select>
+          <div class="field-hint"><span>Cannot be changed after creation</span></div>
+        </div>
+
+        <div class="form-group">
+          <label>Domicile Country *</label>
+          <input id="cp-domicile" placeholder="e.g. US">
+          <div class="field-hint">ISO code — drives withholding tax</div>
+        </div>
+
+        <div class="form-group">
+          <label>Inception Date *</label>
+          <input type="date" id="cp-inception">
+          <div class="field-hint"><span>Cannot be changed after creation</span></div>
+        </div>
+
+        <div class="form-group">
+          <label>Closing Method</label>
+          <select id="cp-closing">
+            <option value="FIFO">FIFO</option>
+            <option value="LIFO">LIFO</option>
+            <option value="AVGCOST">Average Cost</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Accrual Method</label>
+          <select id="cp-accrual">
+            <option value="accrue_eod">End of Day</option>
+            <option value="accrue_bod">Beginning of Day</option>
+            <option value="accrue_through_nonbusiness">Through Non-Business Days</option>
+            <option value="accrue_skip_nonbusiness">Skip Non-Business Days</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Amortization Method</label>
+          <select id="cp-amort">
+            <option value="straight_line">Straight Line</option>
+            <option value="effective_yield">Effective Yield</option>
+            <option value="constant_yield">Constant Yield</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Managers</label>
+          <input id="cp-managers" placeholder="e.g. John Smith, Jane Doe">
+          <div class="field-hint">Comma-separated list</div>
+        </div>
+
+        <div class="form-group full">
+          <label>Description</label>
+          <input id="cp-description" placeholder="e.g. Multi-instrument test portfolio">
+        </div>
+
+        <div class="form-group">
+          <label>Calendar Preset</label>
+          <select id="cp-preset" onchange="onPresetChange()">
+            <option value="Institutional">Institutional — Monthly only</option>
+            <option value="Hedge Fund">Hedge Fund — Daily + Monthly</option>
+            <option value="Full">Full — All four calendars</option>
+            <option value="Custom">Custom — choose below</option>
+          </select>
+          <div class="field-hint">Drives which calendars are created</div>
+        </div>
+
+        <div class="form-group" id="fg-custom-calendars" style="display:none">
+          <label>Calendars</label>
+          <div class="checkbox-group">
+            <label class="checkbox-label"><input type="checkbox" id="cal-daily"> Daily</label>
+            <label class="checkbox-label"><input type="checkbox" id="cal-monthly" checked> Monthly</label>
+            <label class="checkbox-label"><input type="checkbox" id="cal-quarterly"> Quarterly</label>
+            <label class="checkbox-label"><input type="checkbox" id="cal-yearly"> Yearly</label>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="createPortfolio()">Create Portfolio</button>
+        <div class="spinner" id="sp-cp"></div>
+        <div class="status" id="st-cp"></div>
+      </div>
+      <div class="result-box" id="rb-cp"></div>
+    </div>
+  </div>
+
+  <!-- ── UPDATE METHOD ──────────────────────────────────────── -->
+  <div class="widget" id="w-update-method">
+    <div class="widget-head">
+      <div class="widget-title">Update Method</div>
+      <div class="widget-desc">Change closing, accrual, or amort method going forward</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio *</label>
+          <input id="um-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+        <div class="form-group">
+          <label>Method Type *</label>
+          <select id="um-type">
+            <option value="closing_method">Closing Method</option>
+            <option value="accrual_method">Accrual Method</option>
+            <option value="amort_method">Amortization Method</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>New Value *</label>
+          <select id="um-value">
+            <option value="FIFO">FIFO</option>
+            <option value="LIFO">LIFO</option>
+            <option value="AVGCOST">Average Cost</option>
+            <option value="accrue_eod">Accrue EOD</option>
+            <option value="accrue_bod">Accrue BOD</option>
+            <option value="accrue_through_nonbusiness">Through Non-Business Days</option>
+            <option value="accrue_skip_nonbusiness">Skip Non-Business Days</option>
+            <option value="straight_line">Straight Line</option>
+            <option value="effective_yield">Effective Yield</option>
+            <option value="constant_yield">Constant Yield</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Effective From *</label>
+          <input type="date" id="um-date">
+          <div class="field-hint">Does not affect past events</div>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="updateMethod()">Update Method</button>
+        <div class="spinner" id="sp-um"></div>
+        <div class="status" id="st-um"></div>
+      </div>
+      <div class="result-box" id="rb-um"></div>
+    </div>
+  </div>
+
+  <!-- ── ADD INVESTMENT ─────────────────────────────────────── -->
+  <div class="widget" id="w-add-investment">
+    <div class="widget-head">
+      <div class="widget-title">Add Investment</div>
+      <div class="widget-desc">Add to portfolio investment master</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio *</label>
+          <input id="ai-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+        <div class="form-group">
+          <label>Investment ID *</label>
+          <input id="ai-investment" placeholder="e.g. AAPL">
+        </div>
+        <div class="form-group">
+          <label>Full Name</label>
+          <input id="ai-name" placeholder="e.g. Apple Inc">
+        </div>
+        <div class="form-group">
+          <label>Investment Type *</label>
+          <select id="ai-type" onchange="onInvestmentTypeChange()">
+            <option value="EQUITY">Equity</option>
+            <option value="BOND">Bond</option>
+            <option value="FUTURE">Future</option>
+            <option value="OPTION">Option</option>
+            <option value="CURRENCY">Currency</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Currency</label>
+          <input id="ai-currency" value="USD">
+        </div>
+        <div class="form-group">
+          <label>Country</label>
+          <input id="ai-country" placeholder="e.g. US">
+        </div>
+        <div class="form-group">
+          <label>Sector</label>
+          <input id="ai-sector" placeholder="e.g. Technology">
+        </div>
+        <div class="form-group">
+          <label>Analyst</label>
+          <input id="ai-analyst" placeholder="e.g. TED">
+        </div>
+        <div class="form-group">
+          <label>Pricing Factor</label>
+          <input id="ai-pf" value="1" type="number">
+          <div class="field-hint">Bonds: <span>0.01</span> · Equities: <span>1</span></div>
+        </div>
+        <div class="form-group" id="fg-is-currency" style="display:none">
+          <label>Is Currency</label>
+          <select id="ai-is-currency">
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="form-group" id="fg-underlying" style="display:none">
+          <label>Underlying</label>
+          <input id="ai-underlying" placeholder="e.g. AAPL">
+        </div>
+        <div class="form-group" id="fg-putcall" style="display:none">
+          <label>Put / Call</label>
+          <select id="ai-putcall">
+            <option value="CALL">Call</option>
+            <option value="PUT">Put</option>
+          </select>
+        </div>
+        <div class="form-group" id="fg-strike" style="display:none">
+          <label>Strike</label>
+          <input id="ai-strike" type="number" placeholder="0.00">
+        </div>
+        <div class="form-group" id="fg-contract-size" style="display:none">
+          <label>Contract Size</label>
+          <input id="ai-contract-size" type="number" placeholder="100">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="addInvestment()">Add Investment</button>
+        <div class="spinner" id="sp-ai"></div>
+        <div class="status" id="st-ai"></div>
+      </div>
+      <div class="result-box" id="rb-ai"></div>
+    </div>
+  </div>
+
+  <!-- ── VIEW INVESTMENTS ───────────────────────────────────── -->
+  <div class="widget" id="w-view-investments">
+    <div class="widget-head">
+      <div class="widget-title">View Investments</div>
+      <div class="widget-desc">Portfolio investment master</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="vi-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="viewInvestments()">Load</button>
+        <div class="spinner" id="sp-vi"></div>
+        <div class="status info" id="st-vi"></div>
+      </div>
+      <div style="overflow-x:auto;margin-top:16px">
+        <table id="inv-table" style="display:none">
+          <thead id="inv-thead"></thead>
+          <tbody id="inv-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADD EVENT ──────────────────────────────────────────── -->
+  <div class="widget" id="w-add-event">
+    <div class="widget-head">
+      <div class="widget-title">Add Event</div>
+      <div class="widget-desc">Enter a trade or operational event</div>
+    </div>
+    <div class="widget-body">
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio *</label>
+          <input id="ev-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+        <div class="form-group">
+          <label>Method *</label>
+          <select id="ev-method" onchange="onMethodChange()">
+            <optgroup label="Currency">
+              <option value="deposit_currency">Deposit Currency</option>
+              <option value="withdraw_currency">Withdraw Currency</option>
+              <option value="spot_fx">Spot FX</option>
+            </optgroup>
+            <optgroup label="Equity">
+              <option value="buy_equity">Buy Equity</option>
+              <option value="sell_equity">Sell Equity</option>
+              <option value="short_equity">Short Equity</option>
+              <option value="cover_equity">Cover Equity</option>
+              <option value="dividend_equity">Dividend</option>
+              <option value="split_equity">Stock Split</option>
+            </optgroup>
+            <optgroup label="Bond">
+              <option value="buy_bond">Buy Bond</option>
+              <option value="sell_bond">Sell Bond</option>
+              <option value="bond_coupon">Bond Coupon</option>
+            </optgroup>
+            <optgroup label="Future">
+              <option value="buy_future">Buy Future</option>
+              <option value="sell_future">Sell Future</option>
+              <option value="short_future">Short Future</option>
+              <option value="cover_future">Cover Future</option>
+            </optgroup>
+            <optgroup label="Option">
+              <option value="buy_option">Buy Option</option>
+              <option value="sell_option">Sell Option</option>
+              <option value="short_option">Write Option</option>
+              <option value="cover_option">Cover Option</option>
+            </optgroup>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Investment *</label>
+          <input id="ev-investment" placeholder="e.g. AAPL">
+        </div>
+        <div class="form-group">
+          <label>Payment Currency</label>
+          <input id="ev-currency" value="USD">
+        </div>
+        <div class="form-group">
+          <label>Trade Date *</label>
+          <input type="date" id="ev-tradedate">
+        </div>
+        <div class="form-group">
+          <label>Settle Date *</label>
+          <input type="date" id="ev-settledate">
+        </div>
+        <div class="form-group">
+          <label>KD Begin</label>
+          <input type="date" id="ev-kdbegin">
+          <div class="field-hint">Defaults to trade date</div>
+        </div>
+        <div class="form-group">
+          <label>Location</label>
+          <input id="ev-location" placeholder="e.g. Goldman">
+        </div>
+      </div>
+
+      <hr class="section-divider">
+
+      <!-- Method-specific fields -->
+      <div id="mf-qty-price" class="method-fields">
+        <div class="form-group">
+          <label>Quantity</label>
+          <input id="ev-qty" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Price</label>
+          <input id="ev-price" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Total Amount (Local)</label>
+          <input id="ev-local" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Total Amount (Base)</label>
+          <input id="ev-book" type="number" value="0">
+        </div>
+      </div>
+
+      <div id="mf-deposit" class="method-fields">
+        <div class="form-group">
+          <label>Amount (Local)</label>
+          <input id="ev-dep-local" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Amount (Base)</label>
+          <input id="ev-dep-book" type="number" value="0">
+        </div>
+      </div>
+
+      <div id="mf-bond" class="method-fields">
+        <div class="form-group">
+          <label>Accrued Interest (Local)</label>
+          <input id="ev-accrued-local" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Accrued Interest (Base)</label>
+          <input id="ev-accrued-book" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Original Face</label>
+          <input id="ev-oface" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Notional</label>
+          <input id="ev-notional" type="number" value="0">
+        </div>
+      </div>
+
+      <div id="mf-dividend" class="method-fields">
+        <div class="form-group">
+          <label>Per Share Amount</label>
+          <input id="ev-per-share" type="number" value="0">
+        </div>
+      </div>
+
+      <div id="mf-split" class="method-fields">
+        <div class="form-group">
+          <label>New Shares</label>
+          <input id="ev-new-shares" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Old Shares</label>
+          <input id="ev-old-shares" type="number" value="0">
+        </div>
+      </div>
+
+      <div id="mf-spot" class="method-fields">
+        <div class="form-group">
+          <label>Buy Currency</label>
+          <input id="ev-buy-ccy" placeholder="e.g. EUR">
+        </div>
+        <div class="form-group">
+          <label>Sell Currency</label>
+          <input id="ev-sell-ccy" placeholder="e.g. USD">
+        </div>
+        <div class="form-group">
+          <label>Buy Amount</label>
+          <input id="ev-buy-amt" type="number" value="0">
+        </div>
+        <div class="form-group">
+          <label>Sell Amount</label>
+          <input id="ev-sell-amt" type="number" value="0">
+        </div>
+      </div>
+
+      <div class="btn-row" style="margin-top:20px">
+        <button class="btn btn-primary" onclick="addEvent()">Add Event</button>
+        <button class="btn btn-secondary" onclick="clearEvent()">Clear</button>
+        <div class="spinner" id="sp-ev"></div>
+        <div class="status" id="st-ev"></div>
+      </div>
+      <div class="result-box" id="rb-ev"></div>
+    </div>
+  </div>
+
+  <!-- ── VIEW EVENTS ────────────────────────────────────────── -->
+  <div class="widget" id="w-view-events">
+    <div class="widget-head">
+      <div class="widget-title">View Events</div>
+      <div class="widget-desc">Portfolio event history</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="ve-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+        <div class="form-group">
+          <label>Investment (optional)</label>
+          <input id="ve-investment" placeholder="e.g. AAPL">
+        </div>
+        <div class="form-group">
+          <label>Method (optional)</label>
+          <input id="ve-method-filter" placeholder="e.g. buy_equity">
+        </div>
+        <div class="form-group">
+          <label>Limit</label>
+          <input id="ve-limit" type="number" value="50">
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="viewEvents()">Load</button>
+        <div class="spinner" id="sp-ve"></div>
+        <div class="status info" id="st-ve"></div>
+      </div>
+      <div style="overflow-x:auto;margin-top:16px">
+        <table id="events-table" style="display:none">
+          <thead id="events-thead"></thead>
+          <tbody id="events-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROCESS ────────────────────────────────────────────── -->
+  <div class="widget" id="w-process">
+    <div class="widget-head">
+      <div class="widget-title">Process</div>
+      <div class="widget-desc">Bootstrap and run CPH</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio *</label>
+          <input id="pr-portfolio" placeholder="e.g. Portfolio2">
+        </div>
+        <div class="form-group">
+          <label>Calendar *</label>
+          <input id="pr-calendar" value="Monthly">
+        </div>
+        <div class="form-group">
+          <label>Period (optional)</label>
+          <input id="pr-period" placeholder="e.g. 2024-01">
+          <div class="field-hint">Leave blank for all periods</div>
+        </div>
+        <div class="form-group">
+          <label>Force Bootstrap</label>
+          <select id="pr-bootstrap">
+            <option value="false">No — use existing</option>
+            <option value="true">Yes — rebuild</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="process()">Run Processing</button>
+        <div class="spinner" id="sp-pr"></div>
+        <div class="status" id="st-pr"></div>
+      </div>
+      <div class="result-box" id="rb-pr"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = '';
+
+// ── DATE HELPERS ───────────────────────────────────────────
+function toEventDate(val) {
+  // YYYY-MM-DD → MM/DD/YYYY:00:00:00
+  if (!val) return '';
+  const [y, m, d] = val.split('-');
+  return `${m}/${d}/${y}:00:00:00`;
+}
+
+function fromEventDate(val) {
+  // MM/DD/YYYY:HH:MM:SS → YYYY-MM-DD
+  if (!val) return '';
+  const parts = val.split('/');
+  if (parts.length < 3) return val;
+  const [m, d, rest] = parts;
+  const y = rest.split(':')[0];
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+
+// ── AUTO-POPULATE SETTLE AND KDBEGIN ──────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+  const tradeEl = document.getElementById('ev-tradedate');
+  if (tradeEl) {
+    tradeEl.addEventListener('change', function() {
+      const val = this.value;
+      const settle = document.getElementById('ev-settledate');
+      const kd     = document.getElementById('ev-kdbegin');
+      if (settle && !settle.value) settle.value = val;
+      if (kd && !kd.value)         kd.value     = val;
+    });
+  }
+  onMethodChange();
+  loadPortfolios();
+});
+
+// ── METHOD FIELD SETS ──────────────────────────────────────
+const METHOD_FIELDS = {
+  deposit_currency:  ['mf-deposit'],
+  withdraw_currency: ['mf-deposit'],
+  spot_fx:           ['mf-spot'],
+  buy_equity:        ['mf-qty-price'],
+  sell_equity:       ['mf-qty-price'],
+  short_equity:      ['mf-qty-price'],
+  cover_equity:      ['mf-qty-price'],
+  dividend_equity:   ['mf-dividend'],
+  split_equity:      ['mf-split'],
+  buy_bond:          ['mf-qty-price', 'mf-bond'],
+  sell_bond:         ['mf-qty-price', 'mf-bond'],
+  bond_coupon:       ['mf-dividend'],
+  buy_future:        ['mf-qty-price'],
+  sell_future:       ['mf-qty-price'],
+  short_future:      ['mf-qty-price'],
+  cover_future:      ['mf-qty-price'],
+  buy_option:        ['mf-qty-price'],
+  sell_option:       ['mf-qty-price'],
+  short_option:      ['mf-qty-price'],
+  cover_option:      ['mf-qty-price'],
+};
+
+function onMethodChange() {
+  const method = document.getElementById('ev-method').value;
+  document.querySelectorAll('.method-fields').forEach(el => el.classList.remove('show'));
+  (METHOD_FIELDS[method] || []).forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('show');
+  });
+  if (method === 'deposit_currency' || method === 'withdraw_currency') {
+    const ccy = document.getElementById('ev-currency').value;
+    document.getElementById('ev-investment').value = ccy;
+  }
+}
+
+function onInvestmentTypeChange() {
+  const type = document.getElementById('ai-type').value;
+  document.getElementById('fg-is-currency').style.display   = type === 'CURRENCY' ? '' : 'none';
+  document.getElementById('fg-underlying').style.display    = type === 'OPTION'   ? '' : 'none';
+  document.getElementById('fg-putcall').style.display       = type === 'OPTION'   ? '' : 'none';
+  document.getElementById('fg-strike').style.display        = type === 'OPTION'   ? '' : 'none';
+  document.getElementById('fg-contract-size').style.display = type === 'FUTURE'   ? '' : 'none';
+  if (type === 'CURRENCY') {
+    document.getElementById('ai-is-currency').value = 'true';
+    document.getElementById('ai-pf').value = '1';
+  }
+  if (type === 'BOND') {
+    document.getElementById('ai-pf').value = '0.01';
+  }
+}
+
+function onPresetChange() {
+  const preset = document.getElementById('cp-preset').value;
+  document.getElementById('fg-custom-calendars').style.display =
+    preset === 'Custom' ? '' : 'none';
+}
+
+function getSelectedCalendars() {
+  const preset = document.getElementById('cp-preset').value;
+  if (preset !== 'Custom') return null;
+  const cals = [];
+  if (document.getElementById('cal-daily').checked)     cals.push('Daily');
+  if (document.getElementById('cal-monthly').checked)   cals.push('Monthly');
+  if (document.getElementById('cal-quarterly').checked) cals.push('Quarterly');
+  if (document.getElementById('cal-yearly').checked)    cals.push('Yearly');
+  return cals.length > 0 ? cals : ['Monthly'];
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function show(name, el) {
+  document.querySelectorAll('.widget').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('w-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── PORTFOLIOS ─────────────────────────────────────────────
+async function loadPortfolios() {
+  const sp = document.getElementById('sp-portfolios');
+  const st = document.getElementById('st-portfolios');
+  sp.classList.add('show');
+  st.textContent = 'Loading...';
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolios`);
+    const data = await res.json();
+    const list = document.getElementById('portfolio-list');
+    if (!data.portfolios || data.portfolios.length === 0) {
+      list.innerHTML = '<div style="font-family:var(--mono);font-size:0.78em;color:var(--muted)">No portfolios found. Create one to get started.</div>';
+    } else {
+      list.innerHTML = data.portfolios.map(p => `
+        <div class="portfolio-card">
+          <div>
+            <div class="pid">${p.portfolio_id}</div>
+            <div class="pmeta">${p.description || ''} &nbsp;·&nbsp; ${p.base_currency} &nbsp;·&nbsp; ${p.inception_date} &nbsp;·&nbsp; ${p.closing_method || 'FIFO'}</div>
+          </div>
+          <div class="pstatus">● ${p.status || 'active'}</div>
+        </div>
+      `).join('');
+    }
+    st.textContent = `${data.count} portfolio(s)`;
+  } catch(e) {
+    st.textContent = 'Error loading portfolios';
+  }
+  sp.classList.remove('show');
+}
+
+// ── CREATE PORTFOLIO ───────────────────────────────────────
+async function createPortfolio() {
+  const btn = document.querySelector('#w-create-portfolio .btn-primary');
+  const sp  = document.getElementById('sp-cp');
+  const st  = document.getElementById('st-cp');
+  const rb  = document.getElementById('rb-cp');
+
+  const id = document.getElementById('cp-id').value.trim();
+  if (!id) { st.textContent = 'Portfolio ID required'; st.className = 'status err'; return; }
+
+  const inception = document.getElementById('cp-inception').value;
+  if (!inception) { st.textContent = 'Inception date required'; st.className = 'status err'; return; }
+
+  const managers   = document.getElementById('cp-managers').value
+    .split(',').map(m => m.trim()).filter(Boolean);
+  const preset     = document.getElementById('cp-preset').value;
+  const customCals = getSelectedCalendars();
+
+  const body = {
+    portfolio_id:     id,
+    base_currency:    document.getElementById('cp-currency').value,
+    domicile_country: document.getElementById('cp-domicile').value.trim() || 'US',
+    inception_date:   inception,
+    managers:         managers,
+    description:      document.getElementById('cp-description').value.trim() || null,
+    accrual_method:   document.getElementById('cp-accrual').value,
+    amort_method:     document.getElementById('cp-amort').value,
+    closing_method:   document.getElementById('cp-closing').value,
+    calendar_preset:  preset !== 'Custom' ? preset : null,
+    calendars:        customCals || ['Monthly'],
+  };
+
+  btn.disabled = true;
+  sp.classList.add('show');
+  st.textContent = 'Creating...';
+  st.className = 'status info';
+  rb.classList.remove('show');
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      const calList = (data.calendars || [])
+        .map(c => `${c.calendar} (${c.periods_created} periods)`)
+        .join(', ');
+      st.textContent = `✓ Created ${id}`;
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `Portfolio '${id}' created successfully.\n` +
+        `Base currency: ${body.base_currency} · Domicile: ${body.domicile_country}\n` +
+        `Calendars: ${calList}\n` +
+        `Ready for investments and events.`;
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+
+  btn.disabled = false;
+  sp.classList.remove('show');
+}
+
+// ── UPDATE METHOD ──────────────────────────────────────────
+async function updateMethod() {
+  const portfolio = document.getElementById('um-portfolio').value.trim();
+  const type      = document.getElementById('um-type').value;
+  const value     = document.getElementById('um-value').value;
+  const date      = document.getElementById('um-date').value;
+  const sp = document.getElementById('sp-um');
+  const st = document.getElementById('st-um');
+  const rb = document.getElementById('rb-um');
+
+  if (!portfolio || !date) {
+    st.textContent = 'Portfolio and effective date required';
+    st.className = 'status err';
+    return;
+  }
+
+  sp.classList.add('show');
+  st.textContent = 'Updating...';
+  st.className = 'status info';
+
+  try {
+    const url = `${BASE}/api/v1/ops/portfolio/${portfolio}/method?method_type=${type}&value=${encodeURIComponent(value)}&effective_from=${date}`;
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+
+    if (res.ok) {
+      st.textContent = '✓ Updated';
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `${type} updated to '${value}' effective ${date}\n` +
+        `History: ${data.history.map(h => h.value + ' from ' + h.effective_from).join(' → ')}`;
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+// ── ADD INVESTMENT ─────────────────────────────────────────
+async function addInvestment() {
+  const sp = document.getElementById('sp-ai');
+  const st = document.getElementById('st-ai');
+  const rb = document.getElementById('rb-ai');
+
+  const portfolio  = document.getElementById('ai-portfolio').value.trim();
+  const investment = document.getElementById('ai-investment').value.trim().toUpperCase();
+
+  if (!portfolio || !investment) {
+    st.textContent = 'Portfolio and Investment required';
+    st.className = 'status err';
+    return;
+  }
+
+  const type = document.getElementById('ai-type').value;
+  const body = {
+    investment:      investment,
+    full_name:       document.getElementById('ai-name').value.trim() || investment,
+    investment_type: type,
+    currency:        document.getElementById('ai-currency').value.trim() || 'USD',
+    is_currency:     document.getElementById('ai-is-currency')?.value === 'true',
+    country:         document.getElementById('ai-country').value.trim() || null,
+    asset_class:     type,
+    sector:          document.getElementById('ai-sector').value.trim() || null,
+    analyst:         document.getElementById('ai-analyst').value.trim() || null,
+    pricing_factor:  parseFloat(document.getElementById('ai-pf').value) || 1,
+    contract_size:   parseFloat(document.getElementById('ai-contract-size')?.value) || 0,
+    underlying:      document.getElementById('ai-underlying')?.value.trim() || null,
+    put_call:        document.getElementById('ai-putcall')?.value || null,
+    strike:          parseFloat(document.getElementById('ai-strike')?.value) || null,
+  };
+
+  sp.classList.add('show');
+  st.textContent = 'Adding...';
+  st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investment`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      st.textContent = `✓ Added ${investment}`;
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent = `Investment '${investment}' added to ${portfolio}.\nType: ${type}`;
+      document.getElementById('ai-investment').value = '';
+      document.getElementById('ai-name').value = '';
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+// ── VIEW INVESTMENTS ───────────────────────────────────────
+async function viewInvestments() {
+  const portfolio = document.getElementById('vi-portfolio').value.trim();
+  const sp = document.getElementById('sp-vi');
+  const st = document.getElementById('st-vi');
+
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+
+  sp.classList.add('show');
+  st.textContent = 'Loading...';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investments`);
+    const data = await res.json();
+    const tbl  = document.getElementById('inv-table');
+    const head = document.getElementById('inv-thead');
+    const body = document.getElementById('inv-tbody');
+
+    if (data.investments && data.investments.length > 0) {
+      const cols = ['investment', 'full_name', 'investment_type', 'currency', 'country', 'sector', 'pricing_factor'];
+      head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
+      body.innerHTML = data.investments.map(inv =>
+        `<tr>${cols.map(c => `<td>${inv[c] || ''}</td>`).join('')}</tr>`
+      ).join('');
+      tbl.style.display = '';
+      st.textContent = `${data.count} investments`;
+    } else {
+      tbl.style.display = 'none';
+      st.textContent = 'No investments found';
+    }
+  } catch(e) {
+    st.textContent = 'Error';
+  }
+  sp.classList.remove('show');
+}
+
+// ── ADD EVENT ──────────────────────────────────────────────
+async function addEvent() {
+  const sp = document.getElementById('sp-ev');
+  const st = document.getElementById('st-ev');
+  const rb = document.getElementById('rb-ev');
+
+  const portfolio  = document.getElementById('ev-portfolio').value.trim();
+  const method     = document.getElementById('ev-method').value;
+  const investment = document.getElementById('ev-investment').value.trim().toUpperCase();
+  const tradedateRaw  = document.getElementById('ev-tradedate').value;
+  const settledateRaw = document.getElementById('ev-settledate').value;
+
+  if (!portfolio || !investment || !tradedateRaw || !settledateRaw) {
+    st.textContent = 'Portfolio, investment, and dates required';
+    st.className = 'status err';
+    return;
+  }
+
+  const tradedate  = toEventDate(tradedateRaw);
+  const settledate = toEventDate(settledateRaw);
+  const kdbeginRaw = document.getElementById('ev-kdbegin').value;
+  const kdbegin    = kdbeginRaw ? toEventDate(kdbeginRaw) : tradedate;
+
+  const body = {
+    portfolio:         portfolio,
+    method:            method,
+    investment:        investment,
+    tradedate:         tradedate,
+    settledate:        settledate,
+    kdbegin:           kdbegin,
+    kdend:             "12/31/2099:00:00:00",
+    payment_currency:  document.getElementById('ev-currency').value.trim() || 'USD',
+    location:          document.getElementById('ev-location').value.trim(),
+    quantity:          parseFloat(document.getElementById('ev-qty')?.value) || 0,
+    price:             parseFloat(document.getElementById('ev-price')?.value) || 0,
+    total_amount:      parseFloat(document.getElementById('ev-local')?.value) ||
+                       parseFloat(document.getElementById('ev-dep-local')?.value) || 0,
+    total_amount_base: parseFloat(document.getElementById('ev-book')?.value) ||
+                       parseFloat(document.getElementById('ev-dep-book')?.value) || 0,
+    accrued_local:     parseFloat(document.getElementById('ev-accrued-local')?.value) || 0,
+    accrued_book:      parseFloat(document.getElementById('ev-accrued-book')?.value) || 0,
+    notional:          parseFloat(document.getElementById('ev-notional')?.value) || 0,
+    original_face:     parseFloat(document.getElementById('ev-oface')?.value) || 0,
+    per_share:         parseFloat(document.getElementById('ev-per-share')?.value) || 0,
+    new_shares:        parseFloat(document.getElementById('ev-new-shares')?.value) || 0,
+    old_shares:        parseFloat(document.getElementById('ev-old-shares')?.value) || 0,
+    buy_currency:      document.getElementById('ev-buy-ccy')?.value.trim() || null,
+    sell_currency:     document.getElementById('ev-sell-ccy')?.value.trim() || null,
+    buy_amt:           parseFloat(document.getElementById('ev-buy-amt')?.value) || 0,
+    sell_amt:          parseFloat(document.getElementById('ev-sell-amt')?.value) || 0,
+  };
+
+  sp.classList.add('show');
+  st.textContent = 'Adding event...';
+  st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      st.textContent = `✓ Added (tranid=${data.tranid})`;
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `${method} · ${investment} · ${tradedate}\n` +
+        `tranid: ${data.tranid} · closing_method: ${data.closing_method} · file: ${data.file}`;
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+
+function clearEvent() {
+  document.getElementById('ev-investment').value = '';
+  document.getElementById('ev-tradedate').value  = '';
+  document.getElementById('ev-settledate').value = '';
+  document.getElementById('ev-kdbegin').value    = '';
+  document.getElementById('ev-location').value   = '';
+  ['ev-qty','ev-price','ev-local','ev-book','ev-dep-local','ev-dep-book',
+   'ev-accrued-local','ev-accrued-book','ev-notional','ev-oface',
+   'ev-per-share','ev-new-shares','ev-old-shares','ev-buy-amt','ev-sell-amt'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '0';
+  });
+  document.getElementById('rb-ev').classList.remove('show');
+  document.getElementById('st-ev').textContent = '';
+}
+
+// ── VIEW EVENTS ────────────────────────────────────────────
+async function viewEvents() {
+  const portfolio  = document.getElementById('ve-portfolio').value.trim();
+  const investment = document.getElementById('ve-investment').value.trim();
+  const method     = document.getElementById('ve-method-filter').value.trim();
+  const limit      = document.getElementById('ve-limit').value;
+  const sp = document.getElementById('sp-ve');
+  const st = document.getElementById('st-ve');
+
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+
+  sp.classList.add('show');
+  st.textContent = 'Loading...';
+
+  let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/events?limit=${limit}`;
+  if (investment) url += `&investment=${encodeURIComponent(investment)}`;
+  if (method)     url += `&method=${encodeURIComponent(method)}`;
+
+  try {
+    const res  = await fetch(url);
+    const data = await res.json();
+    const tbl  = document.getElementById('events-table');
+    const head = document.getElementById('events-thead');
+    const body = document.getElementById('events-tbody');
+
+    if (data.events && data.events.length > 0) {
+      const cols = ['tranid','method','investment','tradedate','settledate',
+                    'quantity','total_amount','payment_currency','location','closing_method'];
+      head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
+      body.innerHTML = data.events.map(e =>
+        `<tr>${cols.map(c => `<td>${e[c] || ''}</td>`).join('')}</tr>`
+      ).join('');
+      tbl.style.display = '';
+      st.textContent = `${data.count} events`;
+    } else {
+      tbl.style.display = 'none';
+      st.textContent = 'No events found';
+    }
+  } catch(e) {
+    st.textContent = 'Error loading events';
+  }
+  sp.classList.remove('show');
+}
+
+// ── PROCESS ────────────────────────────────────────────────
+async function process() {
+  const portfolio = document.getElementById('pr-portfolio').value.trim();
+  const calendar  = document.getElementById('pr-calendar').value.trim();
+  const period    = document.getElementById('pr-period').value.trim();
+  const bootstrap = document.getElementById('pr-bootstrap').value;
+  const sp = document.getElementById('sp-pr');
+  const st = document.getElementById('st-pr');
+  const rb = document.getElementById('rb-pr');
+
+  if (!portfolio || !calendar) {
+    st.textContent = 'Portfolio and calendar required';
+    st.className = 'status err';
+    return;
+  }
+
+  sp.classList.add('show');
+  st.textContent = 'Processing...';
+  st.className = 'status info';
+  rb.classList.remove('show');
+
+  let url = `${BASE}/api/v1/cph/process?portfolio=${portfolio}&calendar=${calendar}&bootstrap=${bootstrap}`;
+  if (period) url += `&period_name=${encodeURIComponent(period)}`;
+
+  try {
+    const res  = await fetch(url, { method: 'POST' });
+    const data = await res.json();
+
+    if (res.ok) {
+      const periods = data.periods || [];
+      st.textContent = `✓ ${data.periods_processed} period(s) processed`;
+      st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `Portfolio: ${portfolio}  ·  Calendar: ${calendar}\n` +
+        `Periods: ${data.periods_processed}\n` +
+        `Regular JEs:   ${(data.total_regular_je || 0).toLocaleString()}\n` +
+        `Adjusting JEs: ${(data.total_adjusting_je || 0).toLocaleString()}\n` +
+        `CPH time: ${data.total_time_seconds}s\n\n` +
+        periods.map(p =>
+          `  ${p.period_name} | regular=${p.regular_je} | adjusting=${p.adjusting_je} | ${p.time_seconds}s`
+        ).join('\n');
+    } else {
+      st.textContent = `Error: ${data.detail}`;
+      st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    st.textContent = 'Connection error';
+    st.className = 'status err';
+  }
+  sp.classList.remove('show');
+}
+</script>
+</body>
+</html>

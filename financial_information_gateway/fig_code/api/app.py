@@ -45,6 +45,10 @@ from financial_information_gateway.fig_code.compute_performance import (
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.api.app_routes import router
 
+from cph_routes import cph_router
+
+from ops_routes import ops_router
+
 # ============================================================
 # PERIOD FORMAT GUIDE
 # ============================================================
@@ -150,26 +154,31 @@ from fastapi.responses import JSONResponse
 # "127.0.0.1" = localhost (always allow for your own testing)
 # Add ngrok recipient IPs as needed
 # ============================================================
-
-ALLOWED_IPS = {
-    "127.0.0.1",       # localhost — always allowed
-    "::1",             # localhost IPv6
-    "2605:59ca:4246:5808:4946:2eda:2e30:6cf",
-    "2600:1700:2923:1020:4906:2069:f7b9:67f1"
-    # "203.0.113.45",  # example — add recipient IPs here
-}
-
-@app.middleware("http")
-async def ip_whitelist(request: Request, call_next):
-    client_ip = request.client.host
-    if client_ip not in ALLOWED_IPS:
-        return JSONResponse(
-            status_code=403,
-            content={"detail": f"Access denied."}
-        )
-    return await call_next(request)
+#
+# ALLOWED_IPS = {
+#     "127.0.0.1",       # localhost — always allowed
+#     "::1",             # localhost IPv6
+#     "2605:59ca:4246:5808:40e0:c5bd:2dd3:5cdb",
+#     "2600:1700:2923:1020:4906:2069:f7b9:67f1",
+#      "2601:195:8180:2520:2866:66f7:82ef:2901",
+#     "192.168.1.27"
+#     # "203.0.113.45",  # example — add recipient IPs here
+# }
+#
+# @app.middleware("http")
+# async def ip_whitelist(request: Request, call_next):
+#     client_ip = request.client.host
+#     if client_ip not in ALLOWED_IPS:
+#         return JSONResponse(
+#             status_code=403,
+#             content={"detail": f"Access denied."}
+#         )
+#     return await call_next(request)
 # Register all rev/exp and balance sheet routes
 app.include_router(router)
+app.include_router(cph_router)# After existing include_router lines
+app.include_router(ops_router)
+
 
 
 # ============================================================
@@ -245,12 +254,26 @@ def landing():
     <p style="color: #888; margin-top: 40px;">What follows is not a presentation. It is a working system.</p>
     <p style="color: #888;">The data is real. The response times are real. The consistency is real.</p>
     <p style="color: #888;">When you are ready —</p>
-    
-    <div style="display:flex; gap:16px; justify-content:center; margin: 80px auto 60px auto;">
-    <a href="/console" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif;">CONSOLE</a>
-    <a href="/api/v1/docs" style="padding: 20px 48px; background: transparent; color: #2E5FA3; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; border: 1px solid #2E5FA3;">API DOCS</a>
+ 
+<div style="display:flex; gap:16px; justify-content:center; margin: 80px auto 60px auto;">
+    <a href="/ops" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
+        <span>OPS</span>
+        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Operations Console</span>
+    </a>
+    <a href="/fig" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
+        <span>FIG</span>
+        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Financial Information Gateway</span>
+    </a>
+    <a href="/cph" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
+        <span>CPH</span>
+        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Central Processing Hub</span>
+    </a>
+    <a href="/api/v1/docs" style="padding: 20px 48px; background: transparent; color: #2E5FA3; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; border: 1px solid #2E5FA3; display:flex; flex-direction:column; gap:4px;">
+        <span>API DOCS</span>
+        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">REST Interface</span>
+    </a>
 </div>
-
+</div>
     <div class="footer">
         Visibility &nbsp;·&nbsp; Chest Financial Systems &nbsp;·&nbsp; Henry J. Murphy, Founder &nbsp;·&nbsp; Confidential
     </div>
@@ -266,6 +289,29 @@ def console():
     with open(console_path, "r") as f:
         return f.read()
 
+# After the /console route
+@app.get("/fig", response_class=HTMLResponse)
+def fig_console():
+    import os
+    console_path = os.path.join(os.path.dirname(__file__), "console.html")
+    with open(console_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/cph", response_class=HTMLResponse)
+def cph_console():
+    import os
+    cph_path = os.path.join(os.path.dirname(__file__), "cph.html")
+    with open(cph_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/ops", response_class=HTMLResponse)
+def ops_console():
+    import os
+    ops_path = os.path.join(os.path.dirname(__file__), "ops.html")
+    with open(ops_path, "r", encoding="utf-8") as f:
+        return f.read()
 # ============================================================
 # HEALTH
 # ============================================================
