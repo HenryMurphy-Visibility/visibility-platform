@@ -21,7 +21,7 @@ import csv
 import pickle
 import time
 from pathlib import Path
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 from typing import Optional
 
 from v_config import BASE_PATH, FUNDS_PATH, REFDATA_PATH
@@ -52,16 +52,19 @@ def get_events_cached(portfolio: str) -> list:
     print(f">>> EVENT CACHE MISS | {portfolio} | loading from disk...")
 
     events_path = _events_path(portfolio)
-    marks_path = _marks_path(portfolio)
+    marks_path  = _marks_path(portfolio)
 
     if not events_path.exists():
         raise RuntimeError(f"Events file not found: {events_path}")
 
-    # Marks — load if exists and has content, otherwise continue empty
+    # ── LOAD REGULAR EVENTS ───────────────────────────────────────
+    regular_events = load_events_csv_to_app(str(events_path))
+
+    # ── LOAD MARKS — graceful if missing or empty ─────────────────
     if marks_path.exists():
         with open(marks_path, newline="") as f:
             reader = csv.DictReader(f)
-            rows = list(reader)
+            rows   = list(reader)
         if rows:
             mark_events = load_events_csv_to_app(str(marks_path))
         else:
@@ -71,11 +74,7 @@ def get_events_cached(portfolio: str) -> list:
         print(f">>> MARKS NOT FOUND | {portfolio} | continuing with no marks")
         mark_events = []
 
-    regular_events = load_events_csv_to_app(str(events_path))
-    mark_events = load_events_csv_to_app(str(marks_path), allow_empty=True) \
-        if marks_path.exists() else []
-
-    all_events     = regular_events + mark_events
+    all_events = regular_events + mark_events
 
     _EVENT_CACHE[portfolio] = all_events
 
@@ -167,10 +166,10 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
         print(f">>> BOOTSTRAP | {portfolio} | already built | "
               f"{existing.get('count', 0)} investments | skipping")
         return {
-            "candidates":        set(existing.get("investments", [])),
-            "currencies":        set(existing.get("currencies", [])),
-            "investment_count":  existing.get("count", 0),
-            "bond_count":        0,
+            "candidates":       set(existing.get("investments", [])),
+            "currencies":       set(existing.get("currencies", [])),
+            "investment_count": existing.get("count", 0),
+            "bond_count":       0,
         }
 
     # ── 1. DERIVE CANDIDATES FROM EVENTS ─────────────────────────
@@ -178,11 +177,9 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
     if not events_path.exists():
         raise RuntimeError(f"Events file not found: {events_path}")
 
-    candidates  = set()
-    currencies  = set()
-
-    # Also track first trade date per investment for marks window
-    first_trade_dates = {}
+    candidates        = set()
+    currencies        = set()
+    first_trade_dates = {}   # investment → earliest tradedate (datetime)
 
     with open(events_path, newline="") as f:
         reader = csv.DictReader(f)
@@ -190,7 +187,6 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
             inv = (row.get("investment") or "").strip()
             if inv:
                 candidates.add(inv)
-                # Track earliest tradedate per investment
                 td_raw = (row.get("tradedate") or "").strip()
                 if td_raw:
                     try:
@@ -259,7 +255,7 @@ def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
     if marks_path.exists():
         with open(marks_path, newline="") as f:
             reader = csv.DictReader(f)
-            rows = list(reader)
+            rows   = list(reader)
             if rows:
                 print(f"    Marks: already present ({len(rows)} rows) — skipping")
                 return len(rows)
@@ -271,8 +267,7 @@ def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
     try:
         from core_ingest_loaders import create_portfolio_marks
 
-        # Build candidates dict in format expected by create_portfolio_marks:
-        # {(portfolio, investment): first_trade_date}
+        # Build candidates dict: {(portfolio, investment): first_trade_date}
         candidates_dict = {
             (portfolio, inv): td
             for inv, td in first_trade_dates.items()
@@ -446,6 +441,13 @@ def run_period(
     """
     Process a single accounting period.
     Caller is responsible for providing events and calendar records.
+
+    Boundary rules:
+      - kdbegin <= current_period_knowledge  (inclusive — ties belong here)
+      - tradedate <= current_period_cutoff   (inclusive — ties belong here)
+      - tradedate > replay_start             (exclusive — already processed)
+      - First period: replay_start shifted back 1 day so inception-day
+        trades pass the > filter.
     """
 
     from central_processing_hub import cph_run_and_materialize
@@ -498,32 +500,30 @@ def run_period(
                     selected_snapshot_kd   = snapshot_kd
                     selected_snapshot_path = fn
 
+    # ── is_first defined before replay_start — needed for inception fix ──
+    is_first = (period_name == calendar_records[0]["period_name"])
+
     replay_start = (
         selected_snapshot_kd
         if selected_snapshot_kd is not None
         else per_period_ctx["prior_period_knowledge"]
     )
 
+    # First period: prior_period_knowledge == inception date.
+    # Shift back one day so inception-day trades pass the > filter.
+    if is_first:
+        replay_start = replay_start - timedelta(days=1)
+
+    # Boundary rule: ties are INCLUSIVE on knowledge and cutoff.
+    # replay_start is the only exclusive boundary — already processed.
     event_pool = [
         e for e in all_events
         if (
-                e["tradedate"] > replay_start
-                and e["kdbegin"] <= per_period_ctx["current_period_knowledge"]
-                and e["tradedate"] <= per_period_ctx["current_period_cutoff"]
+            e["tradedate"] > replay_start
+            and e["kdbegin"] <= per_period_ctx["current_period_knowledge"]
+            and e["tradedate"] <= per_period_ctx["current_period_cutoff"]
         )
     ]
-
-    # TEMP DEBUG
-    print(f">>> DEBUG | total events: {len(all_events)}")
-    print(f">>> DEBUG | replay_start: {replay_start}")
-    print(f">>> DEBUG | current_period_cutoff: {per_period_ctx['current_period_cutoff']}")
-    print(f">>> DEBUG | current_period_knowledge: {per_period_ctx['current_period_knowledge']}")
-    print(f">>> DEBUG | event_pool size: {len(event_pool)}")
-    if all_events:
-        print(f">>> DEBUG | first event tradedate: {all_events[0]['tradedate']}")
-        print(f">>> DEBUG | first event kdbegin: {all_events[0]['kdbegin']}")
-
-    is_first = (period_name == calendar_records[0]["period_name"])
 
     print(
         f"\n>>> RUN PERIOD | {portfolio} | {period_name} | "
