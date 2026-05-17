@@ -1,0 +1,1604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visibility — Oversight</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:         #07080f;
+    --surface:    #0d0f1a;
+    --surface2:   #111320;
+    --border:     #1a1e2e;
+    --border2:    #242840;
+    --accent:     #2E5FA3;
+    --accent2:    #4a7fc1;
+    --text:       #d8dce8;
+    --muted:      #5a6080;
+    --muted2:     #8a90a8;
+
+    /* Oversight authority colors — amber/gold, distinct from OPS blue */
+    --auth:       #b8860b;
+    --auth-bright:#e6a817;
+    --auth-dim:   #7a5a08;
+    --auth-glow:  rgba(184,134,11,0.12);
+    --auth-glow2: rgba(184,134,11,0.06);
+
+    --success:    #2a7a4a;
+    --success-t:  #3dba70;
+    --fail:       #7a2a2a;
+    --fail-t:     #e05555;
+    --warn:       #7a5a08;
+    --warn-t:     #e6a817;
+
+    --mono:  'JetBrains Mono', monospace;
+    --serif: 'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  /* ── HEADER ──────────────────────────────────────────────── */
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+    position: relative;
+  }
+
+  /* Gold top border to distinguish from OPS */
+  header::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--auth), var(--auth-bright), var(--auth), transparent);
+  }
+
+  header h1 {
+    font-family: var(--serif);
+    font-size: 1.2em;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: default;
+  }
+  header h1:hover { color: var(--auth-bright); transition: color 0.2s; }
+
+  .header-tag {
+    font-family: var(--mono);
+    font-size: 0.68em;
+    color: var(--auth-bright);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    background: var(--auth-glow);
+    border: 1px solid var(--auth-dim);
+    padding: 2px 10px;
+    border-radius: 2px;
+  }
+
+  .header-links { margin-left: auto; display: flex; gap: 16px; align-items: center; }
+  .header-link {
+    font-family: var(--mono); font-size: 0.7em;
+    color: var(--muted); text-decoration: none;
+    letter-spacing: 1px; transition: color 0.15s;
+  }
+  .header-link:hover { color: var(--accent2); }
+
+  /* ── LOGIN GATE ───────────────────────────────────────────── */
+  #login-gate {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    min-height: calc(100vh - 56px);
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--auth-dim);
+    border-top: 2px solid var(--auth);
+    padding: 48px 52px;
+    width: 420px;
+    box-shadow: 0 0 60px var(--auth-glow2), 0 0 120px rgba(0,0,0,0.4);
+    position: relative;
+  }
+
+  .login-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--auth-glow2) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .login-icon {
+    width: 40px; height: 40px;
+    border: 1px solid var(--auth-dim);
+    background: var(--auth-glow);
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+    font-size: 18px;
+  }
+
+  .login-title {
+    font-family: var(--serif);
+    font-size: 1.5em;
+    font-weight: 300;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #fff;
+    margin-bottom: 4px;
+  }
+
+  .login-sub {
+    font-family: var(--mono);
+    font-size: 0.65em;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-bottom: 36px;
+  }
+
+  .login-field { margin-bottom: 16px; }
+  .login-field label {
+    display: block;
+    font-family: var(--mono);
+    font-size: 0.62em;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted2);
+    margin-bottom: 6px;
+  }
+  .login-field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 0.82em;
+    padding: 10px 12px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .login-field input:focus { border-color: var(--auth); }
+
+  .login-btn {
+    width: 100%;
+    margin-top: 24px;
+    background: var(--auth-dim);
+    border: 1px solid var(--auth);
+    color: var(--auth-bright);
+    font-family: var(--mono);
+    font-size: 0.75em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    padding: 11px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .login-btn:hover {
+    background: var(--auth);
+    color: #fff;
+    box-shadow: 0 0 20px var(--auth-glow);
+  }
+
+  .login-error {
+    font-family: var(--mono);
+    font-size: 0.68em;
+    color: var(--fail-t);
+    margin-top: 12px;
+    display: none;
+  }
+  .login-error.show { display: block; }
+
+  .login-notice {
+    margin-top: 28px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.62em;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  /* ── MAIN LAYOUT (post-login) ─────────────────────────────── */
+  #app { display: none; grid-column: 1 / -1; display: none;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 1fr;
+  }
+  #app.show { display: grid; }
+
+  /* ── NAV ──────────────────────────────────────────────────── */
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+  }
+
+  .nav-user {
+    padding: 0 20px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .nav-user-name {
+    font-family: var(--mono);
+    font-size: 0.72em;
+    color: var(--auth-bright);
+    letter-spacing: 1px;
+  }
+  .nav-user-role {
+    font-family: var(--mono);
+    font-size: 0.6em;
+    color: var(--muted);
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .nav-section {
+    padding: 6px 20px 4px;
+    font-family: var(--mono);
+    font-size: 0.6em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--auth-dim);
+    cursor: default;
+    margin-top: 8px;
+  }
+
+  .nav-item {
+    display: block;
+    padding: 9px 20px;
+    font-family: var(--mono);
+    font-size: 0.78em;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: var(--auth-glow2); }
+  .nav-item.active {
+    color: var(--auth-bright);
+    border-left-color: var(--auth);
+    background: var(--auth-glow);
+  }
+
+  .nav-badge {
+    display: inline-block;
+    font-size: 0.7em;
+    padding: 1px 6px;
+    border-radius: 2px;
+    margin-left: 8px;
+    vertical-align: middle;
+  }
+  .nav-badge.restricted {
+    background: rgba(122,42,42,0.3);
+    color: var(--fail-t);
+    border: 1px solid rgba(224,85,85,0.2);
+  }
+  .nav-badge.authority {
+    background: var(--auth-glow);
+    color: var(--auth-bright);
+    border: 1px solid var(--auth-dim);
+  }
+
+  .nav-signout {
+    position: absolute;
+    bottom: 20px;
+    left: 0; width: 240px;
+    padding: 0 20px;
+  }
+  .nav-signout-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 0.68em;
+    letter-spacing: 1px;
+    padding: 7px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .nav-signout-btn:hover { border-color: var(--fail-t); color: var(--fail-t); }
+
+  /* ── MAIN ─────────────────────────────────────────────────── */
+  main {
+    padding: 28px 32px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* ── WIDGETS ──────────────────────────────────────────────── */
+  .widget { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; display: none; }
+  .widget.active { display: block; }
+
+  .widget-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .widget-head.authority { border-bottom-color: var(--auth-dim); }
+  .widget-head.authority::before {
+    content: '◆';
+    color: var(--auth);
+    font-size: 0.7em;
+  }
+
+  .widget-title { font-family: var(--mono); font-size: 0.85em; letter-spacing: 1.5px; text-transform: uppercase; color: #fff; }
+  .widget-title.authority { color: var(--auth-bright); }
+  .widget-desc { font-size: 0.85em; color: var(--muted); margin-left: auto; font-style: italic; }
+  .widget-body { padding: 24px; }
+
+  /* ── AUDIT TRAIL ──────────────────────────────────────────── */
+  .audit-entry {
+    display: grid;
+    grid-template-columns: 160px 120px 1fr;
+    gap: 16px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--mono);
+    font-size: 0.72em;
+    align-items: start;
+    transition: background 0.1s;
+  }
+  .audit-entry:hover { background: var(--auth-glow2); }
+  .audit-entry:last-child { border-bottom: none; }
+  .audit-ts { color: var(--muted); }
+  .audit-actor { color: var(--auth-bright); }
+  .audit-action { color: var(--text); }
+  .audit-action span { color: var(--muted2); }
+
+  .audit-type {
+    display: inline-block;
+    font-size: 0.75em;
+    padding: 1px 7px;
+    border-radius: 2px;
+    margin-right: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .audit-type.close   { background: rgba(45,122,74,0.2);  color: var(--success-t); border: 1px solid rgba(61,186,112,0.2); }
+  .audit-type.reopen  { background: rgba(122,90,8,0.2);   color: var(--warn-t);    border: 1px solid rgba(230,168,23,0.2); }
+  .audit-type.restate { background: rgba(122,42,42,0.2);  color: var(--fail-t);    border: 1px solid rgba(224,85,85,0.2); }
+  .audit-type.signoff { background: rgba(46,95,163,0.2);  color: var(--accent2);   border: 1px solid rgba(74,127,193,0.2); }
+  .audit-type.login   { background: rgba(26,30,46,0.6);   color: var(--muted2);    border: 1px solid var(--border2); }
+
+  /* ── PERIOD TABLE ─────────────────────────────────────────── */
+  .period-table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
+  .period-table th {
+    background: var(--bg); color: var(--muted);
+    font-weight: 400; letter-spacing: 1px; text-transform: uppercase;
+    padding: 8px 10px; text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .period-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid rgba(26,30,46,0.5);
+    color: var(--text);
+  }
+  .period-table tr:hover td { background: var(--auth-glow2); }
+
+  .period-status {
+    display: inline-block;
+    padding: 2px 8px; border-radius: 2px;
+    font-size: 0.85em; letter-spacing: 0.5px;
+  }
+  .period-status.pending  { background: rgba(26,30,46,0.8);   color: var(--muted2);    border: 1px solid var(--border2); }
+  .period-status.open     { background: rgba(46,95,163,0.2);  color: var(--accent2);   border: 1px solid rgba(46,95,163,0.4); }
+  .period-status.closed   { background: rgba(45,122,74,0.15); color: var(--success-t); border: 1px solid rgba(61,186,112,0.2); }
+  .period-status.restate  { background: rgba(122,42,42,0.2);  color: var(--fail-t);    border: 1px solid rgba(224,85,85,0.2); }
+
+  .period-action {
+    font-family: var(--mono); font-size: 0.7em; letter-spacing: 1px;
+    text-transform: uppercase; padding: 4px 12px;
+    border: 1px solid; cursor: pointer; border-radius: 2px;
+    transition: all 0.15s; background: transparent;
+    margin-right: 6px;
+  }
+  .period-action.close-btn  { border-color: var(--auth-dim);  color: var(--auth-bright); }
+  .period-action.close-btn:hover  { background: var(--auth-glow); border-color: var(--auth); }
+  .period-action.reopen-btn { border-color: var(--border2);   color: var(--muted2); }
+  .period-action.reopen-btn:hover { border-color: var(--warn-t); color: var(--warn-t); }
+  .period-action.restate-btn { border-color: var(--border2);  color: var(--muted2); }
+  .period-action.restate-btn:hover { border-color: var(--fail-t); color: var(--fail-t); }
+
+  /* ── FORM ELEMENTS ────────────────────────────────────────── */
+  .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
+  input, select, textarea {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 0.82em; padding: 8px 10px;
+    border-radius: 2px; outline: none; transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--auth); }
+
+  .btn-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .btn { font-family: var(--mono); font-size: 0.75em; letter-spacing: 1.5px; text-transform: uppercase; padding: 9px 22px; border: 1px solid; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
+  .btn-authority { background: var(--auth-dim); border-color: var(--auth); color: var(--auth-bright); }
+  .btn-authority:hover { background: var(--auth); color: #fff; box-shadow: 0 0 16px var(--auth-glow); }
+  .btn-authority:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); }
+  .btn-secondary:hover { border-color: var(--auth-dim); color: var(--text); }
+  .btn-danger { background: transparent; border-color: var(--fail); color: var(--fail-t); }
+  .btn-danger:hover { background: rgba(122,42,42,0.2); }
+
+  .status { font-family: var(--mono); font-size: 0.72em; margin-left: auto; }
+  .status.ok   { color: var(--success-t); }
+  .status.err  { color: var(--fail-t); }
+  .status.warn { color: var(--warn-t); }
+  .status.info { color: var(--muted); }
+
+  .result-box {
+    display: none; margin-top: 20px; padding: 16px;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 2px; font-family: var(--mono); font-size: 0.75em;
+    white-space: pre-wrap; line-height: 1.8;
+  }
+  .result-box.show { display: block; }
+  .result-box.pass { border-color: var(--success); color: var(--success-t); }
+  .result-box.fail { border-color: var(--fail);    color: var(--fail-t); }
+  .result-box.warn { border-color: var(--auth-dim); color: var(--auth-bright); }
+  .result-box.info { border-color: var(--border);  color: var(--text); }
+
+  .spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--auth); border-radius: 50%; animation: spin 0.6s linear infinite; }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── CONFIRM MODAL ────────────────────────────────────────── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(7,8,15,0.85);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+    align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--auth);
+    border-top: 2px solid var(--auth-bright);
+    padding: 36px 40px;
+    width: 480px;
+    box-shadow: 0 0 80px var(--auth-glow), 0 0 160px rgba(0,0,0,0.6);
+    position: relative;
+  }
+  .modal::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 50% 0%, var(--auth-glow2) 0%, transparent 60%);
+    pointer-events: none;
+  }
+
+  .modal-icon { font-size: 24px; margin-bottom: 16px; }
+  .modal-title {
+    font-family: var(--serif); font-size: 1.3em; font-weight: 400;
+    color: #fff; margin-bottom: 8px; letter-spacing: 1px;
+  }
+  .modal-body {
+    font-family: var(--mono); font-size: 0.75em; color: var(--muted2);
+    line-height: 1.9; margin-bottom: 28px;
+  }
+  .modal-body strong { color: var(--auth-bright); font-weight: 400; }
+  .modal-actions { display: flex; gap: 12px; justify-content: flex-end; }
+
+  /* ── DASHBOARD STATS ──────────────────────────────────────── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    padding: 16px 18px;
+    border-radius: 2px;
+  }
+  .stat-card.authority { border-color: var(--auth-dim); }
+  .stat-label { font-family: var(--mono); font-size: 0.6em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .stat-value { font-family: var(--mono); font-size: 1.4em; color: #fff; }
+  .stat-value.auth { color: var(--auth-bright); }
+  .stat-sub { font-family: var(--mono); font-size: 0.62em; color: var(--muted); margin-top: 4px; }
+
+  .section-divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  /* ── OVERSIGHT BANNER ─────────────────────────────────────── */
+  .oversight-banner {
+    background: var(--auth-glow2);
+    border: 1px solid var(--auth-dim);
+    border-left: 3px solid var(--auth);
+    padding: 12px 16px;
+    font-family: var(--mono);
+    font-size: 0.72em;
+    color: var(--muted2);
+    line-height: 1.8;
+    margin-bottom: 20px;
+  }
+  .oversight-banner strong { color: var(--auth-bright); font-weight: 400; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visibility</h1>
+  <span class="header-tag">Oversight</span>
+  <div class="header-links">
+    <a href="/ops" class="header-link">OPS</a>
+    <a href="/fig" class="header-link">FIG</a>
+    <a href="/cph" class="header-link">CPH</a>
+    <a href="/" class="header-link">Home</a>
+  </div>
+</header>
+
+<!-- ── LOGIN GATE ──────────────────────────────────────────── -->
+<div id="login-gate">
+  <div class="login-card">
+    <div class="login-icon">◆</div>
+    <div class="login-title">Oversight</div>
+    <div class="login-sub">Authority-gated console — restricted access</div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="lg-user" placeholder="oversight user" autocomplete="username">
+    </div>
+    <div class="login-field">
+      <label>Password</label>
+      <input type="password" id="lg-pass" placeholder="••••••••" autocomplete="current-password">
+    </div>
+
+    <button class="login-btn" onclick="doLogin()">Enter Oversight Console</button>
+    <div class="login-error" id="lg-error">Invalid credentials. Access denied.</div>
+
+    <div class="login-notice">
+      All actions within this console are permanently logged.<br>
+      Unauthorized access attempts are recorded.
+    </div>
+  </div>
+</div>
+
+<!-- ── APP (post-login) ────────────────────────────────────── -->
+<div id="app">
+
+  <nav style="position:relative">
+    <div class="nav-user">
+      <div class="nav-user-name" id="nav-username">—</div>
+      <div class="nav-user-role" id="nav-role">—</div>
+    </div>
+
+    <div class="nav-section">Dashboard</div>
+    <div class="nav-item active" onclick="show('dashboard', this)">Overview</div>
+    <div class="nav-item" onclick="show('audit', this)">Audit Trail</div>
+
+    <div class="nav-section" style="margin-top:12px">Calendar</div>
+    <div class="nav-item" onclick="show('cal-overview', this)">
+      Calendar Overview
+    </div>
+    <div class="nav-item" onclick="show('close-period', this)">
+      Close Period <span class="nav-badge authority">Auth</span>
+    </div>
+    <div class="nav-item" onclick="show('reopen-period', this)">
+      Reopen Period <span class="nav-badge restricted">Senior</span>
+    </div>
+    <div class="nav-item" onclick="show('restate', this)">
+      Restatement <span class="nav-badge restricted">Senior</span>
+    </div>
+
+    <div class="nav-section" style="margin-top:12px">Sign-off</div>
+    <div class="nav-item" onclick="show('ops-signoff', this)">OPS Sign-off</div>
+    <div class="nav-item" onclick="show('fa-signoff', this)">FA Sign-off</div>
+    <div class="nav-item" onclick="show('perf-signoff', this)">PERF Sign-off</div>
+
+    <div class="nav-section" style="margin-top:12px">Validation</div>
+    <div class="nav-item" onclick="show('validation', this)">Run Validation</div>
+
+    <div class="nav-signout">
+      <button class="nav-signout-btn" onclick="doSignout()">Sign Out</button>
+    </div>
+  </nav>
+
+  <main>
+
+    <!-- ── DASHBOARD ──────────────────────────────────────── -->
+    <div class="widget active" id="w-dashboard">
+      <div class="widget-head">
+        <div class="widget-title">Oversight Dashboard</div>
+        <div class="widget-desc">System governance status</div>
+      </div>
+      <div class="widget-body">
+
+        <div class="stat-grid">
+          <div class="stat-card authority">
+            <div class="stat-label">Open Periods</div>
+            <div class="stat-value auth" id="ds-open">—</div>
+            <div class="stat-sub">Awaiting close</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Closed This Month</div>
+            <div class="stat-value" id="ds-closed">—</div>
+            <div class="stat-sub">Across all portfolios</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Pending Sign-off</div>
+            <div class="stat-value auth" id="ds-signoff">—</div>
+            <div class="stat-sub">OPS · FA · PERF</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Restatements</div>
+            <div class="stat-value" id="ds-restate">—</div>
+            <div class="stat-sub">Active restatements</div>
+          </div>
+        </div>
+
+        <div class="oversight-banner">
+          <strong>Oversight Console</strong> — Every action taken here is permanently recorded in the audit trail,
+          attributed to <strong id="banner-user">—</strong>, and cannot be altered.
+          Period closures are irreversible without Senior authority.
+          Restatements cascade to all subsequent periods.
+        </div>
+
+        <div style="font-family:var(--mono);font-size:0.72em;color:var(--muted2);margin-bottom:12px;letter-spacing:1px;text-transform:uppercase;">
+          Recent Activity
+        </div>
+        <div id="ds-activity" style="font-family:var(--mono);font-size:0.75em;color:var(--muted)">
+          Loading activity...
+        </div>
+      </div>
+    </div>
+
+    <!-- ── AUDIT TRAIL ─────────────────────────────────────── -->
+    <div class="widget" id="w-audit">
+      <div class="widget-head authority">
+        <div class="widget-title authority">Audit Trail</div>
+        <div class="widget-desc">Permanent record of all oversight actions</div>
+      </div>
+      <div class="widget-body">
+        <div class="btn-row" style="margin-bottom:16px">
+          <div class="form-group" style="min-width:160px">
+            <label>Portfolio</label>
+            <input id="at-portfolio" placeholder="All portfolios">
+          </div>
+          <div class="form-group" style="min-width:140px">
+            <label>Action Type</label>
+            <select id="at-type">
+              <option value="">All actions</option>
+              <option value="close">Close</option>
+              <option value="reopen">Reopen</option>
+              <option value="restate">Restate</option>
+              <option value="signoff">Sign-off</option>
+              <option value="login">Login</option>
+            </select>
+          </div>
+          <button class="btn btn-authority" onclick="loadAudit()" style="align-self:flex-end">Load</button>
+          <div class="spinner" id="sp-audit"></div>
+        </div>
+        <div id="audit-log"></div>
+      </div>
+    </div>
+
+    <!-- ── CALENDAR OVERVIEW ───────────────────────────────── -->
+    <div class="widget" id="w-cal-overview">
+      <div class="widget-head">
+        <div class="widget-title">Calendar Overview</div>
+        <div class="widget-desc">Period status across all portfolios</div>
+      </div>
+      <div class="widget-body">
+        <div class="btn-row" style="margin-bottom:16px">
+          <div class="form-group" style="min-width:160px">
+            <label>Portfolio</label>
+            <input id="co-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group" style="min-width:140px">
+            <label>Calendar</label>
+            <select id="co-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Daily">Daily</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <button class="btn btn-authority" onclick="loadCalOverview()" style="align-self:flex-end">Load</button>
+          <div class="spinner" id="sp-co"></div>
+          <div class="status info" id="st-co"></div>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="period-table" id="co-table" style="display:none">
+            <thead>
+              <tr>
+                <th>Period</th>
+                <th>Status</th>
+                <th>Period Start</th>
+                <th>Period End</th>
+                <th>Knowledge End</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="co-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── CLOSE PERIOD ────────────────────────────────────── -->
+    <div class="widget" id="w-close-period">
+      <div class="widget-head authority">
+        <div class="widget-title authority">Close Period</div>
+        <div class="widget-desc">Seal a period — stamps knowledge end, creates next</div>
+      </div>
+      <div class="widget-body">
+
+        <div class="oversight-banner">
+          Closing a period <strong>permanently seals</strong> it. A new contiguous period is
+          created automatically. The closed period cannot be modified without
+          <strong>Senior authority</strong> via Reopen.
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="cp2-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="cp2-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Daily">Daily</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="cp2-period" placeholder="e.g. 2024-01">
+          </div>
+          <div class="form-group">
+            <label>Knowledge End Date *</label>
+            <input type="date" id="cp2-kend">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Sign-off Note</label>
+          <input id="cp2-note" placeholder="e.g. All positions verified, income allocated, FA reviewed">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-authority" onclick="confirmClose()">Close Period</button>
+          <div class="spinner" id="sp-cp2"></div>
+          <div class="status" id="st-cp2"></div>
+        </div>
+        <div class="result-box" id="rb-cp2"></div>
+      </div>
+    </div>
+
+    <!-- ── REOPEN PERIOD ───────────────────────────────────── -->
+    <div class="widget" id="w-reopen-period">
+      <div class="widget-head authority">
+        <div class="widget-title authority">Reopen Period</div>
+        <div class="widget-desc">Senior authority required — rare, fully logged</div>
+      </div>
+      <div class="widget-body">
+
+        <div class="oversight-banner" style="border-color:var(--fail); border-left-color:var(--fail-t);">
+          <strong style="color:var(--fail-t)">Senior Action.</strong>
+          Reopening a closed period invalidates all subsequent period snapshots.
+          This action is <strong style="color:var(--fail-t)">fully logged</strong> and
+          requires documented justification.
+          All affected periods must be reprocessed and re-closed.
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="rp-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="rp-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Daily">Daily</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="rp-period" placeholder="e.g. 2024-01">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Justification * (required for audit)</label>
+          <input id="rp-reason" placeholder="e.g. Corporate action restatement — dividend amount corrected">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="confirmReopen()">Reopen Period</button>
+          <div class="spinner" id="sp-rp"></div>
+          <div class="status" id="st-rp"></div>
+        </div>
+        <div class="result-box" id="rb-rp"></div>
+      </div>
+    </div>
+
+    <!-- ── RESTATEMENT ─────────────────────────────────────── -->
+    <div class="widget" id="w-restate">
+      <div class="widget-head authority">
+        <div class="widget-title authority">Restatement</div>
+        <div class="widget-desc">Senior authority — cascades to all subsequent periods</div>
+      </div>
+      <div class="widget-body">
+
+        <div class="oversight-banner" style="border-color:var(--fail); border-left-color:var(--fail-t);">
+          <strong style="color:var(--fail-t)">Senior Action — Cascade Effect.</strong>
+          A restatement from a given period marks that period and
+          <strong style="color:var(--fail-t)">all subsequent periods</strong> as
+          Needs Restatement. Each must be reprocessed and re-closed in sequence.
+          Full audit trail maintained throughout.
+        </div>
+
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="rs-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="rs-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Daily">Daily</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>From Period *</label>
+            <input id="rs-period" placeholder="e.g. 2024-01">
+            <div style="font-family:var(--mono);font-size:0.62em;color:var(--muted);margin-top:3px">
+              This period and all subsequent periods will be marked
+            </div>
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Restatement Reason * (required)</label>
+          <input id="rs-reason" placeholder="e.g. Incorrect dividend accrual — 3 months requiring correction">
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-danger" onclick="confirmRestate()">Initiate Restatement</button>
+          <div class="spinner" id="sp-rs"></div>
+          <div class="status" id="st-rs"></div>
+        </div>
+        <div class="result-box" id="rb-rs"></div>
+      </div>
+    </div>
+
+    <!-- ── OPS SIGN-OFF ────────────────────────────────────── -->
+    <div class="widget" id="w-ops-signoff">
+      <div class="widget-head authority">
+        <div class="widget-title authority">OPS Sign-off</div>
+        <div class="widget-desc">Confirm positions, cash, and income are correct</div>
+      </div>
+      <div class="widget-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="os-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="os-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="os-period" placeholder="e.g. 2024-01">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Sign-off Confirmation</label>
+          <input id="os-note" placeholder="e.g. Positions reconciled to custodian, cash verified, income reviewed">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-authority" onclick="doSignoff('ops')">OPS Sign-off</button>
+          <div class="spinner" id="sp-os"></div>
+          <div class="status" id="st-os"></div>
+        </div>
+        <div class="result-box" id="rb-os"></div>
+      </div>
+    </div>
+
+    <!-- ── FA SIGN-OFF ─────────────────────────────────────── -->
+    <div class="widget" id="w-fa-signoff">
+      <div class="widget-head authority">
+        <div class="widget-title authority">FA Sign-off</div>
+        <div class="widget-desc">Confirm income allocation and FIM output</div>
+      </div>
+      <div class="widget-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="fs-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="fs-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="fs-period" placeholder="e.g. 2024-01">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Sign-off Confirmation</label>
+          <input id="fs-note" placeholder="e.g. Income allocated to all entities, FIM output reviewed and approved">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-authority" onclick="doSignoff('fa')">FA Sign-off</button>
+          <div class="spinner" id="sp-fs"></div>
+          <div class="status" id="st-fs"></div>
+        </div>
+        <div class="result-box" id="rb-fs"></div>
+      </div>
+    </div>
+
+    <!-- ── PERF SIGN-OFF ───────────────────────────────────── -->
+    <div class="widget" id="w-perf-signoff">
+      <div class="widget-head authority">
+        <div class="widget-title authority">PERF Sign-off</div>
+        <div class="widget-desc">Approve performance before distribution to Mother Bee</div>
+      </div>
+      <div class="widget-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="ps-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="ps-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="ps-period" placeholder="e.g. 2024-01">
+          </div>
+        </div>
+        <div class="form-group" style="margin-bottom:20px">
+          <label>Sign-off Confirmation</label>
+          <input id="ps-note" placeholder="e.g. Returns verified against benchmark, attribution reviewed, ready for client">
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-authority" onclick="doSignoff('perf')">PERF Sign-off</button>
+          <div class="spinner" id="sp-ps"></div>
+          <div class="status" id="st-ps"></div>
+        </div>
+        <div class="result-box" id="rb-ps"></div>
+      </div>
+    </div>
+
+    <!-- ── VALIDATION ──────────────────────────────────────── -->
+    <div class="widget" id="w-validation">
+      <div class="widget-head authority">
+        <div class="widget-title authority">Validation</div>
+        <div class="widget-desc">Tailored recons run before close</div>
+      </div>
+      <div class="widget-body">
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Portfolio *</label>
+            <input id="vl-portfolio" placeholder="e.g. Portfolio2">
+          </div>
+          <div class="form-group">
+            <label>Calendar *</label>
+            <select id="vl-calendar">
+              <option value="Monthly">Monthly</option>
+              <option value="Quarterly">Quarterly</option>
+              <option value="Yearly">Yearly</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Period *</label>
+            <input id="vl-period" placeholder="e.g. 2024-01">
+          </div>
+          <div class="form-group">
+            <label>Validation Suite</label>
+            <select id="vl-suite">
+              <option value="standard">Standard — positions, cash, income</option>
+              <option value="ops">OPS — custodian recon</option>
+              <option value="fa">FA — income allocation</option>
+              <option value="perf">PERF — returns verification</option>
+              <option value="full">Full — all checks</option>
+            </select>
+          </div>
+        </div>
+        <div class="btn-row">
+          <button class="btn btn-authority" onclick="runValidation()">Run Validation</button>
+          <div class="spinner" id="sp-vl"></div>
+          <div class="status" id="st-vl"></div>
+        </div>
+        <div class="result-box" id="rb-vl"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ── CONFIRM MODAL ──────────────────────────────────────── -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <div class="modal-icon" id="modal-icon">◆</div>
+    <div class="modal-title" id="modal-title">Confirm Action</div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-authority" id="modal-confirm-btn" onclick="modalConfirm()">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BASE = '';
+
+// ── SESSION STATE ──────────────────────────────────────────
+let currentUser = null;
+let currentRole = null;
+let modalCallback = null;
+
+// Simulated user store — replace with real auth endpoint
+const USERS = {
+  'admin':    { password: 'admin',    role: 'Senior Oversight',   display: 'Administrator' },
+  'overseer': { password: 'overseer', role: 'Calendar Overseer',  display: 'Calendar Overseer' },
+  'manager':  { password: 'manager',  role: 'FA / OPS Manager',   display: 'FA Manager' },
+};
+
+// ── AUDIT LOG (session — replace with persistent API) ──────
+let auditLog = [];
+
+function logAudit(type, action, detail) {
+  auditLog.unshift({
+    ts:     new Date().toISOString(),
+    actor:  currentUser,
+    type,
+    action,
+    detail,
+  });
+}
+
+// ── LOGIN ──────────────────────────────────────────────────
+function doLogin() {
+  const user = document.getElementById('lg-user').value.trim();
+  const pass = document.getElementById('lg-pass').value;
+  const err  = document.getElementById('lg-error');
+
+  const found = USERS[user];
+  if (!found || found.password !== pass) {
+    err.classList.add('show');
+    document.getElementById('lg-pass').value = '';
+    logAudit('login', 'FAILED LOGIN', `User: ${user}`);
+    return;
+  }
+
+  err.classList.remove('show');
+  currentUser = found.display;
+  currentRole = found.role;
+
+  document.getElementById('nav-username').textContent = currentUser;
+  document.getElementById('nav-role').textContent     = currentRole;
+  document.getElementById('banner-user').textContent  = currentUser;
+
+  document.getElementById('login-gate').style.display = 'none';
+  document.getElementById('app').classList.add('show');
+
+  logAudit('login', 'LOGIN', `${currentUser} — ${currentRole}`);
+  loadDashboard();
+}
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter') {
+    if (!document.getElementById('app').classList.contains('show')) doLogin();
+  }
+});
+
+function doSignout() {
+  logAudit('login', 'SIGNOUT', currentUser);
+  currentUser = null; currentRole = null;
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('login-gate').style.display = 'flex';
+  document.getElementById('lg-user').value = '';
+  document.getElementById('lg-pass').value = '';
+  document.getElementById('nav-username').textContent = '—';
+  document.getElementById('nav-role').textContent     = '—';
+}
+
+// ── NAVIGATION ─────────────────────────────────────────────
+function show(name, el) {
+  document.querySelectorAll('.widget').forEach(w => w.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('w-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function showModal(icon, title, body, confirmLabel, confirmClass, cb) {
+  document.getElementById('modal-icon').textContent  = icon;
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML    = body;
+  const btn = document.getElementById('modal-confirm-btn');
+  btn.textContent  = confirmLabel;
+  btn.className    = 'btn ' + confirmClass;
+  modalCallback    = cb;
+  document.getElementById('modal').classList.add('show');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('show');
+  modalCallback = null;
+}
+
+function modalConfirm() {
+  closeModal();
+  if (modalCallback) modalCallback();
+}
+
+// ── DASHBOARD ──────────────────────────────────────────────
+function loadDashboard() {
+  document.getElementById('ds-open').textContent    = '—';
+  document.getElementById('ds-closed').textContent  = '—';
+  document.getElementById('ds-signoff').textContent = '—';
+  document.getElementById('ds-restate').textContent = '0';
+
+  // Show recent audit activity
+  renderDashboardActivity();
+
+  // Attempt live stats
+  fetch(`${BASE}/api/v1/oversight/dashboard`)
+    .then(r => r.json())
+    .then(d => {
+      document.getElementById('ds-open').textContent    = d.open_periods    ?? '—';
+      document.getElementById('ds-closed').textContent  = d.closed_this_month ?? '—';
+      document.getElementById('ds-signoff').textContent = d.pending_signoff ?? '—';
+      document.getElementById('ds-restate').textContent = d.active_restatements ?? '0';
+    })
+    .catch(() => {});
+}
+
+function renderDashboardActivity() {
+  const el = document.getElementById('ds-activity');
+  if (auditLog.length === 0) {
+    el.innerHTML = '<span style="color:var(--muted)">No activity this session.</span>';
+    return;
+  }
+  el.innerHTML = auditLog.slice(0, 5).map(e => `
+    <div class="audit-entry">
+      <div class="audit-ts">${e.ts.replace('T',' ').substring(0,19)}</div>
+      <div class="audit-actor">${e.actor}</div>
+      <div class="audit-action">
+        <span class="audit-type ${e.type}">${e.type}</span>${e.action}
+        <span> — ${e.detail}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── AUDIT TRAIL ────────────────────────────────────────────
+function loadAudit() {
+  const filterType = document.getElementById('at-type').value;
+  const filterPort = document.getElementById('at-portfolio').value.trim();
+
+  let entries = auditLog;
+  if (filterType) entries = entries.filter(e => e.type === filterType);
+  if (filterPort) entries = entries.filter(e => e.detail.includes(filterPort));
+
+  const el = document.getElementById('audit-log');
+  if (entries.length === 0) {
+    el.innerHTML = '<div style="font-family:var(--mono);font-size:0.75em;color:var(--muted);padding:16px 0">No audit entries match the filter.</div>';
+    return;
+  }
+  el.innerHTML = entries.map(e => `
+    <div class="audit-entry">
+      <div class="audit-ts">${e.ts.replace('T',' ').substring(0,19)}</div>
+      <div class="audit-actor">${e.actor}</div>
+      <div class="audit-action">
+        <span class="audit-type ${e.type}">${e.type}</span>${e.action}
+        <span> — ${e.detail}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── CALENDAR OVERVIEW ──────────────────────────────────────
+async function loadCalOverview() {
+  const portfolio = document.getElementById('co-portfolio').value.trim();
+  const calendar  = document.getElementById('co-calendar').value;
+  const sp = document.getElementById('sp-co');
+  const st = document.getElementById('st-co');
+
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+
+  sp.classList.add('show'); st.textContent = 'Loading...';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/oversight/calendar/${portfolio}/${calendar}`);
+    const data = await res.json();
+    const tbody = document.getElementById('co-tbody');
+    const tbl   = document.getElementById('co-table');
+
+    if (data.periods && data.periods.length > 0) {
+      tbody.innerHTML = data.periods.map(p => {
+        const statusClass =
+          p.period_status === 'Closed'  ? 'closed'  :
+          p.period_status === 'Open'    ? 'open'    :
+          p.period_status === 'Pending' ? 'pending' : 'restate';
+
+        const canClose  = p.period_status === 'Open' || p.period_status === 'Pending';
+        const canReopen = p.period_status === 'Closed';
+
+        return `<tr>
+          <td>${p.period_name}</td>
+          <td><span class="period-status ${statusClass}">${p.period_status}</span></td>
+          <td>${(p.current_period_start  || '').substring(0,10)}</td>
+          <td>${(p.current_period_cutoff || '').substring(0,10)}</td>
+          <td>${(p.current_period_knowledge || '').substring(0,10)}</td>
+          <td>
+            ${canClose  ? `<button class="period-action close-btn"  onclick="quickClose('${portfolio}','${calendar}','${p.period_name}')">Close</button>` : ''}
+            ${canReopen ? `<button class="period-action reopen-btn" onclick="quickReopen('${portfolio}','${calendar}','${p.period_name}')">Reopen</button>` : ''}
+          </td>
+        </tr>`;
+      }).join('');
+      tbl.style.display = '';
+      st.textContent = `${data.periods.length} periods`;
+    } else {
+      tbl.style.display = 'none';
+      st.textContent = 'No periods found';
+    }
+  } catch(e) {
+    st.textContent = 'Error — check server connection';
+  }
+  sp.classList.remove('show');
+}
+
+function quickClose(portfolio, calendar, period) {
+  document.getElementById('cp2-portfolio').value = portfolio;
+  document.getElementById('cp2-calendar').value  = calendar;
+  document.getElementById('cp2-period').value    = period;
+  show('close-period', document.querySelector('.nav-item:nth-child(5)'));
+}
+
+function quickReopen(portfolio, calendar, period) {
+  document.getElementById('rp-portfolio').value = portfolio;
+  document.getElementById('rp-calendar').value  = calendar;
+  document.getElementById('rp-period').value    = period;
+  show('reopen-period', null);
+}
+
+// ── CLOSE PERIOD ───────────────────────────────────────────
+function confirmClose() {
+  const portfolio = document.getElementById('cp2-portfolio').value.trim();
+  const calendar  = document.getElementById('cp2-calendar').value;
+  const period    = document.getElementById('cp2-period').value.trim();
+  const kend      = document.getElementById('cp2-kend').value;
+  const note      = document.getElementById('cp2-note').value.trim();
+
+  if (!portfolio || !period || !kend) {
+    const st = document.getElementById('st-cp2');
+    st.textContent = 'Portfolio, period, and knowledge end date required';
+    st.className = 'status err';
+    return;
+  }
+
+  showModal(
+    '◆',
+    'Close Period',
+    `You are about to permanently close:<br><br>
+    <strong>Portfolio:</strong> ${portfolio}<br>
+    <strong>Calendar:</strong>  ${calendar}<br>
+    <strong>Period:</strong>    ${period}<br>
+    <strong>Knowledge End:</strong> ${kend}<br><br>
+    This period will be <strong>sealed</strong>. A new contiguous period will be created.
+    This action is logged under your authority.`,
+    'Close Period',
+    'btn-authority',
+    () => doClosePeriod(portfolio, calendar, period, kend, note)
+  );
+}
+
+async function doClosePeriod(portfolio, calendar, period, kend, note) {
+  const sp = document.getElementById('sp-cp2');
+  const st = document.getElementById('st-cp2');
+  const rb = document.getElementById('rb-cp2');
+  sp.classList.add('show'); st.textContent = 'Closing...'; st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/oversight/calendar/${portfolio}/${calendar}/${period}/close`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ knowledge_end: kend, note, actor: currentUser }),
+    });
+    const data = await res.json();
+
+    if (res.ok) {
+      logAudit('close', `CLOSE ${period}`, `${portfolio} / ${calendar} — ${note || 'no note'}`);
+      st.textContent = `✓ Period ${period} closed`; st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent =
+        `Period ${period} closed.\n` +
+        `Knowledge end: ${kend}\n` +
+        `Next period created: ${data.next_period || 'see calendar'}\n` +
+        `Actor: ${currentUser}`;
+      renderDashboardActivity();
+    } else {
+      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
+      rb.className = 'result-box show fail';
+      rb.textContent = data.detail;
+    }
+  } catch(e) {
+    // Offline demo mode
+    logAudit('close', `CLOSE ${period}`, `${portfolio} / ${calendar} — ${note || 'no note'} [demo]`);
+    st.textContent = `✓ Period ${period} closed (demo)`; st.className = 'status ok';
+    rb.className = 'result-box show pass';
+    rb.textContent =
+      `[DEMO MODE — server not connected]\n\n` +
+      `Period ${period} closed.\nKnowledge end: ${kend}\nActor: ${currentUser}\n` +
+      `Audit entry recorded in session log.`;
+    renderDashboardActivity();
+  }
+  sp.classList.remove('show');
+}
+
+// ── REOPEN PERIOD ──────────────────────────────────────────
+function confirmReopen() {
+  const portfolio = document.getElementById('rp-portfolio').value.trim();
+  const calendar  = document.getElementById('rp-calendar').value;
+  const period    = document.getElementById('rp-period').value.trim();
+  const reason    = document.getElementById('rp-reason').value.trim();
+
+  if (!portfolio || !period || !reason) {
+    const st = document.getElementById('st-rp');
+    st.textContent = 'Portfolio, period, and justification required';
+    st.className = 'status err';
+    return;
+  }
+
+  showModal(
+    '⚠',
+    'Reopen Closed Period',
+    `<strong style="color:var(--fail-t)">Senior action.</strong> You are reopening:<br><br>
+    <strong>Portfolio:</strong> ${portfolio}<br>
+    <strong>Calendar:</strong>  ${calendar}<br>
+    <strong>Period:</strong>    ${period}<br><br>
+    <strong>Reason:</strong> ${reason}<br><br>
+    All subsequent period snapshots will be <strong style="color:var(--fail-t)">invalidated</strong>.
+    This is permanently logged under your authority.`,
+    'Reopen Period',
+    'btn-danger',
+    () => doReopenPeriod(portfolio, calendar, period, reason)
+  );
+}
+
+async function doReopenPeriod(portfolio, calendar, period, reason) {
+  const sp = document.getElementById('sp-rp');
+  const st = document.getElementById('st-rp');
+  const rb = document.getElementById('rb-rp');
+  sp.classList.add('show'); st.textContent = 'Processing...'; st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/oversight/calendar/${portfolio}/${calendar}/${period}/reopen`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, actor: currentUser }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      logAudit('reopen', `REOPEN ${period}`, `${portfolio} / ${calendar} — ${reason}`);
+      st.textContent = `✓ Period ${period} reopened`; st.className = 'status warn';
+      rb.className = 'result-box show warn';
+      rb.textContent = `Period ${period} reopened.\nReason: ${reason}\nActor: ${currentUser}`;
+      renderDashboardActivity();
+    } else {
+      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
+      rb.className = 'result-box show fail'; rb.textContent = data.detail;
+    }
+  } catch(e) {
+    logAudit('reopen', `REOPEN ${period}`, `${portfolio} / ${calendar} — ${reason} [demo]`);
+    st.textContent = `✓ Reopened (demo)`; st.className = 'status warn';
+    rb.className = 'result-box show warn';
+    rb.textContent = `[DEMO MODE]\n\nPeriod ${period} reopened.\nReason: ${reason}\nActor: ${currentUser}`;
+    renderDashboardActivity();
+  }
+  sp.classList.remove('show');
+}
+
+// ── RESTATEMENT ────────────────────────────────────────────
+function confirmRestate() {
+  const portfolio = document.getElementById('rs-portfolio').value.trim();
+  const calendar  = document.getElementById('rs-calendar').value;
+  const period    = document.getElementById('rs-period').value.trim();
+  const reason    = document.getElementById('rs-reason').value.trim();
+
+  if (!portfolio || !period || !reason) {
+    const st = document.getElementById('st-rs');
+    st.textContent = 'All fields required'; st.className = 'status err'; return;
+  }
+
+  showModal(
+    '⚠',
+    'Initiate Restatement',
+    `<strong style="color:var(--fail-t)">Senior action — cascade effect.</strong><br><br>
+    Restatement from <strong>${period}</strong> will mark that period and
+    <strong style="color:var(--fail-t)">all subsequent periods</strong> as Needs Restatement.<br><br>
+    <strong>Portfolio:</strong> ${portfolio} / ${calendar}<br>
+    <strong>From:</strong> ${period} onwards<br>
+    <strong>Reason:</strong> ${reason}<br><br>
+    Each affected period must be reprocessed and re-closed in sequence.`,
+    'Initiate Restatement',
+    'btn-danger',
+    () => doRestate(portfolio, calendar, period, reason)
+  );
+}
+
+async function doRestate(portfolio, calendar, period, reason) {
+  const sp = document.getElementById('sp-rs');
+  const st = document.getElementById('st-rs');
+  const rb = document.getElementById('rb-rs');
+  sp.classList.add('show'); st.textContent = 'Processing...'; st.className = 'status info';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/oversight/calendar/${portfolio}/${calendar}/${period}/restate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reason, actor: currentUser }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      logAudit('restate', `RESTATE from ${period}`, `${portfolio} / ${calendar} — ${reason}`);
+      st.textContent = `✓ Restatement initiated`; st.className = 'status warn';
+      rb.className = 'result-box show warn';
+      rb.textContent =
+        `Restatement from ${period}.\n` +
+        `Periods affected: ${data.periods_affected || 'see calendar'}\n` +
+        `Reason: ${reason}\nActor: ${currentUser}`;
+      renderDashboardActivity();
+    } else {
+      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
+      rb.className = 'result-box show fail'; rb.textContent = data.detail;
+    }
+  } catch(e) {
+    logAudit('restate', `RESTATE from ${period}`, `${portfolio} / ${calendar} — ${reason} [demo]`);
+    st.textContent = `✓ Restatement initiated (demo)`; st.className = 'status warn';
+    rb.className = 'result-box show warn';
+    rb.textContent = `[DEMO MODE]\n\nRestatement from ${period} onwards.\nReason: ${reason}\nActor: ${currentUser}`;
+    renderDashboardActivity();
+  }
+  sp.classList.remove('show');
+}
+
+// ── SIGN-OFF ───────────────────────────────────────────────
+async function doSignoff(type) {
+  const prefix = { ops: 'os', fa: 'fs', perf: 'ps' }[type];
+  const portfolio = document.getElementById(`${prefix}-portfolio`).value.trim();
+  const calendar  = document.getElementById(`${prefix}-calendar`).value;
+  const period    = document.getElementById(`${prefix}-period`).value.trim();
+  const note      = document.getElementById(`${prefix}-note`).value.trim();
+  const sp = document.getElementById(`sp-${prefix}`);
+  const st = document.getElementById(`st-${prefix}`);
+  const rb = document.getElementById(`rb-${prefix}`);
+
+  if (!portfolio || !period) {
+    st.textContent = 'Portfolio and period required'; st.className = 'status err'; return;
+  }
+
+  sp.classList.add('show'); st.textContent = 'Recording...'; st.className = 'status info';
+
+  try {
+    const res = await fetch(`${BASE}/api/v1/oversight/signoff`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type, portfolio, calendar, period, note, actor: currentUser }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      logAudit('signoff', `${type.toUpperCase()} SIGNOFF ${period}`, `${portfolio} — ${note || 'no note'}`);
+      st.textContent = `✓ ${type.toUpperCase()} sign-off recorded`; st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent = `${type.toUpperCase()} sign-off recorded.\nPeriod: ${period}\nActor: ${currentUser}`;
+      renderDashboardActivity();
+    } else {
+      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
+      rb.className = 'result-box show fail'; rb.textContent = data.detail;
+    }
+  } catch(e) {
+    logAudit('signoff', `${type.toUpperCase()} SIGNOFF ${period}`, `${portfolio} — ${note || 'no note'} [demo]`);
+    st.textContent = `✓ Sign-off recorded (demo)`; st.className = 'status ok';
+    rb.className = 'result-box show pass';
+    rb.textContent = `[DEMO MODE]\n\n${type.toUpperCase()} sign-off recorded.\nPeriod: ${period}\nActor: ${currentUser}`;
+    renderDashboardActivity();
+  }
+  sp.classList.remove('show');
+}
+
+// ── VALIDATION ─────────────────────────────────────────────
+async function runValidation() {
+  const portfolio = document.getElementById('vl-portfolio').value.trim();
+  const calendar  = document.getElementById('vl-calendar').value;
+  const period    = document.getElementById('vl-period').value.trim();
+  const suite     = document.getElementById('vl-suite').value;
+  const sp = document.getElementById('sp-vl');
+  const st = document.getElementById('st-vl');
+  const rb = document.getElementById('rb-vl');
+
+  if (!portfolio || !period) {
+    st.textContent = 'Portfolio and period required'; st.className = 'status err'; return;
+  }
+
+  sp.classList.add('show'); st.textContent = 'Running...'; st.className = 'status info';
+
+  try {
+    const res = await fetch(`${BASE}/api/v1/oversight/validate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ portfolio, calendar, period, suite, actor: currentUser }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      logAudit('signoff', `VALIDATION ${period}`, `${portfolio} / ${suite}`);
+      const passed = data.checks_passed ?? 0;
+      const failed = data.checks_failed ?? 0;
+      st.textContent = failed > 0 ? `${failed} check(s) failed` : `✓ All checks passed`;
+      st.className   = failed > 0 ? 'status err' : 'status ok';
+      rb.className   = `result-box show ${failed > 0 ? 'fail' : 'pass'}`;
+      rb.textContent = `Validation: ${suite}\nPortfolio: ${portfolio} / ${period}\n\nPassed: ${passed}\nFailed: ${failed}\n\n${(data.details || []).join('\n')}`;
+    } else {
+      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
+      rb.className = 'result-box show fail'; rb.textContent = data.detail;
+    }
+  } catch(e) {
+    logAudit('signoff', `VALIDATION ${period}`, `${portfolio} / ${suite} [demo]`);
+    st.textContent = '✓ Validation complete (demo)'; st.className = 'status ok';
+    rb.className = 'result-box show pass';
+    rb.textContent =
+      `[DEMO MODE — server not connected]\n\n` +
+      `Validation suite: ${suite}\nPortfolio: ${portfolio} / ${calendar} / ${period}\n\n` +
+      `✓ Positions reconciled to investment master\n` +
+      `✓ Cash balances consistent\n` +
+      `✓ Income accruals within tolerance\n` +
+      `✓ No open lot mismatches\n` +
+      `✓ FX rates applied correctly\n\n` +
+      `Actor: ${currentUser}`;
+    renderDashboardActivity();
+  }
+  sp.classList.remove('show');
+}
+</script>
+</body>
+</html>

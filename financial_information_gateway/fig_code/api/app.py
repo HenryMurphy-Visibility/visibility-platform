@@ -49,6 +49,9 @@ from cph_routes import cph_router
 
 from ops_routes import ops_router
 
+from oversight_routes import oversight_router
+
+
 # ============================================================
 # PERIOD FORMAT GUIDE
 # ============================================================
@@ -179,6 +182,8 @@ app.include_router(router)
 app.include_router(cph_router)# After existing include_router lines
 app.include_router(ops_router)
 
+app.include_router(oversight_router)
+
 
 
 # ============================================================
@@ -272,6 +277,10 @@ def landing():
         <span>API DOCS</span>
         <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">REST Interface</span>
     </a>
+    <a href="/oversight" style="padding: 20px 48px; background: #7a5a08; color: #e6a817; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; border: 1px solid #b8860b; display:flex; flex-direction:column; gap:4px;">
+         <span>Oversight</span>
+         <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Governance Console</span>
+</a>
 </div>
 </div>
     <div class="footer">
@@ -311,6 +320,14 @@ def ops_console():
     import os
     ops_path = os.path.join(os.path.dirname(__file__), "ops.html")
     with open(ops_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+@app.get("/oversight", response_class=HTMLResponse)
+def oversight_console():
+    import os
+    oversight_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "oversight.html")
+    with open(oversight_path, "r", encoding="utf-8") as f:
         return f.read()
 # ============================================================
 # HEALTH

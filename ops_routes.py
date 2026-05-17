@@ -198,6 +198,13 @@ def create_portfolio(config: PortfolioConfig):
         for d in dirs:
             d.mkdir(parents=True, exist_ok=True)
 
+        # ── RESOLVE CALENDARS FROM PRESET OR EXPLICIT LIST ───────
+        calendars = config.calendars
+        if config.calendar_preset and config.calendar_preset in CALENDAR_PRESETS:
+            calendars = CALENDAR_PRESETS[config.calendar_preset]
+        if not calendars:
+            calendars = ["Monthly"]
+
         # ── BUILD CONFIG WITH TEMPORAL METHOD HISTORIES ───────────
         config_data = {
             # Non-temporal — foundational, never changed
@@ -209,12 +216,8 @@ def create_portfolio(config: PortfolioConfig):
             "description":      config.description,
             "status":           "active",
             "created_at":       datetime.now().isoformat(),
-
-            # Calendars selected at creation
             "calendars":        calendars,
-
             # Temporal — history maintained, effective by date
-            # Each history entry: {value, effective_from (YYYY-MM-DD)}
             "closing_method_history": [
                 {
                     "value":          config.closing_method,
@@ -239,14 +242,6 @@ def create_portfolio(config: PortfolioConfig):
         config_path = portfolio_dir / "portfolio.json"
         with open(config_path, "w") as f:
             json.dump(config_data, f, indent=2)
-
-        # ── RESOLVE CALENDARS FROM PRESET OR EXPLICIT LIST ──────
-        calendars = config.calendars
-        if config.calendar_preset and config.calendar_preset in CALENDAR_PRESETS:
-            calendars = CALENDAR_PRESETS[config.calendar_preset]
-
-        if not calendars:
-            calendars = ["Monthly"]
 
         # ── GENERATE CALENDAR FILES ───────────────────────────────
         calendar_results = generate_calendars(
@@ -355,19 +350,19 @@ def list_portfolios():
                 config = json.load(f)
 
             portfolios.append({
-                "portfolio_id":   config.get("portfolio_id"),
-                "description":    config.get("description"),
-                "base_currency":  config.get("base_currency"),
+                "portfolio_id":     config.get("portfolio_id"),
+                "description":      config.get("description"),
+                "base_currency":    config.get("base_currency"),
                 "domicile_country": config.get("domicile_country"),
-                "inception_date": config.get("inception_date"),
-                "managers":       config.get("managers", []),
-                "status":         config.get("status"),
-                "created_at":     config.get("created_at"),
-                "closing_method": get_method_as_of(
+                "inception_date":   config.get("inception_date"),
+                "managers":         config.get("managers", []),
+                "status":           config.get("status"),
+                "created_at":       config.get("created_at"),
+                "closing_method":   get_method_as_of(
                     config.get("closing_method_history", []), today),
-                "accrual_method": get_method_as_of(
+                "accrual_method":   get_method_as_of(
                     config.get("accrual_method_history", []), today),
-                "amort_method":   get_method_as_of(
+                "amort_method":     get_method_as_of(
                     config.get("amort_method_history", []), today),
             })
 
@@ -523,8 +518,8 @@ def add_investment(portfolio_id: str, investment: InvestmentRecord):
             "strike":          investment.strike or "",
         }
 
-        cols       = list(record.keys())
-        write_hdr  = not im_path.exists() or os.path.getsize(im_path) == 0
+        cols      = list(record.keys())
+        write_hdr = not im_path.exists() or os.path.getsize(im_path) == 0
 
         with open(im_path, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=cols)
@@ -758,14 +753,15 @@ def _csv_date_to_ymd(csv_date: str) -> str:
     Falls back gracefully if format is unexpected.
     """
     try:
-        dt = datetime.strptime(csv_date.split(":")[0] +
-                               ":" + csv_date.split(":")[1] +
-                               ":" + csv_date.split(":")[2],
-                               "%m/%d/%Y")
+        dt = datetime.strptime(
+            csv_date.split(":")[0] + ":" +
+            csv_date.split(":")[1] + ":" +
+            csv_date.split(":")[2],
+            "%m/%d/%Y"
+        )
         return dt.strftime("%Y-%m-%d")
     except Exception:
         try:
-            # Try direct YYYY-MM-DD
             datetime.strptime(csv_date[:10], "%Y-%m-%d")
             return csv_date[:10]
         except Exception:
