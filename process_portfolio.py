@@ -336,8 +336,11 @@ def _extract_portfolio_im(portfolio: str, candidates: set) -> int:
     missing    = needed - global_map.keys()
 
     if missing:
-        print(f"    WARNING: {len(missing)} investments not in global IM: "
-              f"{sorted(missing)[:10]}")
+        raise RuntimeError(
+            f"BOOTSTRAP FAILED — {len(missing)} investment(s) not found "
+            f"in global investment master: {sorted(missing)}. "
+            f"Add to global IM before processing."
+        )
 
     to_write  = [global_map[inv] for inv in needed if inv in global_map]
     write_hdr = not portfolio_im.exists()

@@ -20,6 +20,8 @@
     --success-t: #3dba70;
     --fail:      #7a2a2a;
     --fail-t:    #e05555;
+    --warn:      #7a5a08;
+    --warn-t:    #e6a817;
     --mono:      'JetBrains Mono', monospace;
     --serif:     'Crimson Pro', Georgia, serif;
   }
@@ -27,43 +29,55 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--serif);
-    font-size: 15px;
-    line-height: 1.6;
-    min-height: 100vh;
-    display: grid;
-    grid-template-columns: 220px 1fr;
-    grid-template-rows: 56px 1fr;
+    background: var(--bg); color: var(--text); font-family: var(--serif);
+    font-size: 15px; line-height: 1.6; min-height: 100vh;
+    display: grid; grid-template-columns: 220px 1fr; grid-template-rows: 56px 1fr;
   }
 
   header {
-    grid-column: 1 / -1;
-    background: var(--surface);
+    grid-column: 1 / -1; background: var(--surface);
     border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 28px;
-    gap: 16px;
+    display: flex; align-items: center; padding: 0 28px; gap: 16px;
   }
   header h1 { font-family: var(--serif); font-size: 1.2em; font-weight: 300; letter-spacing: 3px; text-transform: uppercase; color: #fff; cursor: default; }
   header h1:hover { color: var(--accent2); }
-  header span { font-family: var(--mono); font-size: 0.7em; color: var(--muted); letter-spacing: 1px; }
-  .header-links { margin-left: auto; display: flex; gap: 16px; }
+  header span { font-family: var(--mono); font-size: 0.85em; color: #a0a8c0; letter-spacing: 2px; }
+  .header-links { margin-left: auto; display: flex; gap: 16px; align-items: center; }
   .header-link { font-family: var(--mono); font-size: 0.7em; color: var(--muted); text-decoration: none; letter-spacing: 1px; transition: color 0.15s; }
   .header-link:hover { color: var(--accent2); }
 
   nav {
-    background: var(--surface);
-    border-right: 1px solid var(--border);
-    padding: 20px 0;
-    overflow-y: auto;
+    background: var(--surface); border-right: 1px solid var(--border);
+    padding: 16px 0 0; overflow-y: auto; display: flex; flex-direction: column;
   }
-  .nav-section { padding: 6px 20px 4px; font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px; text-transform: uppercase; color: #8a90a8; cursor: default; }
-  .nav-item { display: block; padding: 9px 20px; font-family: var(--mono); font-size: 0.78em; color: var(--muted); cursor: pointer; border-left: 2px solid transparent; transition: all 0.15s; user-select: none; }
+  .nav-sections { flex: 1; }
+  .nav-section {
+    padding: 8px 20px 4px; font-family: var(--mono); font-size: 0.65em;
+    letter-spacing: 2px; text-transform: uppercase; color: #c0c8e0; cursor: default;
+    border-top: 1px solid var(--border); margin-top: 4px;
+  }
+  .nav-section:first-child { border-top: none; margin-top: 0; }
+  .nav-item {
+    display: block; padding: 9px 20px; font-family: var(--mono); font-size: 0.78em;
+    color: var(--muted); cursor: pointer; border-left: 2px solid transparent;
+    transition: all 0.15s; user-select: none;
+  }
   .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
   .nav-item.active { color: #fff; border-left-color: var(--accent); background: rgba(46,95,163,0.12); }
+  .nav-item.stub { color: #3a4060; cursor: default; font-style: italic; }
+  .nav-item.stub:hover { color: #3a4060; background: none; }
+  .nav-stub-badge { font-size: 0.7em; color: #2a3050; margin-left: 6px; letter-spacing: 0; font-style: normal; }
+
+  .nav-fig-link { padding: 16px 20px; border-top: 1px solid var(--border); margin-top: auto; }
+  .nav-fig-btn {
+    display: flex; align-items: center; gap: 8px; font-family: var(--mono);
+    font-size: 0.75em; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--accent2); text-decoration: none; padding: 8px 12px;
+    border: 1px solid rgba(46,95,163,0.3); border-radius: 2px;
+    transition: all 0.15s; background: rgba(46,95,163,0.06);
+  }
+  .nav-fig-btn:hover { background: rgba(46,95,163,0.15); border-color: var(--accent); color: #fff; }
+  .nav-fig-arrow { font-size: 0.9em; margin-left: auto; }
 
   main { padding: 28px 32px; overflow-y: auto; display: flex; flex-direction: column; gap: 20px; }
 
@@ -74,15 +88,17 @@
   .widget-desc { font-size: 0.85em; color: var(--muted); font-style: italic; }
   .widget-body { padding: 24px; }
 
+  .widget-stub .widget-body { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 48px 24px; gap: 12px; text-align: center; }
+  .stub-icon { font-size: 2em; opacity: 0.3; }
+  .stub-title { font-family: var(--mono); font-size: 0.8em; color: var(--muted2); letter-spacing: 1px; }
+  .stub-desc  { font-family: var(--mono); font-size: 0.68em; color: var(--muted); max-width: 360px; line-height: 1.8; }
+  .stub-sprint { font-family: var(--mono); font-size: 0.62em; color: var(--accent2); letter-spacing: 1px; background: rgba(46,95,163,0.1); border: 1px solid rgba(46,95,163,0.2); padding: 3px 10px; border-radius: 2px; margin-top: 4px; }
+
   .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-bottom: 20px; }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   .form-group.full { grid-column: 1 / -1; }
   label { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); }
-  input, select, textarea {
-    background: var(--bg); border: 1px solid var(--border); color: var(--text);
-    font-family: var(--mono); font-size: 0.82em; padding: 8px 10px;
-    border-radius: 2px; outline: none; transition: border-color 0.15s;
-  }
+  input, select, textarea { background: var(--bg); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 0.82em; padding: 8px 10px; border-radius: 2px; outline: none; transition: border-color 0.15s; }
   input[type="date"] { color-scheme: dark; }
   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   input::placeholder { color: var(--muted); }
@@ -96,21 +112,23 @@
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
   .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); }
   .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .btn-danger { background: transparent; border-color: var(--fail); color: var(--fail-t); }
+  .btn-danger:hover { background: rgba(122,42,42,0.15); }
+  .btn-warn { background: transparent; border-color: var(--warn); color: var(--warn-t); }
+  .btn-warn:hover { background: rgba(122,90,8,0.15); }
+
   .status { font-family: var(--mono); font-size: 0.72em; margin-left: auto; }
   .status.ok   { color: var(--success-t); }
   .status.err  { color: var(--fail-t); }
+  .status.warn { color: var(--warn-t); }
   .status.info { color: var(--muted); }
 
-  .result-box {
-    display: none; margin-top: 20px; padding: 16px;
-    background: var(--bg); border: 1px solid var(--border);
-    border-radius: 2px; font-family: var(--mono); font-size: 0.75em;
-    white-space: pre-wrap;
-  }
+  .result-box { display: none; margin-top: 20px; padding: 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; font-family: var(--mono); font-size: 0.75em; white-space: pre-wrap; }
   .result-box.show { display: block; }
   .result-box.pass { border-color: var(--success); color: var(--success-t); }
-  .result-box.fail { border-color: var(--fail); color: var(--fail-t); }
-  .result-box.info { border-color: var(--border); color: var(--text); }
+  .result-box.fail { border-color: var(--fail);    color: var(--fail-t); }
+  .result-box.warn { border-color: var(--warn);    color: var(--warn-t); }
+  .result-box.info { border-color: var(--border);  color: var(--text); }
 
   .spinner { display: none; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.6s linear infinite; }
   .spinner.show { display: inline-block; }
@@ -122,12 +140,7 @@
   .method-fields.show { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 16px; margin-top: 16px; }
 
   .portfolio-list { display: flex; flex-direction: column; gap: 8px; }
-  .portfolio-card {
-    padding: 12px 16px; background: var(--bg);
-    border: 1px solid var(--border); border-radius: 2px;
-    display: flex; align-items: center; gap: 16px;
-    font-family: var(--mono); font-size: 0.78em;
-  }
+  .portfolio-card { padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 0.78em; }
   .portfolio-card .pid { color: #fff; font-size: 0.9em; }
   .portfolio-card .pmeta { color: var(--muted); font-size: 0.85em; }
   .portfolio-card .pstatus { margin-left: auto; color: var(--success-t); }
@@ -141,62 +154,74 @@
   td { padding: 6px 10px; border-bottom: 1px solid rgba(26,30,46,0.5); white-space: nowrap; color: var(--text); }
   tr:hover td { background: rgba(46,95,163,0.05); }
 
-  /* ── VTIPS + UTIPS ──────────────────────────────────────── */
-  .tips-toggle {
-    display: inline-flex; align-items: center; gap: 6px;
-    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px;
-    color: var(--muted); background: transparent;
-    border: 1px solid var(--border); padding: 3px 10px;
-    cursor: pointer; border-radius: 2px; transition: all 0.15s;
-    margin-left: auto; user-select: none;
+  /* Correction display */
+  .correction-card {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 2px; margin-bottom: 12px; overflow: hidden;
   }
+  .correction-card.reversal { border-left: 3px solid var(--fail-t); }
+  .correction-card.modify   { border-left: 3px solid var(--warn-t); }
+  .correction-head {
+    padding: 10px 14px; display: flex; align-items: center; gap: 10px;
+    font-family: var(--mono); font-size: 0.72em;
+    border-bottom: 1px solid var(--border);
+    background: rgba(255,255,255,0.02);
+  }
+  .correction-type {
+    font-size: 0.75em; padding: 2px 8px; border-radius: 2px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .correction-type.reversal { background: rgba(122,42,42,0.2); color: var(--fail-t); border: 1px solid rgba(224,85,85,0.2); }
+  .correction-type.modify   { background: rgba(122,90,8,0.2);  color: var(--warn-t); border: 1px solid rgba(230,168,23,0.2); }
+  .correction-reason { color: var(--muted2); margin-left: auto; font-style: italic; }
+  .correction-body { padding: 12px 14px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .correction-col-head { font-family: var(--mono); font-size: 0.6em; letter-spacing: 1.5px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  .correction-field { font-family: var(--mono); font-size: 0.68em; color: var(--text); margin-bottom: 4px; }
+  .correction-field span { color: var(--muted); margin-right: 6px; }
+  .correction-field.changed { color: var(--warn-t); }
+
+  /* Event preview card */
+  .event-preview {
+    background: rgba(46,95,163,0.05); border: 1px solid rgba(46,95,163,0.2);
+    padding: 14px 16px; margin-bottom: 16px; border-radius: 2px;
+    font-family: var(--mono); font-size: 0.72em;
+  }
+  .event-preview-head { color: var(--accent2); margin-bottom: 8px; font-size: 0.85em; letter-spacing: 1px; }
+  .event-preview-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 6px; }
+  .event-preview-field { color: var(--text); }
+  .event-preview-field span { color: var(--muted); }
+
+  /* Warning banner */
+  .action-banner {
+    padding: 10px 14px; margin-bottom: 16px;
+    font-family: var(--mono); font-size: 0.7em; line-height: 1.8;
+    border-radius: 2px;
+  }
+  .action-banner.danger { background: rgba(122,42,42,0.1); border: 1px solid rgba(224,85,85,0.2); color: var(--fail-t); border-left: 3px solid var(--fail-t); }
+  .action-banner.warn   { background: rgba(122,90,8,0.1);  border: 1px solid rgba(230,168,23,0.2); color: var(--warn-t); border-left: 3px solid var(--warn-t); }
+
+  /* VTips + UTips */
+  .tips-toggle { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 3px 10px; cursor: pointer; border-radius: 2px; transition: all 0.15s; margin-left: auto; user-select: none; }
   .tips-toggle:hover { border-color: var(--accent2); color: var(--text); }
   .tips-toggle.has-warning { border-color: #b8860b; color: #e6a817; }
-
-  .tips-panel {
-    display: none; border-bottom: 1px solid var(--border);
-    background: #060710; overflow: hidden;
-    animation: tipsFadeIn 0.15s ease;
-  }
+  .tips-panel { display: none; border-bottom: 1px solid var(--border); background: #060710; overflow: hidden; animation: tipsFadeIn 0.15s ease; }
   .tips-panel.show { display: block; }
-  @keyframes tipsFadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  .tips-panel-tabs {
-    display: flex; border-bottom: 1px solid var(--border); padding: 0 16px;
-  }
-  .tips-tab {
-    font-family: var(--mono); font-size: 0.62em; letter-spacing: 1.5px;
-    text-transform: uppercase; padding: 8px 14px; cursor: pointer;
-    color: var(--muted); border-bottom: 2px solid transparent;
-    transition: all 0.15s; user-select: none;
-    display: flex; align-items: center; gap: 6px;
-  }
+  @keyframes tipsFadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+  .tips-panel-tabs { display: flex; border-bottom: 1px solid var(--border); padding: 0 16px; }
+  .tips-tab { font-family: var(--mono); font-size: 0.62em; letter-spacing: 1.5px; text-transform: uppercase; padding: 8px 14px; cursor: pointer; color: var(--muted); border-bottom: 2px solid transparent; transition: all 0.15s; user-select: none; display: flex; align-items: center; gap: 6px; }
   .tips-tab:hover { color: var(--text); }
   .tips-tab.vtab.active  { color: var(--accent2); border-bottom-color: var(--accent); }
-  .tips-tab.utab.active  { color: #4db87a;        border-bottom-color: #2a7a4a; }
-
-  .tips-tab-count {
-    display: inline-block; font-size: 0.85em; padding: 1px 5px;
-    border-radius: 8px; min-width: 16px; text-align: center;
-  }
-  .vtab .tips-tab-count          { background: rgba(46,95,163,0.3); color: var(--accent2); }
-  .utab .tips-tab-count          { background: rgba(42,122,74,0.3); color: #4db87a; }
-  .vtab.active .tips-tab-count   { background: var(--accent); color: #fff; }
-  .utab.active .tips-tab-count   { background: #2a7a4a; color: #fff; }
-
+  .tips-tab.utab.active  { color: #4db87a; border-bottom-color: #2a7a4a; }
+  .tips-tab-count { display: inline-block; font-size: 0.85em; padding: 1px 5px; border-radius: 8px; min-width: 16px; text-align: center; }
+  .vtab .tips-tab-count { background: rgba(46,95,163,0.3); color: var(--accent2); }
+  .utab .tips-tab-count { background: rgba(42,122,74,0.3); color: #4db87a; }
+  .vtab.active .tips-tab-count { background: var(--accent); color: #fff; }
+  .utab.active .tips-tab-count { background: #2a7a4a; color: #fff; }
   .tips-content-area { display: none; max-height: 260px; overflow-y: auto; }
   .tips-content-area.show { display: block; }
   .tips-content-area::-webkit-scrollbar { width: 4px; }
   .tips-content-area::-webkit-scrollbar-thumb { background: var(--border); }
-
-  .vtip-entry {
-    padding: 10px 16px; border-bottom: 1px solid rgba(26,30,46,0.6);
-    display: flex; gap: 10px; border-left: 2px solid transparent;
-    transition: background 0.1s;
-  }
+  .vtip-entry { padding: 10px 16px; border-bottom: 1px solid rgba(26,30,46,0.6); display: flex; gap: 10px; border-left: 2px solid transparent; transition: background 0.1s; }
   .vtip-entry:last-child { border-bottom: none; }
   .vtip-entry:hover { background: rgba(46,95,163,0.05); }
   .vtip-entry.severity-info    { border-left-color: var(--accent); }
@@ -206,12 +231,7 @@
   .vtip-title { font-family: var(--mono); font-size: 0.71em; color: #fff; margin-bottom: 3px; }
   .vtip-entry.severity-warning .vtip-title { color: #e6a817; }
   .vtip-text  { font-family: var(--mono); font-size: 0.67em; color: var(--muted2); line-height: 1.75; }
-
-  .utip-entry {
-    padding: 10px 16px; border-bottom: 1px solid rgba(26,30,46,0.6);
-    display: flex; gap: 10px; border-left: 2px solid #2a7a4a;
-    transition: background 0.1s; position: relative;
-  }
+  .utip-entry { padding: 10px 16px; border-bottom: 1px solid rgba(26,30,46,0.6); display: flex; gap: 10px; border-left: 2px solid #2a7a4a; transition: background 0.1s; position: relative; }
   .utip-entry:last-child { border-bottom: none; }
   .utip-entry:hover { background: rgba(42,122,74,0.04); }
   .utip-icon { font-size: 13px; flex-shrink: 0; margin-top: 1px; }
@@ -219,53 +239,23 @@
   .utip-title { font-family: var(--mono); font-size: 0.71em; color: #4db87a; margin-bottom: 3px; }
   .utip-text  { font-family: var(--mono); font-size: 0.67em; color: var(--muted2); line-height: 1.75; }
   .utip-meta  { font-family: var(--mono); font-size: 0.6em; color: var(--muted); margin-top: 4px; }
-  .utip-delete {
-    position: absolute; right: 12px; top: 10px;
-    font-family: var(--mono); font-size: 0.6em; color: var(--muted);
-    background: transparent; border: none; cursor: pointer;
-    padding: 2px 6px; border-radius: 2px; opacity: 0; transition: all 0.15s;
-  }
+  .utip-delete { position: absolute; right: 12px; top: 10px; font-family: var(--mono); font-size: 0.6em; color: var(--muted); background: transparent; border: none; cursor: pointer; padding: 2px 6px; border-radius: 2px; opacity: 0; transition: all 0.15s; }
   .utip-entry:hover .utip-delete { opacity: 1; }
   .utip-delete:hover { color: #e05555; background: rgba(122,42,42,0.2); }
-
-  .utip-add-area {
-    padding: 10px 16px; border-top: 1px solid var(--border);
-    background: rgba(42,122,74,0.03);
-  }
-  .utip-add-btn {
-    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px;
-    color: #4db87a; background: transparent; border: 1px dashed #2a7a4a;
-    padding: 5px 14px; cursor: pointer; border-radius: 2px;
-    transition: all 0.15s; width: 100%; text-align: left;
-  }
+  .utip-add-area { padding: 10px 16px; border-top: 1px solid var(--border); background: rgba(42,122,74,0.03); }
+  .utip-add-btn { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px; color: #4db87a; background: transparent; border: 1px dashed #2a7a4a; padding: 5px 14px; cursor: pointer; border-radius: 2px; transition: all 0.15s; width: 100%; text-align: left; }
   .utip-add-btn:hover { background: rgba(42,122,74,0.08); border-style: solid; }
   .utip-form { display: none; gap: 8px; flex-direction: column; margin-top: 8px; }
   .utip-form.show { display: flex; }
-  .utip-form input {
-    background: var(--bg); border: 1px solid #2a7a4a; color: var(--text);
-    font-family: var(--mono); font-size: 0.75em; padding: 7px 10px;
-    border-radius: 2px; outline: none; transition: border-color 0.15s;
-  }
+  .utip-form input { background: var(--bg); border: 1px solid #2a7a4a; color: var(--text); font-family: var(--mono); font-size: 0.75em; padding: 7px 10px; border-radius: 2px; outline: none; transition: border-color 0.15s; }
   .utip-form input:focus { border-color: #4db87a; }
   .utip-form input::placeholder { color: var(--muted); }
   .utip-form-btns { display: flex; gap: 8px; }
-  .utip-save-btn {
-    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px;
-    background: #2a7a4a; border: 1px solid #4db87a; color: #fff;
-    padding: 5px 16px; cursor: pointer; border-radius: 2px; transition: all 0.15s;
-  }
+  .utip-save-btn { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px; background: #2a7a4a; border: 1px solid #4db87a; color: #fff; padding: 5px 16px; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
   .utip-save-btn:hover { background: #3dba70; }
-  .utip-cancel-btn {
-    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px;
-    background: transparent; border: 1px solid var(--border); color: var(--muted);
-    padding: 5px 12px; cursor: pointer; border-radius: 2px; transition: all 0.15s;
-  }
+  .utip-cancel-btn { font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px; background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 5px 12px; cursor: pointer; border-radius: 2px; transition: all 0.15s; }
   .utip-cancel-btn:hover { border-color: var(--muted); color: var(--text); }
-  .tips-empty {
-    padding: 16px; font-family: var(--mono);
-    font-size: 0.7em; color: var(--muted); text-align: center;
-  }
-
+  .tips-empty { padding: 16px; font-family: var(--mono); font-size: 0.7em; color: var(--muted); text-align: center; }
 </style>
 </head>
 <body>
@@ -274,29 +264,49 @@
   <h1>Visibility</h1>
   <span>Operations Console</span>
   <div class="header-links">
-    <a href="/fig"      class="header-link">FIG</a>
-    <a href="/cph"      class="header-link">CPH</a>
-    <a href="/"         class="header-link">Home</a>
+    <a href="/"          class="header-link">Home</a>
     <a href="/oversight" class="header-link" style="color:#e6a817">Oversight</a>
   </div>
 </header>
 
 <nav>
-  <div class="nav-section">Portfolio</div>
-  <div class="nav-item active" onclick="show('portfolios', this)">Portfolios</div>
-  <div class="nav-item" onclick="show('create-portfolio', this)">Create Portfolio</div>
-  <div class="nav-item" onclick="show('update-method', this)">Update Method</div>
+  <div class="nav-sections">
 
-  <div class="nav-section" style="margin-top:12px">Investments</div>
-  <div class="nav-item" onclick="show('add-investment', this)">Add Investment</div>
-  <div class="nav-item" onclick="show('view-investments', this)">View Investments</div>
+    <div class="nav-section">Portfolio</div>
+    <div class="nav-item active" onclick="show('portfolios', this)">Portfolios</div>
+    <div class="nav-item" onclick="show('create-portfolio', this)">Create Portfolio</div>
+    <div class="nav-item" onclick="show('update-method', this)">Update Method</div>
 
-  <div class="nav-section" style="margin-top:12px">Events</div>
-  <div class="nav-item" onclick="show('add-event', this)">Add Event</div>
-  <div class="nav-item" onclick="show('view-events', this)">View Events</div>
+    <div class="nav-section">Investments</div>
+    <div class="nav-item" onclick="show('add-investment', this)">Add Investment</div>
+    <div class="nav-item" onclick="show('view-investments', this)">View Investments</div>
 
-  <div class="nav-section" style="margin-top:12px">Processing</div>
-  <div class="nav-item" onclick="show('process', this)">Process</div>
+    <div class="nav-section">Events</div>
+    <div class="nav-item" onclick="show('add-event', this)">Add Event</div>
+    <div class="nav-item" onclick="show('view-events', this)">View Events</div>
+    <div class="nav-item" onclick="show('reverse-event', this)">Reverse Event</div>
+    <div class="nav-item" onclick="show('modify-event', this)">Modify Event</div>
+    <div class="nav-item" onclick="show('view-corrections', this)">View Corrections</div>
+    <div class="nav-item stub">Corporate Actions <span class="nav-stub-badge">sprint</span></div>
+
+    <div class="nav-section">Marks</div>
+    <div class="nav-item stub">Prices <span class="nav-stub-badge">sprint</span></div>
+    <div class="nav-item stub">FX <span class="nav-stub-badge">sprint</span></div>
+    <div class="nav-item stub">Marks Management <span class="nav-stub-badge">sprint</span></div>
+    <div class="nav-item stub">Accruals &amp; Bond Info <span class="nav-stub-badge">sprint</span></div>
+
+    <div class="nav-section">Calendars</div>
+    <div class="nav-item stub">View Calendar <span class="nav-stub-badge">sprint</span></div>
+    <div class="nav-item stub">Add Calendar <span class="nav-stub-badge">sprint</span></div>
+
+    <div class="nav-section">Processing</div>
+    <div class="nav-item" onclick="show('process', this)">Process</div>
+    <div class="nav-item" onclick="show('je-viewer', this)">JE Viewer</div>
+
+  </div>
+  <div class="nav-fig-link">
+    <a href="/fig?context=ops" class="nav-fig-btn">FIG — Reports <span class="nav-fig-arrow">↗</span></a>
+  </div>
 </nav>
 
 <main>
@@ -316,14 +326,7 @@
       <div class="tips-content-area show" id="vtips-content-portfolios"><div id="vtips-list-portfolios"></div></div>
       <div class="tips-content-area" id="utips-content-portfolios">
         <div id="utips-list-portfolios"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-portfolios" onclick="showUTipForm('portfolios')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-portfolios">
-            <input id="utip-title-input-portfolios" placeholder="Title">
-            <input id="utip-text-input-portfolios" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('portfolios')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('portfolios')">Cancel</button></div>
-          </div>
-        </div>
+        <div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-portfolios" onclick="showUTipForm('portfolios')">+ Add personal tip...</button><div class="utip-form" id="utip-form-portfolios"><input id="utip-title-input-portfolios" placeholder="Title"><input id="utip-text-input-portfolios" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('portfolios')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('portfolios')">Cancel</button></div></div></div>
       </div>
     </div>
     <div class="widget-body">
@@ -346,112 +349,25 @@
       <button class="tips-toggle" id="tips-toggle-create_portfolio" onclick="toggleTips('create_portfolio')">ℹ️&nbsp;<span id="tips-badge-create_portfolio" style="font-family:var(--mono);font-size:0.85em;background:rgba(46,95,163,0.3);color:var(--accent2);padding:1px 6px;border-radius:8px">?</span></button>
     </div>
     <div class="tips-panel" id="tips-panel-create_portfolio">
-      <div class="tips-panel-tabs">
-        <div class="tips-tab vtab active" id="vtab-create_portfolio" onclick="switchTab('create_portfolio','v')">VTips <span class="tips-tab-count" id="vtab-count-create_portfolio">...</span></div>
-        <div class="tips-tab utab" id="utab-create_portfolio" onclick="switchTab('create_portfolio','u')">My Tips <span class="tips-tab-count" id="utab-count-create_portfolio">0</span></div>
-      </div>
+      <div class="tips-panel-tabs"><div class="tips-tab vtab active" id="vtab-create_portfolio" onclick="switchTab('create_portfolio','v')">VTips <span class="tips-tab-count" id="vtab-count-create_portfolio">...</span></div><div class="tips-tab utab" id="utab-create_portfolio" onclick="switchTab('create_portfolio','u')">My Tips <span class="tips-tab-count" id="utab-count-create_portfolio">0</span></div></div>
       <div class="tips-content-area show" id="vtips-content-create_portfolio"><div id="vtips-list-create_portfolio"></div></div>
-      <div class="tips-content-area" id="utips-content-create_portfolio">
-        <div id="utips-list-create_portfolio"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-create_portfolio" onclick="showUTipForm('create_portfolio')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-create_portfolio">
-            <input id="utip-title-input-create_portfolio" placeholder="Title">
-            <input id="utip-text-input-create_portfolio" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('create_portfolio')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('create_portfolio')">Cancel</button></div>
-          </div>
-        </div>
-      </div>
+      <div class="tips-content-area" id="utips-content-create_portfolio"><div id="utips-list-create_portfolio"></div><div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-create_portfolio" onclick="showUTipForm('create_portfolio')">+ Add personal tip...</button><div class="utip-form" id="utip-form-create_portfolio"><input id="utip-title-input-create_portfolio" placeholder="Title"><input id="utip-text-input-create_portfolio" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('create_portfolio')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('create_portfolio')">Cancel</button></div></div></div></div>
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio ID *</label>
-          <input id="cp-id" placeholder="e.g. Portfolio2">
-          <div class="field-hint">Unique identifier — no spaces</div>
-        </div>
-        <div class="form-group">
-          <label>Base Currency *</label>
-          <select id="cp-currency">
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-            <option value="GBP">GBP</option>
-            <option value="JPY">JPY</option>
-            <option value="CHF">CHF</option>
-            <option value="CAD">CAD</option>
-            <option value="AUD">AUD</option>
-          </select>
-          <div class="field-hint"><span>Cannot be changed after creation</span></div>
-        </div>
-        <div class="form-group">
-          <label>Domicile Country *</label>
-          <input id="cp-domicile" placeholder="e.g. US">
-          <div class="field-hint">ISO code — drives withholding tax</div>
-        </div>
-        <div class="form-group">
-          <label>Inception Date *</label>
-          <input type="date" id="cp-inception">
-          <div class="field-hint"><span>Cannot be changed after creation</span></div>
-        </div>
-        <div class="form-group">
-          <label>Closing Method</label>
-          <select id="cp-closing">
-            <option value="FIFO">FIFO</option>
-            <option value="LIFO">LIFO</option>
-            <option value="AVGCOST">Average Cost</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Accrual Method</label>
-          <select id="cp-accrual">
-            <option value="accrue_eod">End of Day</option>
-            <option value="accrue_bod">Beginning of Day</option>
-            <option value="accrue_through_nonbusiness">Through Non-Business Days</option>
-            <option value="accrue_skip_nonbusiness">Skip Non-Business Days</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Amortization Method</label>
-          <select id="cp-amort">
-            <option value="straight_line">Straight Line</option>
-            <option value="effective_yield">Effective Yield</option>
-            <option value="constant_yield">Constant Yield</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Managers</label>
-          <input id="cp-managers" placeholder="e.g. John Smith, Jane Doe">
-          <div class="field-hint">Comma-separated list</div>
-        </div>
-        <div class="form-group full">
-          <label>Description</label>
-          <input id="cp-description" placeholder="e.g. Multi-instrument test portfolio">
-        </div>
-        <div class="form-group">
-          <label>Calendar Preset</label>
-          <select id="cp-preset" onchange="onPresetChange()">
-            <option value="Institutional">Institutional — Monthly only</option>
-            <option value="Hedge Fund">Hedge Fund — Daily + Monthly</option>
-            <option value="Full">Full — All four calendars</option>
-            <option value="Custom">Custom — choose below</option>
-          </select>
-          <div class="field-hint">Drives which calendars are created</div>
-        </div>
-        <div class="form-group" id="fg-custom-calendars" style="display:none">
-          <label>Calendars</label>
-          <div class="checkbox-group">
-            <label class="checkbox-label"><input type="checkbox" id="cal-daily"> Daily</label>
-            <label class="checkbox-label"><input type="checkbox" id="cal-monthly" checked> Monthly</label>
-            <label class="checkbox-label"><input type="checkbox" id="cal-quarterly"> Quarterly</label>
-            <label class="checkbox-label"><input type="checkbox" id="cal-yearly"> Yearly</label>
-          </div>
-        </div>
+        <div class="form-group"><label>Portfolio ID *</label><input id="cp-id" placeholder="e.g. Portfolio3"><div class="field-hint">Unique identifier — no spaces</div></div>
+        <div class="form-group"><label>Base Currency *</label><select id="cp-currency"><option value="USD">USD</option><option value="EUR">EUR</option><option value="GBP">GBP</option><option value="JPY">JPY</option><option value="CHF">CHF</option><option value="CAD">CAD</option><option value="AUD">AUD</option></select><div class="field-hint"><span>Cannot be changed after creation</span></div></div>
+        <div class="form-group"><label>Domicile Country *</label><input id="cp-domicile" placeholder="e.g. US"><div class="field-hint">ISO code — drives withholding tax</div></div>
+        <div class="form-group"><label>Inception Date *</label><input type="date" id="cp-inception"><div class="field-hint"><span>Cannot be changed after creation</span></div></div>
+        <div class="form-group"><label>Closing Method</label><select id="cp-closing"><option value="FIFO">FIFO</option><option value="LIFO">LIFO</option><option value="AVGCOST">Average Cost</option></select></div>
+        <div class="form-group"><label>Accrual Method</label><select id="cp-accrual"><option value="accrue_eod">End of Day</option><option value="accrue_bod">Beginning of Day</option><option value="accrue_through_nonbusiness">Through Non-Business Days</option><option value="accrue_skip_nonbusiness">Skip Non-Business Days</option></select></div>
+        <div class="form-group"><label>Amortization Method</label><select id="cp-amort"><option value="straight_line">Straight Line</option><option value="effective_yield">Effective Yield</option><option value="constant_yield">Constant Yield</option></select></div>
+        <div class="form-group"><label>Managers</label><input id="cp-managers" placeholder="e.g. John Smith, Jane Doe"><div class="field-hint">Comma-separated list</div></div>
+        <div class="form-group full"><label>Description</label><input id="cp-description" placeholder="e.g. Multi-instrument test portfolio"></div>
+        <div class="form-group"><label>Calendar Preset</label><select id="cp-preset" onchange="onPresetChange()"><option value="Institutional">Institutional — Monthly only</option><option value="Hedge Fund">Hedge Fund — Daily + Monthly</option><option value="Full">Full — All four calendars</option><option value="Custom">Custom — choose below</option></select><div class="field-hint">Drives which calendars are created</div></div>
+        <div class="form-group" id="fg-custom-calendars" style="display:none"><label>Calendars</label><div class="checkbox-group"><label class="checkbox-label"><input type="checkbox" id="cal-daily"> Daily</label><label class="checkbox-label"><input type="checkbox" id="cal-monthly" checked> Monthly</label><label class="checkbox-label"><input type="checkbox" id="cal-quarterly"> Quarterly</label><label class="checkbox-label"><input type="checkbox" id="cal-yearly"> Yearly</label></div></div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="createPortfolio()">Create Portfolio</button>
-        <div class="spinner" id="sp-cp"></div>
-        <div class="status" id="st-cp"></div>
-      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="createPortfolio()">Create Portfolio</button><div class="spinner" id="sp-cp"></div><div class="status" id="st-cp"></div></div>
       <div class="result-box" id="rb-cp"></div>
     </div>
   </div>
@@ -464,63 +380,18 @@
       <button class="tips-toggle" id="tips-toggle-update_method" onclick="toggleTips('update_method')">ℹ️&nbsp;<span id="tips-badge-update_method" style="font-family:var(--mono);font-size:0.85em;background:rgba(46,95,163,0.3);color:var(--accent2);padding:1px 6px;border-radius:8px">?</span></button>
     </div>
     <div class="tips-panel" id="tips-panel-update_method">
-      <div class="tips-panel-tabs">
-        <div class="tips-tab vtab active" id="vtab-update_method" onclick="switchTab('update_method','v')">VTips <span class="tips-tab-count" id="vtab-count-update_method">...</span></div>
-        <div class="tips-tab utab" id="utab-update_method" onclick="switchTab('update_method','u')">My Tips <span class="tips-tab-count" id="utab-count-update_method">0</span></div>
-      </div>
+      <div class="tips-panel-tabs"><div class="tips-tab vtab active" id="vtab-update_method" onclick="switchTab('update_method','v')">VTips <span class="tips-tab-count" id="vtab-count-update_method">...</span></div><div class="tips-tab utab" id="utab-update_method" onclick="switchTab('update_method','u')">My Tips <span class="tips-tab-count" id="utab-count-update_method">0</span></div></div>
       <div class="tips-content-area show" id="vtips-content-update_method"><div id="vtips-list-update_method"></div></div>
-      <div class="tips-content-area" id="utips-content-update_method">
-        <div id="utips-list-update_method"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-update_method" onclick="showUTipForm('update_method')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-update_method">
-            <input id="utip-title-input-update_method" placeholder="Title">
-            <input id="utip-text-input-update_method" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('update_method')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('update_method')">Cancel</button></div>
-          </div>
-        </div>
-      </div>
+      <div class="tips-content-area" id="utips-content-update_method"><div id="utips-list-update_method"></div><div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-update_method" onclick="showUTipForm('update_method')">+ Add personal tip...</button><div class="utip-form" id="utip-form-update_method"><input id="utip-title-input-update_method" placeholder="Title"><input id="utip-text-input-update_method" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('update_method')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('update_method')">Cancel</button></div></div></div></div>
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio *</label>
-          <input id="um-portfolio" placeholder="e.g. Portfolio2">
-        </div>
-        <div class="form-group">
-          <label>Method Type *</label>
-          <select id="um-type">
-            <option value="closing_method">Closing Method</option>
-            <option value="accrual_method">Accrual Method</option>
-            <option value="amort_method">Amortization Method</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>New Value *</label>
-          <select id="um-value">
-            <option value="FIFO">FIFO</option>
-            <option value="LIFO">LIFO</option>
-            <option value="AVGCOST">Average Cost</option>
-            <option value="accrue_eod">Accrue EOD</option>
-            <option value="accrue_bod">Accrue BOD</option>
-            <option value="accrue_through_nonbusiness">Through Non-Business Days</option>
-            <option value="accrue_skip_nonbusiness">Skip Non-Business Days</option>
-            <option value="straight_line">Straight Line</option>
-            <option value="effective_yield">Effective Yield</option>
-            <option value="constant_yield">Constant Yield</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Effective From *</label>
-          <input type="date" id="um-date">
-          <div class="field-hint">Does not affect past events</div>
-        </div>
+        <div class="form-group"><label>Portfolio *</label><input id="um-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Method Type *</label><select id="um-type"><option value="closing_method">Closing Method</option><option value="accrual_method">Accrual Method</option><option value="amort_method">Amortization Method</option></select></div>
+        <div class="form-group"><label>New Value *</label><select id="um-value"><option value="FIFO">FIFO</option><option value="LIFO">LIFO</option><option value="AVGCOST">Average Cost</option><option value="accrue_eod">Accrue EOD</option><option value="accrue_bod">Accrue BOD</option><option value="accrue_through_nonbusiness">Through Non-Business Days</option><option value="accrue_skip_nonbusiness">Skip Non-Business Days</option><option value="straight_line">Straight Line</option><option value="effective_yield">Effective Yield</option><option value="constant_yield">Constant Yield</option></select></div>
+        <div class="form-group"><label>Effective From *</label><input type="date" id="um-date"><div class="field-hint">Does not affect past events</div></div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="updateMethod()">Update Method</button>
-        <div class="spinner" id="sp-um"></div>
-        <div class="status" id="st-um"></div>
-      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="updateMethod()">Update Method</button><div class="spinner" id="sp-um"></div><div class="status" id="st-um"></div></div>
       <div class="result-box" id="rb-um"></div>
     </div>
   </div>
@@ -533,128 +404,39 @@
       <button class="tips-toggle" id="tips-toggle-add_investment" onclick="toggleTips('add_investment')">ℹ️&nbsp;<span id="tips-badge-add_investment" style="font-family:var(--mono);font-size:0.85em;background:rgba(46,95,163,0.3);color:var(--accent2);padding:1px 6px;border-radius:8px">?</span></button>
     </div>
     <div class="tips-panel" id="tips-panel-add_investment">
-      <div class="tips-panel-tabs">
-        <div class="tips-tab vtab active" id="vtab-add_investment" onclick="switchTab('add_investment','v')">VTips <span class="tips-tab-count" id="vtab-count-add_investment">...</span></div>
-        <div class="tips-tab utab" id="utab-add_investment" onclick="switchTab('add_investment','u')">My Tips <span class="tips-tab-count" id="utab-count-add_investment">0</span></div>
-      </div>
+      <div class="tips-panel-tabs"><div class="tips-tab vtab active" id="vtab-add_investment" onclick="switchTab('add_investment','v')">VTips <span class="tips-tab-count" id="vtab-count-add_investment">...</span></div><div class="tips-tab utab" id="utab-add_investment" onclick="switchTab('add_investment','u')">My Tips <span class="tips-tab-count" id="utab-count-add_investment">0</span></div></div>
       <div class="tips-content-area show" id="vtips-content-add_investment"><div id="vtips-list-add_investment"></div></div>
-      <div class="tips-content-area" id="utips-content-add_investment">
-        <div id="utips-list-add_investment"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-add_investment" onclick="showUTipForm('add_investment')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-add_investment">
-            <input id="utip-title-input-add_investment" placeholder="Title">
-            <input id="utip-text-input-add_investment" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('add_investment')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('add_investment')">Cancel</button></div>
-          </div>
-        </div>
-      </div>
+      <div class="tips-content-area" id="utips-content-add_investment"><div id="utips-list-add_investment"></div><div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-add_investment" onclick="showUTipForm('add_investment')">+ Add personal tip...</button><div class="utip-form" id="utip-form-add_investment"><input id="utip-title-input-add_investment" placeholder="Title"><input id="utip-text-input-add_investment" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('add_investment')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('add_investment')">Cancel</button></div></div></div></div>
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio *</label>
-          <input id="ai-portfolio" placeholder="e.g. Portfolio2">
-        </div>
-        <div class="form-group">
-          <label>Investment ID *</label>
-          <input id="ai-investment" placeholder="e.g. AAPL">
-        </div>
-        <div class="form-group">
-          <label>Full Name</label>
-          <input id="ai-name" placeholder="e.g. Apple Inc">
-        </div>
-        <div class="form-group">
-          <label>Investment Type *</label>
-          <select id="ai-type" onchange="onInvestmentTypeChange()">
-            <option value="EQUITY">Equity</option>
-            <option value="BOND">Bond</option>
-            <option value="FUTURE">Future</option>
-            <option value="OPTION">Option</option>
-            <option value="CURRENCY">Currency</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Currency</label>
-          <input id="ai-currency" value="USD">
-        </div>
-        <div class="form-group">
-          <label>Country</label>
-          <input id="ai-country" placeholder="e.g. US">
-        </div>
-        <div class="form-group">
-          <label>Sector</label>
-          <input id="ai-sector" placeholder="e.g. Technology">
-        </div>
-        <div class="form-group">
-          <label>Analyst</label>
-          <input id="ai-analyst" placeholder="e.g. TED">
-        </div>
-        <div class="form-group">
-          <label>Pricing Factor</label>
-          <input id="ai-pf" value="1" type="number">
-          <div class="field-hint">Bonds: <span>0.01</span> · Equities: <span>1</span></div>
-        </div>
-        <div class="form-group" id="fg-is-currency" style="display:none">
-          <label>Is Currency</label>
-          <select id="ai-is-currency">
-            <option value="true">Yes</option>
-            <option value="false">No</option>
-          </select>
-        </div>
-        <div class="form-group" id="fg-underlying" style="display:none">
-          <label>Underlying</label>
-          <input id="ai-underlying" placeholder="e.g. AAPL">
-        </div>
-        <div class="form-group" id="fg-putcall" style="display:none">
-          <label>Put / Call</label>
-          <select id="ai-putcall">
-            <option value="CALL">Call</option>
-            <option value="PUT">Put</option>
-          </select>
-        </div>
-        <div class="form-group" id="fg-strike" style="display:none">
-          <label>Strike</label>
-          <input id="ai-strike" type="number" placeholder="0.00">
-        </div>
-        <div class="form-group" id="fg-contract-size" style="display:none">
-          <label>Contract Size</label>
-          <input id="ai-contract-size" type="number" placeholder="100">
-        </div>
+        <div class="form-group"><label>Portfolio *</label><input id="ai-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Investment ID *</label><input id="ai-investment" placeholder="e.g. AAPL"></div>
+        <div class="form-group"><label>Full Name</label><input id="ai-name" placeholder="e.g. Apple Inc"></div>
+        <div class="form-group"><label>Investment Type *</label><select id="ai-type" onchange="onInvestmentTypeChange()"><option value="EQUITY">Equity</option><option value="BOND">Bond</option><option value="FUTURE">Future</option><option value="OPTION">Option</option><option value="CURRENCY">Currency</option></select></div>
+        <div class="form-group"><label>Currency</label><input id="ai-currency" value="USD"></div>
+        <div class="form-group"><label>Country</label><input id="ai-country" placeholder="e.g. US"></div>
+        <div class="form-group"><label>Sector</label><input id="ai-sector" placeholder="e.g. Technology"></div>
+        <div class="form-group"><label>Analyst</label><input id="ai-analyst" placeholder="e.g. TED"></div>
+        <div class="form-group"><label>Pricing Factor</label><input id="ai-pf" value="1" type="number"><div class="field-hint">Bonds: <span>0.01</span> · Equities: <span>1</span></div></div>
+        <div class="form-group" id="fg-is-currency" style="display:none"><label>Is Currency</label><select id="ai-is-currency"><option value="true">Yes</option><option value="false">No</option></select></div>
+        <div class="form-group" id="fg-underlying" style="display:none"><label>Underlying</label><input id="ai-underlying" placeholder="e.g. AAPL"></div>
+        <div class="form-group" id="fg-putcall" style="display:none"><label>Put / Call</label><select id="ai-putcall"><option value="CALL">Call</option><option value="PUT">Put</option></select></div>
+        <div class="form-group" id="fg-strike" style="display:none"><label>Strike</label><input id="ai-strike" type="number" placeholder="0.00"></div>
+        <div class="form-group" id="fg-contract-size" style="display:none"><label>Contract Size</label><input id="ai-contract-size" type="number" placeholder="100"></div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="addInvestment()">Add Investment</button>
-        <div class="spinner" id="sp-ai"></div>
-        <div class="status" id="st-ai"></div>
-      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="addInvestment()">Add Investment</button><div class="spinner" id="sp-ai"></div><div class="status" id="st-ai"></div></div>
       <div class="result-box" id="rb-ai"></div>
     </div>
   </div>
 
   <!-- ── VIEW INVESTMENTS ───────────────────────────────────── -->
   <div class="widget" id="w-view-investments">
-    <div class="widget-head">
-      <div class="widget-title">View Investments</div>
-      <div class="widget-desc">Portfolio investment master</div>
-    </div>
+    <div class="widget-head"><div class="widget-title">View Investments</div><div class="widget-desc">Portfolio investment master</div></div>
     <div class="widget-body">
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="form-group">
-          <label>Portfolio</label>
-          <input id="vi-portfolio" placeholder="e.g. Portfolio2">
-        </div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="viewInvestments()">Load</button>
-        <div class="spinner" id="sp-vi"></div>
-        <div class="status info" id="st-vi"></div>
-      </div>
-      <div style="overflow-x:auto;margin-top:16px">
-        <table id="inv-table" style="display:none">
-          <thead id="inv-thead"></thead>
-          <tbody id="inv-tbody"></tbody>
-        </table>
-      </div>
+      <div class="form-grid" style="margin-bottom:16px"><div class="form-group"><label>Portfolio</label><input id="vi-portfolio" placeholder="e.g. Portfolio3"></div></div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="viewInvestments()">Load</button><div class="spinner" id="sp-vi"></div><div class="status info" id="st-vi"></div></div>
+      <div style="overflow-x:auto;margin-top:16px"><table id="inv-table" style="display:none"><thead id="inv-thead"></thead><tbody id="inv-tbody"></tbody></table></div>
     </div>
   </div>
 
@@ -666,120 +448,28 @@
       <button class="tips-toggle" id="tips-toggle-add_event" onclick="toggleTips('add_event')">ℹ️&nbsp;<span id="tips-badge-add_event" style="font-family:var(--mono);font-size:0.85em;background:rgba(46,95,163,0.3);color:var(--accent2);padding:1px 6px;border-radius:8px">?</span></button>
     </div>
     <div class="tips-panel" id="tips-panel-add_event">
-      <div class="tips-panel-tabs">
-        <div class="tips-tab vtab active" id="vtab-add_event" onclick="switchTab('add_event','v')">VTips <span class="tips-tab-count" id="vtab-count-add_event">...</span></div>
-        <div class="tips-tab utab" id="utab-add_event" onclick="switchTab('add_event','u')">My Tips <span class="tips-tab-count" id="utab-count-add_event">0</span></div>
-      </div>
+      <div class="tips-panel-tabs"><div class="tips-tab vtab active" id="vtab-add_event" onclick="switchTab('add_event','v')">VTips <span class="tips-tab-count" id="vtab-count-add_event">...</span></div><div class="tips-tab utab" id="utab-add_event" onclick="switchTab('add_event','u')">My Tips <span class="tips-tab-count" id="utab-count-add_event">0</span></div></div>
       <div class="tips-content-area show" id="vtips-content-add_event"><div id="vtips-list-add_event"></div></div>
-      <div class="tips-content-area" id="utips-content-add_event">
-        <div id="utips-list-add_event"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-add_event" onclick="showUTipForm('add_event')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-add_event">
-            <input id="utip-title-input-add_event" placeholder="Title">
-            <input id="utip-text-input-add_event" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('add_event')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('add_event')">Cancel</button></div>
-          </div>
-        </div>
-      </div>
+      <div class="tips-content-area" id="utips-content-add_event"><div id="utips-list-add_event"></div><div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-add_event" onclick="showUTipForm('add_event')">+ Add personal tip...</button><div class="utip-form" id="utip-form-add_event"><input id="utip-title-input-add_event" placeholder="Title"><input id="utip-text-input-add_event" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('add_event')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('add_event')">Cancel</button></div></div></div></div>
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio *</label>
-          <input id="ev-portfolio" placeholder="e.g. Portfolio2">
-        </div>
-        <div class="form-group">
-          <label>Method *</label>
-          <select id="ev-method" onchange="onMethodChange()">
-            <optgroup label="Currency">
-              <option value="deposit_currency">Deposit Currency</option>
-              <option value="withdraw_currency">Withdraw Currency</option>
-              <option value="spot_fx">Spot FX</option>
-            </optgroup>
-            <optgroup label="Equity">
-              <option value="buy_equity">Buy Equity</option>
-              <option value="sell_equity">Sell Equity</option>
-              <option value="short_equity">Short Equity</option>
-              <option value="cover_equity">Cover Equity</option>
-              <option value="dividend_equity">Dividend</option>
-              <option value="split_equity">Stock Split</option>
-            </optgroup>
-            <optgroup label="Bond">
-              <option value="buy_bond">Buy Bond</option>
-              <option value="sell_bond">Sell Bond</option>
-              <option value="bond_coupon">Bond Coupon</option>
-            </optgroup>
-            <optgroup label="Future">
-              <option value="buy_future">Buy Future</option>
-              <option value="sell_future">Sell Future</option>
-              <option value="short_future">Short Future</option>
-              <option value="cover_future">Cover Future</option>
-            </optgroup>
-            <optgroup label="Option">
-              <option value="buy_option">Buy Option</option>
-              <option value="sell_option">Sell Option</option>
-              <option value="short_option">Write Option</option>
-              <option value="cover_option">Cover Option</option>
-            </optgroup>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Investment *</label>
-          <input id="ev-investment" placeholder="e.g. AAPL">
-        </div>
-        <div class="form-group">
-          <label>Payment Currency</label>
-          <input id="ev-currency" value="USD">
-        </div>
-        <div class="form-group">
-          <label>Trade Date *</label>
-          <input type="date" id="ev-tradedate">
-        </div>
-        <div class="form-group">
-          <label>Settle Date *</label>
-          <input type="date" id="ev-settledate">
-        </div>
-        <div class="form-group">
-          <label>KD Begin</label>
-          <input type="date" id="ev-kdbegin">
-          <div class="field-hint">Defaults to trade date</div>
-        </div>
-        <div class="form-group">
-          <label>Location</label>
-          <input id="ev-location" placeholder="e.g. Goldman">
-        </div>
+        <div class="form-group"><label>Portfolio *</label><input id="ev-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Method *</label><select id="ev-method" onchange="onMethodChange()"><optgroup label="Currency"><option value="deposit_currency">Deposit Currency</option><option value="withdraw_currency">Withdraw Currency</option><option value="spot_fx">Spot FX</option></optgroup><optgroup label="Equity"><option value="buy_equity">Buy Equity</option><option value="sell_equity">Sell Equity</option><option value="short_equity">Short Equity</option><option value="cover_equity">Cover Equity</option><option value="dividend_equity">Dividend</option><option value="split_equity">Stock Split</option></optgroup><optgroup label="Bond"><option value="buy_bond">Buy Bond</option><option value="sell_bond">Sell Bond</option><option value="bond_coupon">Bond Coupon</option></optgroup><optgroup label="Future"><option value="buy_future">Buy Future</option><option value="sell_future">Sell Future</option><option value="short_future">Short Future</option><option value="cover_future">Cover Future</option></optgroup><optgroup label="Option"><option value="buy_option">Buy Option</option><option value="sell_option">Sell Option</option><option value="short_option">Write Option</option><option value="cover_option">Cover Option</option></optgroup></select></div>
+        <div class="form-group"><label>Investment *</label><input id="ev-investment" placeholder="e.g. AAPL"></div>
+        <div class="form-group"><label>Payment Currency</label><input id="ev-currency" value="USD"></div>
+        <div class="form-group"><label>Trade Date *</label><input type="date" id="ev-tradedate"></div>
+        <div class="form-group"><label>Settle Date *</label><input type="date" id="ev-settledate"></div>
+        <div class="form-group"><label>KD Begin</label><input type="date" id="ev-kdbegin"><div class="field-hint">Defaults to trade date</div></div>
+        <div class="form-group"><label>Location</label><input id="ev-location" placeholder="e.g. Goldman"></div>
       </div>
       <hr class="section-divider">
-      <div id="mf-qty-price" class="method-fields">
-        <div class="form-group"><label>Quantity</label><input id="ev-qty" type="number" value="0"></div>
-        <div class="form-group"><label>Price</label><input id="ev-price" type="number" value="0"></div>
-        <div class="form-group"><label>Total Amount (Local)</label><input id="ev-local" type="number" value="0"></div>
-        <div class="form-group"><label>Total Amount (Base)</label><input id="ev-book" type="number" value="0"></div>
-      </div>
-      <div id="mf-deposit" class="method-fields">
-        <div class="form-group"><label>Amount (Local)</label><input id="ev-dep-local" type="number" value="0"></div>
-        <div class="form-group"><label>Amount (Base)</label><input id="ev-dep-book" type="number" value="0"></div>
-      </div>
-      <div id="mf-bond" class="method-fields">
-        <div class="form-group"><label>Accrued Interest (Local)</label><input id="ev-accrued-local" type="number" value="0"></div>
-        <div class="form-group"><label>Accrued Interest (Base)</label><input id="ev-accrued-book" type="number" value="0"></div>
-        <div class="form-group"><label>Original Face</label><input id="ev-oface" type="number" value="0"></div>
-        <div class="form-group"><label>Notional</label><input id="ev-notional" type="number" value="0"></div>
-      </div>
-      <div id="mf-dividend" class="method-fields">
-        <div class="form-group"><label>Per Share Amount</label><input id="ev-per-share" type="number" value="0"></div>
-      </div>
-      <div id="mf-split" class="method-fields">
-        <div class="form-group"><label>New Shares</label><input id="ev-new-shares" type="number" value="0"></div>
-        <div class="form-group"><label>Old Shares</label><input id="ev-old-shares" type="number" value="0"></div>
-      </div>
-      <div id="mf-spot" class="method-fields">
-        <div class="form-group"><label>Buy Currency</label><input id="ev-buy-ccy" placeholder="e.g. EUR"></div>
-        <div class="form-group"><label>Sell Currency</label><input id="ev-sell-ccy" placeholder="e.g. USD"></div>
-        <div class="form-group"><label>Buy Amount</label><input id="ev-buy-amt" type="number" value="0"></div>
-        <div class="form-group"><label>Sell Amount</label><input id="ev-sell-amt" type="number" value="0"></div>
-      </div>
+      <div id="mf-qty-price" class="method-fields"><div class="form-group"><label>Quantity</label><input id="ev-qty" type="number" value="0"></div><div class="form-group"><label>Price</label><input id="ev-price" type="number" value="0"></div><div class="form-group"><label>Total Amount (Local)</label><input id="ev-local" type="number" value="0"></div><div class="form-group"><label>Total Amount (Base)</label><input id="ev-book" type="number" value="0"></div></div>
+      <div id="mf-deposit" class="method-fields"><div class="form-group"><label>Amount (Local)</label><input id="ev-dep-local" type="number" value="0"></div><div class="form-group"><label>Amount (Base)</label><input id="ev-dep-book" type="number" value="0"></div></div>
+      <div id="mf-bond" class="method-fields"><div class="form-group"><label>Accrued Interest (Local)</label><input id="ev-accrued-local" type="number" value="0"></div><div class="form-group"><label>Accrued Interest (Base)</label><input id="ev-accrued-book" type="number" value="0"></div><div class="form-group"><label>Original Face</label><input id="ev-oface" type="number" value="0"></div><div class="form-group"><label>Notional</label><input id="ev-notional" type="number" value="0"></div></div>
+      <div id="mf-dividend" class="method-fields"><div class="form-group"><label>Per Share Amount</label><input id="ev-per-share" type="number" value="0"></div></div>
+      <div id="mf-split" class="method-fields"><div class="form-group"><label>New Shares</label><input id="ev-new-shares" type="number" value="0"></div><div class="form-group"><label>Old Shares</label><input id="ev-old-shares" type="number" value="0"></div></div>
+      <div id="mf-spot" class="method-fields"><div class="form-group"><label>Buy Currency</label><input id="ev-buy-ccy" placeholder="e.g. EUR"></div><div class="form-group"><label>Sell Currency</label><input id="ev-sell-ccy" placeholder="e.g. USD"></div><div class="form-group"><label>Buy Amount</label><input id="ev-buy-amt" type="number" value="0"></div><div class="form-group"><label>Sell Amount</label><input id="ev-sell-amt" type="number" value="0"></div></div>
       <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-primary" onclick="addEvent()">Add Event</button>
         <button class="btn btn-secondary" onclick="clearEvent()">Clear</button>
@@ -792,13 +482,10 @@
 
   <!-- ── VIEW EVENTS ────────────────────────────────────────── -->
   <div class="widget" id="w-view-events">
-    <div class="widget-head">
-      <div class="widget-title">View Events</div>
-      <div class="widget-desc">Portfolio event history</div>
-    </div>
+    <div class="widget-head"><div class="widget-title">View Events</div><div class="widget-desc">Portfolio event history</div></div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group"><label>Portfolio</label><input id="ve-portfolio" placeholder="e.g. Portfolio2"></div>
+        <div class="form-group"><label>Portfolio</label><input id="ve-portfolio" placeholder="e.g. Portfolio3"></div>
         <div class="form-group"><label>Investment (optional)</label><input id="ve-investment" placeholder="e.g. AAPL"></div>
         <div class="form-group"><label>Method (optional)</label><input id="ve-method-filter" placeholder="e.g. buy_equity"></div>
         <div class="form-group"><label>Limit</label><input id="ve-limit" type="number" value="50"></div>
@@ -809,11 +496,159 @@
         <div class="status info" id="st-ve"></div>
       </div>
       <div style="overflow-x:auto;margin-top:16px">
-        <table id="events-table" style="display:none">
-          <thead id="events-thead"></thead>
-          <tbody id="events-tbody"></tbody>
+        <table id="events-table" style="display:none"><thead id="events-thead"></thead><tbody id="events-tbody"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── REVERSE EVENT ──────────────────────────────────────── -->
+  <div class="widget" id="w-reverse-event">
+    <div class="widget-head">
+      <div class="widget-title">Reverse Event</div>
+      <div class="widget-desc">Seal an event — stamps knowledge end, removes from processing</div>
+    </div>
+    <div class="widget-body">
+      <div class="action-banner danger">
+        Reversing an event seals it permanently. The original record is preserved but ceases to exist in all future processing. To rebook, add a new event after reversing.
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Portfolio *</label><input id="rv-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Tran ID *</label><input id="rv-tranid" type="number" placeholder="e.g. 3"><div class="field-hint">Find in View Events</div></div>
+        <div class="form-group full"><label>Reason</label><input id="rv-reason" placeholder="e.g. Incorrect investment — rebooked as tranid 7"></div>
+      </div>
+
+      <!-- Event preview -->
+      <div id="rv-preview" style="display:none" class="event-preview">
+        <div class="event-preview-head">Event to be reversed</div>
+        <div class="event-preview-fields" id="rv-preview-fields"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="previewEvent('rv')">Preview Event</button>
+        <button class="btn btn-danger" onclick="reverseEvent()">Reverse Event</button>
+        <div class="spinner" id="sp-rv"></div>
+        <div class="status" id="st-rv"></div>
+      </div>
+      <div class="result-box" id="rb-rv"></div>
+    </div>
+  </div>
+
+  <!-- ── MODIFY EVENT ───────────────────────────────────────── -->
+  <div class="widget" id="w-modify-event">
+    <div class="widget-head">
+      <div class="widget-title">Modify Event</div>
+      <div class="widget-desc">Temporal correction — reverse original, create corrected replacement</div>
+    </div>
+    <div class="widget-body">
+      <div class="action-banner warn">
+        Modify seals the original event and creates a corrected replacement with a new Tran ID. Only supply the fields that changed — all others carry forward from the original.
+      </div>
+      <div class="form-grid">
+        <div class="form-group"><label>Portfolio *</label><input id="mv-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Tran ID to Correct *</label><input id="mv-tranid" type="number" placeholder="e.g. 3"><div class="field-hint">Find in View Events</div></div>
+        <div class="form-group full"><label>Correction Reason *</label><input id="mv-reason" placeholder="e.g. Wrong quantity entered — correcting from 100 to 1000"></div>
+      </div>
+
+      <!-- Original event preview -->
+      <div id="mv-preview" style="display:none" class="event-preview">
+        <div class="event-preview-head">Original event — fields below override this</div>
+        <div class="event-preview-fields" id="mv-preview-fields"></div>
+      </div>
+
+      <hr class="section-divider">
+      <div style="font-family:var(--mono);font-size:0.65em;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Corrected Values — leave blank to keep original</div>
+
+      <div class="form-grid">
+        <div class="form-group"><label>Investment</label><input id="mv-investment" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Quantity</label><input id="mv-quantity" type="number" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Price</label><input id="mv-price" type="number" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Total Amount (Local)</label><input id="mv-total-amount" type="number" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Total Amount (Base)</label><input id="mv-total-amount-base" type="number" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Trade Date</label><input type="date" id="mv-tradedate"><div class="field-hint">leave blank = unchanged</div></div>
+        <div class="form-group"><label>Settle Date</label><input type="date" id="mv-settledate"><div class="field-hint">leave blank = unchanged</div></div>
+        <div class="form-group"><label>Payment Currency</label><input id="mv-currency" placeholder="leave blank = unchanged"></div>
+        <div class="form-group"><label>Location</label><input id="mv-location" placeholder="leave blank = unchanged"></div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" onclick="previewEvent('mv')">Preview Original</button>
+        <button class="btn btn-warn" onclick="modifyEvent()">Apply Correction</button>
+        <div class="spinner" id="sp-mv"></div>
+        <div class="status" id="st-mv"></div>
+      </div>
+      <div class="result-box" id="rb-mv"></div>
+    </div>
+  </div>
+
+  <!-- ── VIEW CORRECTIONS ───────────────────────────────────── -->
+  <div class="widget" id="w-view-corrections">
+    <div class="widget-head">
+      <div class="widget-title">View Corrections</div>
+      <div class="widget-desc">Correction audit trail — reversals and rebooks</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Portfolio *</label><input id="vc-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Investment (optional)</label><input id="vc-investment" placeholder="e.g. AAPL"></div>
+        <div class="form-group"><label>Limit</label><input id="vc-limit" type="number" value="50"></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="viewCorrections()">Load</button>
+        <div class="spinner" id="sp-vc"></div>
+        <div class="status info" id="st-vc"></div>
+      </div>
+      <div id="corrections-list" style="margin-top:16px"></div>
+    </div>
+  </div>
+
+  <!-- ── STUBS ──────────────────────────────────────────────── -->
+  <div class="widget widget-stub" id="w-corporate-actions"><div class="widget-head"><div class="widget-title">Corporate Actions</div><div class="widget-desc">Dividends, splits, mergers — manual and scheduled</div></div><div class="widget-body"><div class="stub-icon">📋</div><div class="stub-title">Corporate Actions</div><div class="stub-desc">Manual corporate action entry for events not sourced externally.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-prices"><div class="widget-head"><div class="widget-title">Prices</div><div class="widget-desc">View and add price marks per investment</div></div><div class="widget-body"><div class="stub-icon">💹</div><div class="stub-title">Price Management</div><div class="stub-desc">View price history, add manual overrides, identify missing marks.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-fx"><div class="widget-head"><div class="widget-title">FX</div><div class="widget-desc">View and add foreign exchange rates</div></div><div class="widget-body"><div class="stub-icon">💱</div><div class="stub-title">FX Rate Management</div><div class="stub-desc">View FX rate history, add manual overrides, identify missing rates.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-marks-management"><div class="widget-head"><div class="widget-title">Marks Management</div><div class="widget-desc">View marks file, identify gaps, trigger rebuild</div></div><div class="widget-body"><div class="stub-icon">📊</div><div class="stub-title">Marks Management</div><div class="stub-desc">Review the marks file, identify missing marks, trigger rebuild.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-accruals"><div class="widget-head"><div class="widget-title">Accruals &amp; Bond Info</div><div class="widget-desc">Review and modify bond reference data</div></div><div class="widget-body"><div class="stub-icon">📎</div><div class="stub-title">Accruals &amp; Bond Info</div><div class="stub-desc">View and modify bond reference data including coupon rates, maturity dates, day count conventions.</div><div class="stub-sprint">Bond Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-view-calendar"><div class="widget-head"><div class="widget-title">View Calendar</div><div class="widget-desc">Read-only period viewer</div></div><div class="widget-body"><div class="stub-icon">📅</div><div class="stub-title">Calendar Viewer</div><div class="stub-desc">View all periods for a portfolio calendar. Period management is in the Oversight Console.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+  <div class="widget widget-stub" id="w-add-calendar"><div class="widget-head"><div class="widget-title">Add Calendar</div><div class="widget-desc">Add a new calendar type to an existing portfolio</div></div><div class="widget-body"><div class="stub-icon">🗓️</div><div class="stub-title">Add Calendar</div><div class="stub-desc">Add Daily, Quarterly, or Yearly calendars after portfolio creation.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
+
+  <!-- ── JE VIEWER ─────────────────────────────────────────── -->
+  <div class="widget" id="w-je-viewer">
+    <div class="widget-head">
+      <div class="widget-title">JE Viewer</div>
+      <div class="widget-desc">Raw journal entries by Tran ID — direct from Journals PKL</div>
+    </div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Portfolio *</label>
+          <input id="jv-portfolio" placeholder="e.g. Portfolio3">
+        </div>
+        <div class="form-group">
+          <label>Tran ID (optional)</label>
+          <input id="jv-tranid" type="number" placeholder="leave blank for all">
+          <div class="field-hint">Find in View Events</div>
+        </div>
+        <div class="form-group">
+          <label>Calendar</label>
+          <select id="jv-calendar">
+            <option value="Monthly">Monthly</option>
+            <option value="Daily">Daily</option>
+            <option value="Quarterly">Quarterly</option>
+            <option value="Yearly">Yearly</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="viewJEs()">Load JEs</button>
+        <div class="spinner" id="sp-jv"></div>
+        <div class="status info" id="st-jv"></div>
+      </div>
+      <div style="overflow-x:auto;margin-top:16px">
+        <table id="je-table" style="display:none">
+          <thead id="je-thead"></thead>
+          <tbody id="je-tbody"></tbody>
         </table>
       </div>
+      <div class="result-box" id="rb-jv"></div>
     </div>
   </div>
 
@@ -825,51 +660,18 @@
       <button class="tips-toggle" id="tips-toggle-process" onclick="toggleTips('process')">ℹ️&nbsp;<span id="tips-badge-process" style="font-family:var(--mono);font-size:0.85em;background:rgba(46,95,163,0.3);color:var(--accent2);padding:1px 6px;border-radius:8px">?</span></button>
     </div>
     <div class="tips-panel" id="tips-panel-process">
-      <div class="tips-panel-tabs">
-        <div class="tips-tab vtab active" id="vtab-process" onclick="switchTab('process','v')">VTips <span class="tips-tab-count" id="vtab-count-process">...</span></div>
-        <div class="tips-tab utab" id="utab-process" onclick="switchTab('process','u')">My Tips <span class="tips-tab-count" id="utab-count-process">0</span></div>
-      </div>
+      <div class="tips-panel-tabs"><div class="tips-tab vtab active" id="vtab-process" onclick="switchTab('process','v')">VTips <span class="tips-tab-count" id="vtab-count-process">...</span></div><div class="tips-tab utab" id="utab-process" onclick="switchTab('process','u')">My Tips <span class="tips-tab-count" id="utab-count-process">0</span></div></div>
       <div class="tips-content-area show" id="vtips-content-process"><div id="vtips-list-process"></div></div>
-      <div class="tips-content-area" id="utips-content-process">
-        <div id="utips-list-process"></div>
-        <div class="utip-add-area">
-          <button class="utip-add-btn" id="utip-add-btn-process" onclick="showUTipForm('process')">+ Add personal tip...</button>
-          <div class="utip-form" id="utip-form-process">
-            <input id="utip-title-input-process" placeholder="e.g. Always force bootstrap first run of month">
-            <input id="utip-text-input-process" placeholder="Detail — optional">
-            <div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('process')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('process')">Cancel</button></div>
-          </div>
-        </div>
-      </div>
+      <div class="tips-content-area" id="utips-content-process"><div id="utips-list-process"></div><div class="utip-add-area"><button class="utip-add-btn" id="utip-add-btn-process" onclick="showUTipForm('process')">+ Add personal tip...</button><div class="utip-form" id="utip-form-process"><input id="utip-title-input-process" placeholder="e.g. Always force bootstrap first run of month"><input id="utip-text-input-process" placeholder="Detail — optional"><div class="utip-form-btns"><button class="utip-save-btn" onclick="saveUTip('process')">Save</button><button class="utip-cancel-btn" onclick="cancelUTip('process')">Cancel</button></div></div></div></div>
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio *</label>
-          <input id="pr-portfolio" placeholder="e.g. Portfolio2">
-        </div>
-        <div class="form-group">
-          <label>Calendar *</label>
-          <input id="pr-calendar" value="Monthly">
-        </div>
-        <div class="form-group">
-          <label>Period (optional)</label>
-          <input id="pr-period" placeholder="e.g. 2024-01">
-          <div class="field-hint">Leave blank for all periods</div>
-        </div>
-        <div class="form-group">
-          <label>Force Bootstrap</label>
-          <select id="pr-bootstrap">
-            <option value="false">No — use existing</option>
-            <option value="true">Yes — rebuild</option>
-          </select>
-        </div>
+        <div class="form-group"><label>Portfolio *</label><input id="pr-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Calendar *</label><input id="pr-calendar" value="Monthly"></div>
+        <div class="form-group"><label>Period (optional)</label><input id="pr-period" placeholder="e.g. 2026-01"><div class="field-hint">Leave blank for all periods</div></div>
+        <div class="form-group"><label>Force Bootstrap</label><select id="pr-bootstrap"><option value="false">No — use existing</option><option value="true">Yes — rebuild</option></select></div>
       </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="process()">Run Processing</button>
-        <div class="spinner" id="sp-pr"></div>
-        <div class="status" id="st-pr"></div>
-      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="process()">Run Processing</button><div class="spinner" id="sp-pr"></div><div class="status" id="st-pr"></div></div>
       <div class="result-box" id="rb-pr"></div>
     </div>
   </div>
@@ -885,206 +687,84 @@ let   _utips      = {};
 let   _activeTab  = {};
 let   _tipsOpen   = {};
 
-function _loadUTips() {
-  try { _utips = JSON.parse(localStorage.getItem('visibility_utips') || '{}'); }
-  catch(e) { _utips = {}; }
-}
-function _saveUTips() {
-  try { localStorage.setItem('visibility_utips', JSON.stringify(_utips)); }
-  catch(e) {}
-}
+function _loadUTips() { try { _utips = JSON.parse(localStorage.getItem('visibility_utips') || '{}'); } catch(e) { _utips = {}; } }
+function _saveUTips() { try { localStorage.setItem('visibility_utips', JSON.stringify(_utips)); } catch(e) {} }
 _loadUTips();
 
 function toggleTips(context) {
-  const panel  = document.getElementById(`tips-panel-${context}`);
+  const panel = document.getElementById(`tips-panel-${context}`);
   if (!panel) return;
   const isOpen = _tipsOpen[context];
   document.querySelectorAll('.tips-panel').forEach(p => p.classList.remove('show'));
   Object.keys(_tipsOpen).forEach(k => _tipsOpen[k] = false);
-  if (!isOpen) {
-    panel.classList.add('show');
-    _tipsOpen[context] = true;
-    if (!_activeTab[context]) _activeTab[context] = 'v';
-    _loadVTips(context);
-    _renderTabs(context);
-  }
+  if (!isOpen) { panel.classList.add('show'); _tipsOpen[context] = true; if (!_activeTab[context]) _activeTab[context] = 'v'; _loadVTips(context); _renderTabs(context); }
 }
-
 async function _loadVTips(context) {
   if (_vtipsCache[context] !== undefined) { _renderVTips(context); return; }
-  try {
-    const res  = await fetch(`/api/v1/tips?context=${context}`);
-    const data = await res.json();
-    _vtipsCache[context] = data.tips || [];
-  } catch(e) { _vtipsCache[context] = []; }
-  _renderVTips(context);
-  _updateBadge(context);
+  try { const res = await fetch(`/api/v1/tips?context=${context}`); const data = await res.json(); _vtipsCache[context] = data.tips || []; } catch(e) { _vtipsCache[context] = []; }
+  _renderVTips(context); _updateBadge(context);
 }
-
 function _renderTabs(context) {
-  const vCount = (_vtipsCache[context] || []).length;
-  const uCount = (_utips[context] || []).length;
-  const vc = document.getElementById(`vtab-count-${context}`);
-  const uc = document.getElementById(`utab-count-${context}`);
-  if (vc) vc.textContent = vCount || '...';
-  if (uc) uc.textContent = uCount;
+  const vCount = (_vtipsCache[context] || []).length; const uCount = (_utips[context] || []).length;
+  const vc = document.getElementById(`vtab-count-${context}`); const uc = document.getElementById(`utab-count-${context}`);
+  if (vc) vc.textContent = vCount || '...'; if (uc) uc.textContent = uCount;
   const active = _activeTab[context] || 'v';
   document.getElementById(`vtab-${context}`)?.classList.toggle('active', active === 'v');
   document.getElementById(`utab-${context}`)?.classList.toggle('active', active === 'u');
   document.getElementById(`vtips-content-${context}`)?.classList.toggle('show', active === 'v');
   document.getElementById(`utips-content-${context}`)?.classList.toggle('show', active === 'u');
 }
-
-function switchTab(context, tab) {
-  _activeTab[context] = tab;
-  _renderTabs(context);
-  if (tab === 'v') _renderVTips(context);
-  if (tab === 'u') _renderUTips(context);
-}
-
+function switchTab(context, tab) { _activeTab[context] = tab; _renderTabs(context); if (tab === 'v') _renderVTips(context); if (tab === 'u') _renderUTips(context); }
 function _renderVTips(context) {
-  const el = document.getElementById(`vtips-list-${context}`);
-  if (!el) return;
+  const el = document.getElementById(`vtips-list-${context}`); if (!el) return;
   const tips = _vtipsCache[context] || [];
   if (!tips.length) { el.innerHTML = '<div class="tips-empty">No system tips for this context.</div>'; return; }
-  el.innerHTML = tips.map(t => `
-    <div class="vtip-entry severity-${t.severity}">
-      <div class="vtip-icon">${t.severity === 'warning' ? '⚠️' : 'ℹ️'}</div>
-      <div class="vtip-body">
-        <div class="vtip-title">${t.title}</div>
-        <div class="vtip-text">${t.text}</div>
-      </div>
-    </div>`).join('');
+  el.innerHTML = tips.map(t => `<div class="vtip-entry severity-${t.severity}"><div class="vtip-icon">${t.severity === 'warning' ? '⚠️' : 'ℹ️'}</div><div class="vtip-body"><div class="vtip-title">${t.title}</div><div class="vtip-text">${t.text}</div></div></div>`).join('');
   _updateBadge(context);
 }
-
 function _renderUTips(context) {
-  const el = document.getElementById(`utips-list-${context}`);
-  if (!el) return;
+  const el = document.getElementById(`utips-list-${context}`); if (!el) return;
   const tips = _utips[context] || [];
   if (!tips.length) { el.innerHTML = '<div class="tips-empty">No personal tips yet. Add one below.</div>'; return; }
-  el.innerHTML = tips.map((t, i) => `
-    <div class="utip-entry">
-      <div class="utip-icon">📌</div>
-      <div class="utip-body">
-        <div class="utip-title">${t.title}</div>
-        <div class="utip-text">${t.text || ''}</div>
-        <div class="utip-meta">Added ${t.created}</div>
-      </div>
-      <button class="utip-delete" onclick="deleteUTip('${context}',${i})">✕</button>
-    </div>`).join('');
+  el.innerHTML = tips.map((t, i) => `<div class="utip-entry"><div class="utip-icon">📌</div><div class="utip-body"><div class="utip-title">${t.title}</div><div class="utip-text">${t.text || ''}</div><div class="utip-meta">Added ${t.created}</div></div><button class="utip-delete" onclick="deleteUTip('${context}',${i})">✕</button></div>`).join('');
 }
-
-function showUTipForm(context) {
-  document.getElementById(`utip-add-btn-${context}`).style.display = 'none';
-  document.getElementById(`utip-form-${context}`).classList.add('show');
-  document.getElementById(`utip-title-input-${context}`).focus();
-}
-function cancelUTip(context) {
-  document.getElementById(`utip-add-btn-${context}`).style.display = '';
-  document.getElementById(`utip-form-${context}`).classList.remove('show');
-  document.getElementById(`utip-title-input-${context}`).value = '';
-  document.getElementById(`utip-text-input-${context}`).value  = '';
-}
+function showUTipForm(context) { document.getElementById(`utip-add-btn-${context}`).style.display = 'none'; document.getElementById(`utip-form-${context}`).classList.add('show'); document.getElementById(`utip-title-input-${context}`).focus(); }
+function cancelUTip(context) { document.getElementById(`utip-add-btn-${context}`).style.display = ''; document.getElementById(`utip-form-${context}`).classList.remove('show'); document.getElementById(`utip-title-input-${context}`).value = ''; document.getElementById(`utip-text-input-${context}`).value = ''; }
 function saveUTip(context) {
-  const title = document.getElementById(`utip-title-input-${context}`).value.trim();
-  const text  = document.getElementById(`utip-text-input-${context}`).value.trim();
-  if (!title) return;
-  if (!_utips[context]) _utips[context] = [];
-  _utips[context].push({
-    title, text,
-    created: new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'})
-  });
-  _saveUTips();
-  cancelUTip(context);
-  _renderUTips(context);
-  _renderTabs(context);
+  const title = document.getElementById(`utip-title-input-${context}`).value.trim(); const text = document.getElementById(`utip-text-input-${context}`).value.trim();
+  if (!title) return; if (!_utips[context]) _utips[context] = [];
+  _utips[context].push({ title, text, created: new Date().toLocaleDateString('en-US',{year:'numeric',month:'short',day:'numeric'}) });
+  _saveUTips(); cancelUTip(context); _renderUTips(context); _renderTabs(context);
 }
-function deleteUTip(context, index) {
-  if (!_utips[context]) return;
-  _utips[context].splice(index, 1);
-  _saveUTips();
-  _renderUTips(context);
-  _renderTabs(context);
-}
+function deleteUTip(context, index) { if (!_utips[context]) return; _utips[context].splice(index, 1); _saveUTips(); _renderUTips(context); _renderTabs(context); }
 function _updateBadge(context) {
-  const toggle = document.getElementById(`tips-toggle-${context}`);
-  const badge  = document.getElementById(`tips-badge-${context}`);
+  const toggle = document.getElementById(`tips-toggle-${context}`); const badge = document.getElementById(`tips-badge-${context}`);
   if (!toggle || !badge) return;
-  const vTips  = _vtipsCache[context] || [];
-  const uTips  = _utips[context]      || [];
+  const vTips = _vtipsCache[context] || []; const uTips = _utips[context] || [];
   badge.textContent = vTips.length + uTips.length;
   toggle.classList.toggle('has-warning', vTips.some(t => t.severity === 'warning'));
 }
 
 // ── DATE HELPERS ───────────────────────────────────────────
-function toEventDate(val) {
-  if (!val) return '';
-  const [y, m, d] = val.split('-');
-  return `${m}/${d}/${y}:00:00:00`;
-}
-function fromEventDate(val) {
-  if (!val) return '';
-  const parts = val.split('/');
-  if (parts.length < 3) return val;
-  const [m, d, rest] = parts;
-  const y = rest.split(':')[0];
-  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
-}
+function toEventDate(val) { if (!val) return ''; const [y, m, d] = val.split('-'); return `${m}/${d}/${y}:00:00:00`; }
+function fromEventDate(val) { if (!val) return ''; const parts = val.split('/'); if (parts.length < 3) return val; const [m, d, rest] = parts; const y = rest.split(':')[0]; return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
+function csvDateToInput(val) { if (!val) return ''; const parts = val.split('/'); if (parts.length < 3) return ''; const [m, d, rest] = parts; const y = rest.split(':')[0]; return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`; }
 
 // ── AUTO-POPULATE SETTLE AND KDBEGIN ──────────────────────
 document.addEventListener('DOMContentLoaded', function() {
   const tradeEl = document.getElementById('ev-tradedate');
-  if (tradeEl) {
-    tradeEl.addEventListener('change', function() {
-      const val    = this.value;
-      const settle = document.getElementById('ev-settledate');
-      const kd     = document.getElementById('ev-kdbegin');
-      if (settle && !settle.value) settle.value = val;
-      if (kd     && !kd.value)     kd.value     = val;
-    });
-  }
-  onMethodChange();
-  loadPortfolios();
+  if (tradeEl) { tradeEl.addEventListener('change', function() { const val = this.value; const settle = document.getElementById('ev-settledate'); const kd = document.getElementById('ev-kdbegin'); if (settle && !settle.value) settle.value = val; if (kd && !kd.value) kd.value = val; }); }
+  onMethodChange(); loadPortfolios();
 });
 
 // ── METHOD FIELD SETS ──────────────────────────────────────
-const METHOD_FIELDS = {
-  deposit_currency:  ['mf-deposit'],
-  withdraw_currency: ['mf-deposit'],
-  spot_fx:           ['mf-spot'],
-  buy_equity:        ['mf-qty-price'],
-  sell_equity:       ['mf-qty-price'],
-  short_equity:      ['mf-qty-price'],
-  cover_equity:      ['mf-qty-price'],
-  dividend_equity:   ['mf-dividend'],
-  split_equity:      ['mf-split'],
-  buy_bond:          ['mf-qty-price', 'mf-bond'],
-  sell_bond:         ['mf-qty-price', 'mf-bond'],
-  bond_coupon:       ['mf-dividend'],
-  buy_future:        ['mf-qty-price'],
-  sell_future:       ['mf-qty-price'],
-  short_future:      ['mf-qty-price'],
-  cover_future:      ['mf-qty-price'],
-  buy_option:        ['mf-qty-price'],
-  sell_option:       ['mf-qty-price'],
-  short_option:      ['mf-qty-price'],
-  cover_option:      ['mf-qty-price'],
-};
-
+const METHOD_FIELDS = { deposit_currency: ['mf-deposit'], withdraw_currency: ['mf-deposit'], spot_fx: ['mf-spot'], buy_equity: ['mf-qty-price'], sell_equity: ['mf-qty-price'], short_equity: ['mf-qty-price'], cover_equity: ['mf-qty-price'], dividend_equity: ['mf-dividend'], split_equity: ['mf-split'], buy_bond: ['mf-qty-price', 'mf-bond'], sell_bond: ['mf-qty-price', 'mf-bond'], bond_coupon: ['mf-dividend'], buy_future: ['mf-qty-price'], sell_future: ['mf-qty-price'], short_future: ['mf-qty-price'], cover_future: ['mf-qty-price'], buy_option: ['mf-qty-price'], sell_option: ['mf-qty-price'], short_option: ['mf-qty-price'], cover_option: ['mf-qty-price'] };
 function onMethodChange() {
   const method = document.getElementById('ev-method').value;
   document.querySelectorAll('.method-fields').forEach(el => el.classList.remove('show'));
-  (METHOD_FIELDS[method] || []).forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.classList.add('show');
-  });
-  if (method === 'deposit_currency' || method === 'withdraw_currency') {
-    const ccy = document.getElementById('ev-currency').value;
-    document.getElementById('ev-investment').value = ccy;
-  }
+  (METHOD_FIELDS[method] || []).forEach(id => { const el = document.getElementById(id); if (el) el.classList.add('show'); });
+  if (method === 'deposit_currency' || method === 'withdraw_currency') { const ccy = document.getElementById('ev-currency').value; document.getElementById('ev-investment').value = ccy; }
 }
-
 function onInvestmentTypeChange() {
   const type = document.getElementById('ai-type').value;
   document.getElementById('fg-is-currency').style.display   = type === 'CURRENCY' ? '' : 'none';
@@ -1095,15 +775,9 @@ function onInvestmentTypeChange() {
   if (type === 'CURRENCY') { document.getElementById('ai-is-currency').value = 'true'; document.getElementById('ai-pf').value = '1'; }
   if (type === 'BOND')     { document.getElementById('ai-pf').value = '0.01'; }
 }
-
-function onPresetChange() {
-  const preset = document.getElementById('cp-preset').value;
-  document.getElementById('fg-custom-calendars').style.display = preset === 'Custom' ? '' : 'none';
-}
-
+function onPresetChange() { document.getElementById('fg-custom-calendars').style.display = document.getElementById('cp-preset').value === 'Custom' ? '' : 'none'; }
 function getSelectedCalendars() {
-  const preset = document.getElementById('cp-preset').value;
-  if (preset !== 'Custom') return null;
+  const preset = document.getElementById('cp-preset').value; if (preset !== 'Custom') return null;
   const cals = [];
   if (document.getElementById('cal-daily').checked)     cals.push('Daily');
   if (document.getElementById('cal-monthly').checked)   cals.push('Monthly');
@@ -1122,26 +796,13 @@ function show(name, el) {
 
 // ── PORTFOLIOS ─────────────────────────────────────────────
 async function loadPortfolios() {
-  const sp = document.getElementById('sp-portfolios');
-  const st = document.getElementById('st-portfolios');
-  sp.classList.add('show');
-  st.textContent = 'Loading...';
+  const sp = document.getElementById('sp-portfolios'); const st = document.getElementById('st-portfolios');
+  sp.classList.add('show'); st.textContent = 'Loading...';
   try {
-    const res  = await fetch(`${BASE}/api/v1/ops/portfolios`);
-    const data = await res.json();
+    const res = await fetch(`${BASE}/api/v1/ops/portfolios`); const data = await res.json();
     const list = document.getElementById('portfolio-list');
-    if (!data.portfolios || data.portfolios.length === 0) {
-      list.innerHTML = '<div style="font-family:var(--mono);font-size:0.78em;color:var(--muted)">No portfolios found. Create one to get started.</div>';
-    } else {
-      list.innerHTML = data.portfolios.map(p => `
-        <div class="portfolio-card">
-          <div>
-            <div class="pid">${p.portfolio_id}</div>
-            <div class="pmeta">${p.description || ''} &nbsp;·&nbsp; ${p.base_currency} &nbsp;·&nbsp; ${p.inception_date} &nbsp;·&nbsp; ${p.closing_method || 'FIFO'}</div>
-          </div>
-          <div class="pstatus">● ${p.status || 'active'}</div>
-        </div>`).join('');
-    }
+    if (!data.portfolios || data.portfolios.length === 0) { list.innerHTML = '<div style="font-family:var(--mono);font-size:0.78em;color:var(--muted)">No portfolios found. Create one to get started.</div>'; }
+    else { list.innerHTML = data.portfolios.map(p => `<div class="portfolio-card"><div><div class="pid">${p.portfolio_id}</div><div class="pmeta">${p.description || ''} &nbsp;·&nbsp; ${p.base_currency} &nbsp;·&nbsp; ${p.inception_date} &nbsp;·&nbsp; ${p.closing_method || 'FIFO'}</div></div><div class="pstatus">● ${p.status || 'active'}</div></div>`).join(''); }
     st.textContent = `${data.count} portfolio(s)`;
   } catch(e) { st.textContent = 'Error loading portfolios'; }
   sp.classList.remove('show');
@@ -1150,282 +811,305 @@ async function loadPortfolios() {
 // ── CREATE PORTFOLIO ───────────────────────────────────────
 async function createPortfolio() {
   const btn = document.querySelector('#w-create-portfolio .btn-primary');
-  const sp  = document.getElementById('sp-cp');
-  const st  = document.getElementById('st-cp');
-  const rb  = document.getElementById('rb-cp');
-
-  const id = document.getElementById('cp-id').value.trim();
-  if (!id) { st.textContent = 'Portfolio ID required'; st.className = 'status err'; return; }
-  const inception = document.getElementById('cp-inception').value;
-  if (!inception) { st.textContent = 'Inception date required'; st.className = 'status err'; return; }
-
-  const managers   = document.getElementById('cp-managers').value.split(',').map(m => m.trim()).filter(Boolean);
-  const preset     = document.getElementById('cp-preset').value;
-  const customCals = getSelectedCalendars();
-
-  const body = {
-    portfolio_id:     id,
-    base_currency:    document.getElementById('cp-currency').value,
-    domicile_country: document.getElementById('cp-domicile').value.trim() || 'US',
-    inception_date:   inception,
-    managers,
-    description:      document.getElementById('cp-description').value.trim() || null,
-    accrual_method:   document.getElementById('cp-accrual').value,
-    amort_method:     document.getElementById('cp-amort').value,
-    closing_method:   document.getElementById('cp-closing').value,
-    calendar_preset:  preset !== 'Custom' ? preset : null,
-    calendars:        customCals || ['Monthly'],
-  };
-
-  btn.disabled = true;
-  sp.classList.add('show');
-  st.textContent = 'Creating...';
-  st.className = 'status info';
-  rb.classList.remove('show');
-
+  const sp = document.getElementById('sp-cp'); const st = document.getElementById('st-cp'); const rb = document.getElementById('rb-cp');
+  const id = document.getElementById('cp-id').value.trim(); if (!id) { st.textContent = 'Portfolio ID required'; st.className = 'status err'; return; }
+  const inception = document.getElementById('cp-inception').value; if (!inception) { st.textContent = 'Inception date required'; st.className = 'status err'; return; }
+  const managers = document.getElementById('cp-managers').value.split(',').map(m => m.trim()).filter(Boolean);
+  const preset = document.getElementById('cp-preset').value; const customCals = getSelectedCalendars();
+  const body = { portfolio_id: id, base_currency: document.getElementById('cp-currency').value, domicile_country: document.getElementById('cp-domicile').value.trim() || 'US', inception_date: inception, managers, description: document.getElementById('cp-description').value.trim() || null, accrual_method: document.getElementById('cp-accrual').value, amort_method: document.getElementById('cp-amort').value, closing_method: document.getElementById('cp-closing').value, calendar_preset: preset !== 'Custom' ? preset : null, calendars: customCals || ['Monthly'] };
+  btn.disabled = true; sp.classList.add('show'); st.textContent = 'Creating...'; st.className = 'status info'; rb.classList.remove('show');
   try {
-    const res  = await fetch(`${BASE}/api/v1/ops/portfolio`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      const calList = (data.calendars || []).map(c => `${c.calendar} (${c.periods_created} periods)`).join(', ');
-      st.textContent = `✓ Created ${id}`; st.className = 'status ok';
-      rb.className = 'result-box show pass';
-      rb.textContent = `Portfolio '${id}' created successfully.\nBase currency: ${body.base_currency} · Domicile: ${body.domicile_country}\nCalendars: ${calList}\nReady for investments and events.`;
-    } else {
-      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-    }
+    const res = await fetch(`${BASE}/api/v1/ops/portfolio`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }); const data = await res.json();
+    if (res.ok) { const calList = (data.calendars || []).map(c => `${c.calendar} (${c.periods_created} periods)`).join(', '); st.textContent = `✓ Created ${id}`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `Portfolio '${id}' created.\nBase currency: ${body.base_currency} · Domicile: ${body.domicile_country}\nCalendars: ${calList}\nReady for investments and events.`; }
+    else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
-  btn.disabled = false;
-  sp.classList.remove('show');
+  btn.disabled = false; sp.classList.remove('show');
 }
 
 // ── UPDATE METHOD ──────────────────────────────────────────
 async function updateMethod() {
-  const portfolio = document.getElementById('um-portfolio').value.trim();
-  const type      = document.getElementById('um-type').value;
-  const value     = document.getElementById('um-value').value;
-  const date      = document.getElementById('um-date').value;
-  const sp = document.getElementById('sp-um');
-  const st = document.getElementById('st-um');
-  const rb = document.getElementById('rb-um');
+  const portfolio = document.getElementById('um-portfolio').value.trim(); const type = document.getElementById('um-type').value; const value = document.getElementById('um-value').value; const date = document.getElementById('um-date').value;
+  const sp = document.getElementById('sp-um'); const st = document.getElementById('st-um'); const rb = document.getElementById('rb-um');
   if (!portfolio || !date) { st.textContent = 'Portfolio and effective date required'; st.className = 'status err'; return; }
   sp.classList.add('show'); st.textContent = 'Updating...'; st.className = 'status info';
   try {
-    const url  = `${BASE}/api/v1/ops/portfolio/${portfolio}/method?method_type=${type}&value=${encodeURIComponent(value)}&effective_from=${date}`;
-    const res  = await fetch(url, { method: 'POST' });
-    const data = await res.json();
-    if (res.ok) {
-      st.textContent = '✓ Updated'; st.className = 'status ok';
-      rb.className = 'result-box show pass';
-      rb.textContent = `${type} updated to '${value}' effective ${date}\nHistory: ${data.history.map(h => h.value + ' from ' + h.effective_from).join(' → ')}`;
-    } else {
-      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-    }
+    const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/method?method_type=${type}&value=${encodeURIComponent(value)}&effective_from=${date}`, { method: 'POST' }); const data = await res.json();
+    if (res.ok) { st.textContent = '✓ Updated'; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `${type} updated to '${value}' effective ${date}\nHistory: ${data.history.map(h => h.value + ' from ' + h.effective_from).join(' → ')}`; }
+    else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
 }
 
 // ── ADD INVESTMENT ─────────────────────────────────────────
 async function addInvestment() {
-  const sp = document.getElementById('sp-ai');
-  const st = document.getElementById('st-ai');
-  const rb = document.getElementById('rb-ai');
-  const portfolio  = document.getElementById('ai-portfolio').value.trim();
-  const investment = document.getElementById('ai-investment').value.trim().toUpperCase();
+  const sp = document.getElementById('sp-ai'); const st = document.getElementById('st-ai'); const rb = document.getElementById('rb-ai');
+  const portfolio = document.getElementById('ai-portfolio').value.trim(); const investment = document.getElementById('ai-investment').value.trim().toUpperCase();
   if (!portfolio || !investment) { st.textContent = 'Portfolio and Investment required'; st.className = 'status err'; return; }
   const type = document.getElementById('ai-type').value;
-  const body = {
-    investment, full_name: document.getElementById('ai-name').value.trim() || investment,
-    investment_type: type, currency: document.getElementById('ai-currency').value.trim() || 'USD',
-    is_currency: document.getElementById('ai-is-currency')?.value === 'true',
-    country: document.getElementById('ai-country').value.trim() || null,
-    asset_class: type, sector: document.getElementById('ai-sector').value.trim() || null,
-    analyst: document.getElementById('ai-analyst').value.trim() || null,
-    pricing_factor: parseFloat(document.getElementById('ai-pf').value) || 1,
-    contract_size: parseFloat(document.getElementById('ai-contract-size')?.value) || 0,
-    underlying: document.getElementById('ai-underlying')?.value.trim() || null,
-    put_call: document.getElementById('ai-putcall')?.value || null,
-    strike: parseFloat(document.getElementById('ai-strike')?.value) || null,
-  };
+  const body = { investment, full_name: document.getElementById('ai-name').value.trim() || investment, investment_type: type, currency: document.getElementById('ai-currency').value.trim() || 'USD', is_currency: document.getElementById('ai-is-currency')?.value === 'true', country: document.getElementById('ai-country').value.trim() || null, asset_class: type, sector: document.getElementById('ai-sector').value.trim() || null, analyst: document.getElementById('ai-analyst').value.trim() || null, pricing_factor: parseFloat(document.getElementById('ai-pf').value) || 1, contract_size: parseFloat(document.getElementById('ai-contract-size')?.value) || 0, underlying: document.getElementById('ai-underlying')?.value.trim() || null, put_call: document.getElementById('ai-putcall')?.value || null, strike: parseFloat(document.getElementById('ai-strike')?.value) || null };
   sp.classList.add('show'); st.textContent = 'Adding...'; st.className = 'status info';
   try {
-    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investment`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      st.textContent = `✓ Added ${investment}`; st.className = 'status ok';
-      rb.className = 'result-box show pass';
-      rb.textContent = `Investment '${investment}' added to ${portfolio}.\nType: ${type}`;
-      document.getElementById('ai-investment').value = '';
-      document.getElementById('ai-name').value = '';
-    } else {
-      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-    }
+    const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investment`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }); const data = await res.json();
+    if (res.ok) { st.textContent = `✓ Added ${investment}`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `Investment '${investment}' added to ${portfolio}.\nType: ${type}`; document.getElementById('ai-investment').value = ''; document.getElementById('ai-name').value = ''; }
+    else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
 }
 
 // ── VIEW INVESTMENTS ───────────────────────────────────────
 async function viewInvestments() {
-  const portfolio = document.getElementById('vi-portfolio').value.trim();
-  const sp = document.getElementById('sp-vi');
-  const st = document.getElementById('st-vi');
+  const portfolio = document.getElementById('vi-portfolio').value.trim(); const sp = document.getElementById('sp-vi'); const st = document.getElementById('st-vi');
   if (!portfolio) { st.textContent = 'Portfolio required'; return; }
   sp.classList.add('show'); st.textContent = 'Loading...';
   try {
-    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investments`);
-    const data = await res.json();
-    const tbl  = document.getElementById('inv-table');
-    const head = document.getElementById('inv-thead');
-    const body = document.getElementById('inv-tbody');
-    if (data.investments && data.investments.length > 0) {
-      const cols = ['investment','full_name','investment_type','currency','country','sector','pricing_factor'];
-      head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
-      body.innerHTML = data.investments.map(inv => `<tr>${cols.map(c => `<td>${inv[c] || ''}</td>`).join('')}</tr>`).join('');
-      tbl.style.display = ''; st.textContent = `${data.count} investments`;
-    } else { tbl.style.display = 'none'; st.textContent = 'No investments found'; }
+    const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investments`); const data = await res.json();
+    const tbl = document.getElementById('inv-table'); const head = document.getElementById('inv-thead'); const body = document.getElementById('inv-tbody');
+    if (data.investments && data.investments.length > 0) { const cols = ['investment','full_name','investment_type','currency','country','sector','pricing_factor']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.investments.map(inv => `<tr>${cols.map(c => `<td>${inv[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} investments`; }
+    else { tbl.style.display = 'none'; st.textContent = 'No investments found'; }
   } catch(e) { st.textContent = 'Error'; }
   sp.classList.remove('show');
 }
 
 // ── ADD EVENT ──────────────────────────────────────────────
 async function addEvent() {
-  const sp = document.getElementById('sp-ev');
-  const st = document.getElementById('st-ev');
-  const rb = document.getElementById('rb-ev');
-  const portfolio    = document.getElementById('ev-portfolio').value.trim();
-  const method       = document.getElementById('ev-method').value;
-  const investment   = document.getElementById('ev-investment').value.trim().toUpperCase();
-  const tradedateRaw = document.getElementById('ev-tradedate').value;
-  const settledateRaw= document.getElementById('ev-settledate').value;
-  if (!portfolio || !investment || !tradedateRaw || !settledateRaw) {
-    st.textContent = 'Portfolio, investment, and dates required'; st.className = 'status err'; return;
-  }
-  const tradedate  = toEventDate(tradedateRaw);
-  const settledate = toEventDate(settledateRaw);
-  const kdbeginRaw = document.getElementById('ev-kdbegin').value;
-  const kdbegin    = kdbeginRaw ? toEventDate(kdbeginRaw) : tradedate;
-  const body = {
-    portfolio, method, investment, tradedate, settledate, kdbegin,
-    kdend: "12/31/2099:00:00:00",
-    payment_currency: document.getElementById('ev-currency').value.trim() || 'USD',
-    location: document.getElementById('ev-location').value.trim(),
-    quantity:          parseFloat(document.getElementById('ev-qty')?.value) || 0,
-    price:             parseFloat(document.getElementById('ev-price')?.value) || 0,
-    total_amount:      parseFloat(document.getElementById('ev-local')?.value) || parseFloat(document.getElementById('ev-dep-local')?.value) || 0,
-    total_amount_base: parseFloat(document.getElementById('ev-book')?.value)  || parseFloat(document.getElementById('ev-dep-book')?.value)  || 0,
-    accrued_local:     parseFloat(document.getElementById('ev-accrued-local')?.value) || 0,
-    accrued_book:      parseFloat(document.getElementById('ev-accrued-book')?.value)  || 0,
-    notional:          parseFloat(document.getElementById('ev-notional')?.value)      || 0,
-    original_face:     parseFloat(document.getElementById('ev-oface')?.value)         || 0,
-    per_share:         parseFloat(document.getElementById('ev-per-share')?.value)     || 0,
-    new_shares:        parseFloat(document.getElementById('ev-new-shares')?.value)    || 0,
-    old_shares:        parseFloat(document.getElementById('ev-old-shares')?.value)    || 0,
-    buy_currency:  document.getElementById('ev-buy-ccy')?.value.trim()  || null,
-    sell_currency: document.getElementById('ev-sell-ccy')?.value.trim() || null,
-    buy_amt:  parseFloat(document.getElementById('ev-buy-amt')?.value)  || 0,
-    sell_amt: parseFloat(document.getElementById('ev-sell-amt')?.value) || 0,
-  };
+  const sp = document.getElementById('sp-ev'); const st = document.getElementById('st-ev'); const rb = document.getElementById('rb-ev');
+  const portfolio = document.getElementById('ev-portfolio').value.trim(); const method = document.getElementById('ev-method').value; const investment = document.getElementById('ev-investment').value.trim().toUpperCase();
+  const tradedateRaw = document.getElementById('ev-tradedate').value; const settledateRaw = document.getElementById('ev-settledate').value;
+  if (!portfolio || !investment || !tradedateRaw || !settledateRaw) { st.textContent = 'Portfolio, investment, and dates required'; st.className = 'status err'; return; }
+  const tradedate = toEventDate(tradedateRaw); const settledate = toEventDate(settledateRaw); const kdbeginRaw = document.getElementById('ev-kdbegin').value; const kdbegin = kdbeginRaw ? toEventDate(kdbeginRaw) : tradedate;
+  const body = { portfolio, method, investment, tradedate, settledate, kdbegin, kdend: "12/31/2099:00:00:00", payment_currency: document.getElementById('ev-currency').value.trim() || 'USD', location: document.getElementById('ev-location').value.trim(), quantity: parseFloat(document.getElementById('ev-qty')?.value) || 0, price: parseFloat(document.getElementById('ev-price')?.value) || 0, total_amount: parseFloat(document.getElementById('ev-local')?.value) || parseFloat(document.getElementById('ev-dep-local')?.value) || 0, total_amount_base: parseFloat(document.getElementById('ev-book')?.value) || parseFloat(document.getElementById('ev-dep-book')?.value) || 0, accrued_local: parseFloat(document.getElementById('ev-accrued-local')?.value) || 0, accrued_book: parseFloat(document.getElementById('ev-accrued-book')?.value) || 0, notional: parseFloat(document.getElementById('ev-notional')?.value) || 0, original_face: parseFloat(document.getElementById('ev-oface')?.value) || 0, per_share: parseFloat(document.getElementById('ev-per-share')?.value) || 0, new_shares: parseFloat(document.getElementById('ev-new-shares')?.value) || 0, old_shares: parseFloat(document.getElementById('ev-old-shares')?.value) || 0, buy_currency: document.getElementById('ev-buy-ccy')?.value.trim() || null, sell_currency: document.getElementById('ev-sell-ccy')?.value.trim() || null, buy_amt: parseFloat(document.getElementById('ev-buy-amt')?.value) || 0, sell_amt: parseFloat(document.getElementById('ev-sell-amt')?.value) || 0 };
   sp.classList.add('show'); st.textContent = 'Adding event...'; st.className = 'status info';
   try {
-    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
-    });
-    const data = await res.json();
-    if (res.ok) {
-      st.textContent = `✓ Added (tranid=${data.tranid})`; st.className = 'status ok';
-      rb.className = 'result-box show pass';
-      rb.textContent = `${method} · ${investment} · ${tradedate}\ntranid: ${data.tranid} · closing_method: ${data.closing_method} · file: ${data.file}`;
-    } else {
-      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-    }
+    const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }); const data = await res.json();
+    if (res.ok) { st.textContent = `✓ Added (tranid=${data.tranid})`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `${method} · ${investment} · ${tradedate}\ntranid: ${data.tranid} · closing_method: ${data.closing_method} · file: ${data.file}`; }
+    else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
 }
 
 function clearEvent() {
-  document.getElementById('ev-investment').value = '';
-  document.getElementById('ev-tradedate').value  = '';
-  document.getElementById('ev-settledate').value = '';
-  document.getElementById('ev-kdbegin').value    = '';
-  document.getElementById('ev-location').value   = '';
-  ['ev-qty','ev-price','ev-local','ev-book','ev-dep-local','ev-dep-book',
-   'ev-accrued-local','ev-accrued-book','ev-notional','ev-oface',
-   'ev-per-share','ev-new-shares','ev-old-shares','ev-buy-amt','ev-sell-amt'].forEach(id => {
-    const el = document.getElementById(id); if (el) el.value = '0';
-  });
-  document.getElementById('rb-ev').classList.remove('show');
-  document.getElementById('st-ev').textContent = '';
+  document.getElementById('ev-investment').value = ''; document.getElementById('ev-tradedate').value = ''; document.getElementById('ev-settledate').value = ''; document.getElementById('ev-kdbegin').value = ''; document.getElementById('ev-location').value = '';
+  ['ev-qty','ev-price','ev-local','ev-book','ev-dep-local','ev-dep-book','ev-accrued-local','ev-accrued-book','ev-notional','ev-oface','ev-per-share','ev-new-shares','ev-old-shares','ev-buy-amt','ev-sell-amt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '0'; });
+  document.getElementById('rb-ev').classList.remove('show'); document.getElementById('st-ev').textContent = '';
 }
 
 // ── VIEW EVENTS ────────────────────────────────────────────
 async function viewEvents() {
-  const portfolio  = document.getElementById('ve-portfolio').value.trim();
-  const investment = document.getElementById('ve-investment').value.trim();
-  const method     = document.getElementById('ve-method-filter').value.trim();
-  const limit      = document.getElementById('ve-limit').value;
-  const sp = document.getElementById('sp-ve');
-  const st = document.getElementById('st-ve');
+  const portfolio = document.getElementById('ve-portfolio').value.trim(); const investment = document.getElementById('ve-investment').value.trim(); const method = document.getElementById('ve-method-filter').value.trim(); const limit = document.getElementById('ve-limit').value;
+  const sp = document.getElementById('sp-ve'); const st = document.getElementById('st-ve');
   if (!portfolio) { st.textContent = 'Portfolio required'; return; }
   sp.classList.add('show'); st.textContent = 'Loading...';
   let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/events?limit=${limit}`;
   if (investment) url += `&investment=${encodeURIComponent(investment)}`;
   if (method)     url += `&method=${encodeURIComponent(method)}`;
   try {
-    const res  = await fetch(url);
-    const data = await res.json();
-    const tbl  = document.getElementById('events-table');
-    const head = document.getElementById('events-thead');
-    const body = document.getElementById('events-tbody');
-    if (data.events && data.events.length > 0) {
-      const cols = ['tranid','method','investment','tradedate','settledate','quantity','total_amount','payment_currency','location','closing_method'];
-      head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
-      body.innerHTML = data.events.map(e => `<tr>${cols.map(c => `<td>${e[c] || ''}</td>`).join('')}</tr>`).join('');
-      tbl.style.display = ''; st.textContent = `${data.count} events`;
-    } else { tbl.style.display = 'none'; st.textContent = 'No events found'; }
+    const res = await fetch(url); const data = await res.json();
+    const tbl = document.getElementById('events-table'); const head = document.getElementById('events-thead'); const body = document.getElementById('events-tbody');
+    if (data.events && data.events.length > 0) { const cols = ['tranid','method','investment','tradedate','settledate','quantity','total_amount','payment_currency','location','closing_method']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.events.map(e => `<tr>${cols.map(c => `<td>${e[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} events`; }
+    else { tbl.style.display = 'none'; st.textContent = 'No events found'; }
   } catch(e) { st.textContent = 'Error loading events'; }
   sp.classList.remove('show');
 }
 
-// ── PROCESS ────────────────────────────────────────────────
+// ── PREVIEW EVENT (shared by Reverse and Modify) ───────────
+async function previewEvent(prefix) {
+  const portfolio = document.getElementById(`${prefix}-portfolio`).value.trim();
+  const tranid    = document.getElementById(`${prefix}-tranid`).value.trim();
+  if (!portfolio || !tranid) return;
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event/${tranid}`);
+    const data = await res.json();
+    if (!res.ok) return;
+    const ev = data.event;
+    const previewEl  = document.getElementById(`${prefix}-preview`);
+    const fieldsEl   = document.getElementById(`${prefix}-preview-fields`);
+    const showFields = ['tranid','method','investment','tradedate','settledate','quantity','price','total_amount','total_amount_base','payment_currency','location','kdbegin','kdend'];
+    fieldsEl.innerHTML = showFields.map(f => `<div class="event-preview-field"><span>${f}:</span> ${ev[f] || '—'}</div>`).join('');
+    previewEl.style.display = 'block';
+
+    // Pre-populate modify fields from original
+    if (prefix === 'mv') {
+      if (ev.investment) document.getElementById('mv-investment').placeholder = ev.investment;
+      if (ev.quantity)   document.getElementById('mv-quantity').placeholder   = ev.quantity;
+      if (ev.price)      document.getElementById('mv-price').placeholder      = ev.price;
+      if (ev.tradedate)  document.getElementById('mv-tradedate').value         = csvDateToInput(ev.tradedate);
+      if (ev.settledate) document.getElementById('mv-settledate').value        = csvDateToInput(ev.settledate);
+    }
+  } catch(e) {}
+}
+
+// ── REVERSE EVENT ──────────────────────────────────────────
+async function reverseEvent() {
+  const portfolio = document.getElementById('rv-portfolio').value.trim();
+  const tranid    = parseInt(document.getElementById('rv-tranid').value);
+  const reason    = document.getElementById('rv-reason').value.trim();
+  const sp = document.getElementById('sp-rv'); const st = document.getElementById('st-rv'); const rb = document.getElementById('rb-rv');
+  if (!portfolio || !tranid) { st.textContent = 'Portfolio and Tran ID required'; st.className = 'status err'; return; }
+  sp.classList.add('show'); st.textContent = 'Reversing...'; st.className = 'status info';
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event/reverse`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ tranid, reason, actor: 'ops' }) });
+    const data = await res.json();
+    if (res.ok) {
+      st.textContent = `✓ Event ${tranid} reversed`; st.className = 'status ok'; rb.className = 'result-box show warn';
+      rb.textContent = `Event tranid=${tranid} reversed.\nKD End stamped: ${data.kdend}\nReason: ${data.reason || 'none'}\n\nEvent is sealed. Add a new event to rebook.`;
+      document.getElementById('rv-preview').style.display = 'none';
+    } else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
+  } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
+  sp.classList.remove('show');
+}
+
+// ── MODIFY EVENT ───────────────────────────────────────────
+async function modifyEvent() {
+  const portfolio = document.getElementById('mv-portfolio').value.trim();
+  const tranid    = parseInt(document.getElementById('mv-tranid').value);
+  const reason    = document.getElementById('mv-reason').value.trim();
+  const sp = document.getElementById('sp-mv'); const st = document.getElementById('st-mv'); const rb = document.getElementById('rb-mv');
+  if (!portfolio || !tranid) { st.textContent = 'Portfolio and Tran ID required'; st.className = 'status err'; return; }
+  if (!reason) { st.textContent = 'Correction reason required'; st.className = 'status err'; return; }
+
+  // Build payload — only include fields that were filled in
+  const body = { tranid, reason, actor: 'ops' };
+  const inv = document.getElementById('mv-investment').value.trim(); if (inv) body.investment = inv.toUpperCase();
+  const qty = document.getElementById('mv-quantity').value;          if (qty !== '') body.quantity = parseFloat(qty);
+  const prc = document.getElementById('mv-price').value;             if (prc !== '') body.price = parseFloat(prc);
+  const ta  = document.getElementById('mv-total-amount').value;      if (ta  !== '') body.total_amount = parseFloat(ta);
+  const tab = document.getElementById('mv-total-amount-base').value; if (tab !== '') body.total_amount_base = parseFloat(tab);
+  const td  = document.getElementById('mv-tradedate').value;         if (td)  body.tradedate  = toEventDate(td);
+  const sd  = document.getElementById('mv-settledate').value;        if (sd)  body.settledate = toEventDate(sd);
+  const ccy = document.getElementById('mv-currency').value.trim();   if (ccy) body.payment_currency = ccy;
+  const loc = document.getElementById('mv-location').value.trim();   if (loc) body.location = loc;
+
+  sp.classList.add('show'); st.textContent = 'Applying correction...'; st.className = 'status info';
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event/modify`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
+    const data = await res.json();
+    if (res.ok) {
+      st.textContent = `✓ Corrected → tranid=${data.correction_tranid}`; st.className = 'status ok'; rb.className = 'result-box show pass';
+      rb.textContent = `Original tranid=${data.original_tranid} sealed.\nCorrection tranid=${data.correction_tranid} created.\nReason: ${data.reason}\n\nReprocess to apply correction.`;
+      document.getElementById('mv-preview').style.display = 'none';
+    } else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
+  } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
+  sp.classList.remove('show');
+}
+
+// ── VIEW CORRECTIONS ───────────────────────────────────────
+async function viewCorrections() {
+  const portfolio  = document.getElementById('vc-portfolio').value.trim();
+  const investment = document.getElementById('vc-investment').value.trim();
+  const limit      = document.getElementById('vc-limit').value;
+  const sp = document.getElementById('sp-vc'); const st = document.getElementById('st-vc');
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+  sp.classList.add('show'); st.textContent = 'Loading...';
+  let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/corrections?limit=${limit}`;
+  if (investment) url += `&investment=${encodeURIComponent(investment)}`;
+  try {
+    const res  = await fetch(url); const data = await res.json();
+    const list = document.getElementById('corrections-list');
+    if (!data.corrections || data.corrections.length === 0) {
+      list.innerHTML = '<div style="font-family:var(--mono);font-size:0.78em;color:var(--muted);padding:16px 0">No corrections found.</div>';
+      st.textContent = '0 corrections'; sp.classList.remove('show'); return;
+    }
+    list.innerHTML = data.corrections.map(c => {
+      const orig = c.original || {};
+      const corr = c.correction || {};
+      const isModify = c.type === 'modify';
+      return `
+        <div class="correction-card ${c.type}">
+          <div class="correction-head">
+            <span class="correction-type ${c.type}">${c.type === 'modify' ? 'Modified' : 'Reversed'}</span>
+            <span style="font-family:var(--mono);font-size:0.85em;color:var(--text)">${orig.investment || '—'} &nbsp;·&nbsp; tranid=${orig.tranid || '—'}</span>
+            <span class="correction-reason">${c.reason || ''}</span>
+            <span style="color:var(--muted);margin-left:8px">${c.reversed_at || ''}</span>
+          </div>
+          <div class="correction-body">
+            <div>
+              <div class="correction-col-head">Original (sealed)</div>
+              ${['tranid','method','investment','tradedate','quantity','total_amount','payment_currency'].map(f => `<div class="correction-field"><span>${f}:</span>${orig[f] || '—'}</div>`).join('')}
+            </div>
+            ${isModify ? `
+            <div>
+              <div class="correction-col-head">Correction (active)</div>
+              ${['tranid','method','investment','tradedate','quantity','total_amount','payment_currency'].map(f => {
+                const changed = corr[f] && orig[f] && corr[f] !== orig[f];
+                return `<div class="correction-field ${changed ? 'changed' : ''}"><span>${f}:</span>${corr[f] || '—'}${changed ? ' ←' : ''}</div>`;
+              }).join('')}
+            </div>` : '<div><div class="correction-col-head">No replacement</div><div class="correction-field" style="color:var(--muted)">Pure reversal — add new event to rebook</div></div>'}
+          </div>
+        </div>`;
+    }).join('');
+    st.textContent = `${data.count} correction(s)`;
+  } catch(e) { st.textContent = 'Error loading corrections'; }
+  sp.classList.remove('show');
+}
+
+// ── JE VIEWER ──────────────────────────────────────────────
+async function viewJEs() {
+  const portfolio = document.getElementById('jv-portfolio').value.trim();
+  const tranid    = document.getElementById('jv-tranid').value.trim();
+  const calendar  = document.getElementById('jv-calendar').value;
+  const sp = document.getElementById('sp-jv');
+  const st = document.getElementById('st-jv');
+  const rb = document.getElementById('rb-jv');
+
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+
+  sp.classList.add('show'); st.textContent = 'Loading JEs...'; rb.classList.remove('show');
+
+  try {
+    let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=5000`;
+    if (tranid) url += `&tranid=${tranid}`;
+
+    const res  = await fetch(url);
+    const data = await res.json();
+
+    if (!res.ok) {
+      st.textContent = `Error: ${data.detail}`;
+      rb.className = 'result-box show fail'; rb.textContent = data.detail;
+      sp.classList.remove('show'); return;
+    }
+
+    const tbl  = document.getElementById('je-table');
+    const head = document.getElementById('je-thead');
+    const body = document.getElementById('je-tbody');
+
+    if (data.entries && data.entries.length > 0) {
+      const cols = ['tranid','entry_type','transaction','investment','lotid','ibor_date','tradedate','ls','financial_account','quantity','local','book','location'];
+      head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
+      body.innerHTML = data.entries.map(je => `<tr>${cols.map(c => {
+        let val = je[c] != null ? je[c] : '';
+        if (c === 'local' || c === 'book') {
+          const n = parseFloat(val);
+          val = isNaN(n) ? val : n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+        }
+        return `<td>${val}</td>`;
+      }).join('')}</tr>`).join('');
+      tbl.style.display = '';
+      st.textContent = `${data.je_count} JE line(s)${tranid ? ' for tranid=' + tranid : ''}`;
+    } else {
+      tbl.style.display = 'none';
+      st.textContent = 'No JEs found';
+      rb.className = 'result-box show info';
+      rb.textContent = `No journal entries found in ${portfolio}/${calendar}.\n\nPossible reasons:\n  · Not yet processed\n  · Try Force Bootstrap + Reprocess\n  · Wrong calendar selected`;
+      rb.style.display = 'block';
+    }
+  } catch(e) { st.textContent = 'Connection error'; }
+  sp.classList.remove('show');
+}
+
 async function process() {
-  const portfolio = document.getElementById('pr-portfolio').value.trim();
-  const calendar  = document.getElementById('pr-calendar').value.trim();
-  const period    = document.getElementById('pr-period').value.trim();
-  const bootstrap = document.getElementById('pr-bootstrap').value;
-  const sp = document.getElementById('sp-pr');
-  const st = document.getElementById('st-pr');
-  const rb = document.getElementById('rb-pr');
+  const portfolio = document.getElementById('pr-portfolio').value.trim(); const calendar = document.getElementById('pr-calendar').value.trim(); const period = document.getElementById('pr-period').value.trim(); const bootstrap = document.getElementById('pr-bootstrap').value;
+  const sp = document.getElementById('sp-pr'); const st = document.getElementById('st-pr'); const rb = document.getElementById('rb-pr');
   if (!portfolio || !calendar) { st.textContent = 'Portfolio and calendar required'; st.className = 'status err'; return; }
-  sp.classList.add('show'); st.textContent = 'Processing...'; st.className = 'status info';
-  rb.classList.remove('show');
+  sp.classList.add('show'); st.textContent = 'Processing...'; st.className = 'status info'; rb.classList.remove('show');
   let url = `${BASE}/api/v1/cph/process?portfolio=${portfolio}&calendar=${calendar}&bootstrap=${bootstrap}`;
   if (period) url += `&period_name=${encodeURIComponent(period)}`;
   try {
-    const res  = await fetch(url, { method: 'POST' });
-    const data = await res.json();
+    const res = await fetch(url, { method: 'POST' }); const data = await res.json();
     if (res.ok) {
       const periods = data.periods || [];
-      st.textContent = `✓ ${data.periods_processed} period(s) processed`; st.className = 'status ok';
-      rb.className = 'result-box show pass';
-      rb.textContent =
-        `Portfolio: ${portfolio}  ·  Calendar: ${calendar}\n` +
-        `Periods: ${data.periods_processed}\n` +
-        `Regular JEs:   ${(data.total_regular_je || 0).toLocaleString()}\n` +
-        `Adjusting JEs: ${(data.total_adjusting_je || 0).toLocaleString()}\n` +
-        `CPH time: ${data.total_time_seconds}s\n\n` +
-        periods.map(p => `  ${p.period_name} | regular=${p.regular_je} | adjusting=${p.adjusting_je} | ${p.time_seconds}s`).join('\n');
-    } else {
-      st.textContent = `Error: ${data.detail}`; st.className = 'status err';
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-    }
+      st.textContent = `✓ ${data.periods_processed} period(s) processed`; st.className = 'status ok'; rb.className = 'result-box show pass';
+      rb.textContent = `Portfolio: ${portfolio}  ·  Calendar: ${calendar}\nPeriods: ${data.periods_processed}\nRegular JEs:   ${(data.total_regular_je || 0).toLocaleString()}\nAdjusting JEs: ${(data.total_adjusting_je || 0).toLocaleString()}\nCPH time: ${data.total_time_seconds}s\n\n` + periods.map(p => `  ${p.period_name} | regular=${p.regular_je} | adjusting=${p.adjusting_je} | ${p.time_seconds}s`).join('\n');
+    } else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
 }

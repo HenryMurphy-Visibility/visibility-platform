@@ -142,7 +142,8 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
     lifespan=lifespan,
 )
-
+from fastapi.staticfiles import StaticFiles
+app.mount("/static", StaticFiles(directory="static"), name="static")
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
@@ -189,108 +190,314 @@ app.include_router(oversight_router)
 
 app.include_router(tips_router)
 
-
-
-# ============================================================
-# LANDING PAGE
-# ============================================================
-
 @app.get("/", response_class=HTMLResponse)
 def landing():
     return """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Visibility — Financial Information Gateway</title>
+    <title>Visibility — Financial Information Platform</title>
     <style>
-        body { font-family: Georgia, serif; max-width: 800px; margin: 0 auto; padding: 60px 40px; background: #0a0a1a; color: #e8e8e8; line-height: 1.8; }
-        h1 { font-size: 2.4em; color: #ffffff; border-bottom: 1px solid #2E5FA3; padding-bottom: 20px; margin-bottom: 10px; }
-        .version { color: #888; font-size: 0.9em; margin-bottom: 40px; }
-        h2 { color: #2E5FA3; margin-top: 60px; font-size: 1.3em; }
-        p { margin: 16px 0; }
-        .metric { font-size: 1.1em; color: #ffffff; font-weight: bold; margin: 8px 0; padding-left: 20px; border-left: 2px solid #2E5FA3; }
-        .question { border-left: 3px solid #2E5FA3; padding: 10px 20px; margin: 16px 0; font-style: italic; color: #cccccc; }
-        .killer { font-weight: bold; color: #ffffff; font-size: 1.05em; margin: 40px 0; padding: 24px; border: 1px solid #2E5FA3; line-height: 1.9; }
-        .disclaimer { font-size: 0.9em; color: #888; font-style: italic; margin: 40px 0; padding: 20px; border-left: 2px solid #444; }
-        .targeting { font-size: 0.95em; color: #aaa; margin: 40px 0; padding: 20px; border: 1px solid #333; }
-        .get-started { display: block; margin: 80px auto 60px auto; padding: 20px 60px; background: #2E5FA3; color: white; font-size: 1.1em; border: none; cursor: pointer; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; }
-        .get-started:hover { background: #1F3864; }
-        .footer { margin-top: 80px; padding-top: 20px; border-top: 1px solid #222; color: #555; font-size: 0.85em; text-align: center; }
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400&display=swap');
+
+        :root {
+            --bg:      #07080f;
+            --surface: #0d0f1a;
+            --border:  #1a1e2e;
+            --accent:  #2E5FA3;
+            --accent2: #4a7fc1;
+            --text:    #d8dce8;
+            --muted:   #5a6080;
+            --gold:    #e6a817;
+            --mono:    'JetBrains Mono', monospace;
+            --serif:   'Crimson Pro', Georgia, serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: var(--serif);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 40px;
+        }
+
+        /* subtle radial glow behind logo */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 600px; height: 400px;
+            background: radial-gradient(ellipse at center top,
+                rgba(46,95,163,0.12) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 720px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+        }
+
+        /* ── LOGO + TITLE ─────────────────────────────── */
+        .brand {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .brand img {
+            width: 96px; height: 96px;
+            object-fit: contain;
+            opacity: 0.92;
+            filter: drop-shadow(0 0 24px rgba(46,95,163,0.4));
+        }
+
+        .brand-title {
+            font-family: var(--serif);
+            font-size: 3.2em;
+            font-weight: 300;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .brand-sub {
+            font-family: var(--mono);
+            font-size: 0.68em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: var(--accent2);
+            margin-top: -8px;
+        }
+
+        /* ── DIVIDER ──────────────────────────────────── */
+        .divider {
+            width: 100%;
+            height: 1px;
+            background: linear-gradient(90deg,
+                transparent, var(--accent), transparent);
+            margin-bottom: 40px;
+        }
+
+        /* ── WELCOME TEXT ─────────────────────────────── */
+        .welcome {
+            text-align: center;
+            margin-bottom: 52px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .welcome p {
+            font-family: var(--serif);
+            font-size: 1.15em;
+            color: #b0b8cc;
+            line-height: 1.85;
+            font-weight: 300;
+        }
+
+        .welcome p.lead {
+            font-size: 1.25em;
+            color: var(--text);
+        }
+
+        .welcome p.closing {
+            font-family: var(--mono);
+            font-size: 0.75em;
+            letter-spacing: 1px;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+
+        .welcome .exclusive {
+            font-family: var(--mono);
+            font-size: 0.72em;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--gold);
+            background: rgba(230,168,23,0.07);
+            border: 1px solid rgba(230,168,23,0.2);
+            padding: 8px 20px;
+            display: inline-block;
+            margin: 0 auto;
+        }
+
+        /* ── CONSOLE BUTTONS ──────────────────────────── */
+        .consoles {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: center;
+            width: 100%;
+            margin-bottom: 40px;
+        }
+
+        .console-btn {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+            padding: 18px 32px;
+            text-decoration: none;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            transition: all 0.2s;
+            min-width: 120px;
+        }
+        .console-btn:hover {
+            border-color: var(--accent);
+            background: rgba(46,95,163,0.1);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(46,95,163,0.2);
+        }
+        .console-btn.primary {
+            border-color: rgba(46,95,163,0.4);
+            background: rgba(46,95,163,0.08);
+        }
+        .console-btn.primary:hover {
+            border-color: var(--accent2);
+            background: rgba(46,95,163,0.18);
+        }
+        .console-btn.oversight {
+            border-color: rgba(184,134,11,0.3);
+            background: rgba(184,134,11,0.05);
+        }
+        .console-btn.oversight:hover {
+            border-color: var(--gold);
+            background: rgba(184,134,11,0.12);
+        }
+        .console-btn.stub {
+            opacity: 0.35;
+            cursor: default;
+            pointer-events: none;
+        }
+
+        .console-label {
+            font-family: var(--mono);
+            font-size: 0.9em;
+            letter-spacing: 3px;
+            text-transform: uppercase;
+            color: #fff;
+        }
+        .console-btn.oversight .console-label { color: var(--gold); }
+
+        .console-desc {
+            font-family: var(--mono);
+            font-size: 0.58em;
+            letter-spacing: 1px;
+            color: var(--muted);
+            text-transform: uppercase;
+        }
+
+        /* ── FOOTER ───────────────────────────────────── */
+        .footer {
+            font-family: var(--mono);
+            font-size: 0.62em;
+            color: #2a3050;
+            letter-spacing: 1px;
+            text-align: center;
+            padding-top: 24px;
+            border-top: 1px solid var(--border);
+            width: 100%;
+        }
     </style>
 </head>
 <body>
-    <h1>Visibility</h1>
-    <p class="version">Financial Information Gateway &nbsp;·&nbsp; Version 1.0 &nbsp;·&nbsp; Invitation Only</p>
+<div class="container">
 
-    <h2>A 50-Year Problem</h2>
-    <p>Every investment firm knows the landscape. Multiple systems. Multiple schemas. Reconciliation processes that run continuously. Teams whose primary function is validating that different parts of the technology stack agree with each other.</p>
-    <p>This is not the result of bad decisions. It is the accumulated consequence of a structural problem that has resisted every attempt to fix it.</p>
-    <p style="color: #ffffff; font-weight: bold; margin-top: 30px;">Visibility addresses the root problem.</p>
-
-    <h2>What You Are About to See</h2>
-    <p>This API exposes the reporting layer of a working investment accounting system built on a different foundation — event-driven, state-based, and consistent by construction.</p>
-
-    <p class="disclaimer">
-        The dataset behind this demonstration is purpose-built — modelled to reflect real-world conditions while remaining focused enough for you to verify both accuracy and scale independently. It is intentionally not a showcase of functional breadth.<br><br>
-        That is an entirely different conversation — one we look forward to having.
-    </p>
-
-    <h2>The Numbers</h2>
-    <p class="metric">504 investments &nbsp;·&nbsp; five-year history</p>
-    <p class="metric">180,000+ trades &nbsp;·&nbsp; 3.8 million journal entries</p>
-    <p class="metric">1,300+ immutably stored states across four calendars</p>
-    <p class="metric">Daily · Monthly · Quarterly · Yearly — simultaneously</p>
-    <p class="metric">Full portfolio appraisal: 3.7 seconds · Pure Python · No database · Laptop hardware</p>
-    <p class="metric">826,320 price observations indexed · 182,111 journals loaded</p>
-
-    <h2>The Questions Worth Asking</h2>
-    <p class="question">Can your system restate any closed period and propagate the correction through all subsequent periods automatically?</p>
-    <p class="question">Can your system produce daily performance at the investment level as a direct output of your accounting architecture — not a separate process?</p>
-    <p class="question">Can your system maintain unlimited period history across any number of simultaneous calendars with full consistency?</p>
-    <p class="question">Can your system process a correction across five years of history in seconds?</p>
-    <p class="question">Can your system produce operations, fund accounting, and management reporting from a single consistent source of truth with no reconciliation between them?</p>
-
-    <p class="killer">
-        If you answered no to any or all of these questions — can you envision the productivity that could be achieved with the logical restructuring of your workflows and the elimination of reconciliation points between them?
-    </p>
-
-    <p class="targeting">
-        <strong>Who this is for:</strong><br><br>
-        Visibility is built for organizations with the technical and domain expertise to build on a proven foundation — not for those seeking a turnkey solution out of the box.<br><br>
-        If your team includes sophisticated engineers and domain experts who have long wanted a coherent architectural foundation to build against rather than another layer of workarounds — this is built for you.<br><br>
-        If you are looking for a fully configured off-the-shelf system today — Visibility is not yet that product. But it will be. And when it is, the firms that built on the foundation early will have shaped it. We welcome that conversation too.
-    </p>
-
-    <p style="color: #888; margin-top: 40px;">What follows is not a presentation. It is a working system.</p>
-    <p style="color: #888;">The data is real. The response times are real. The consistency is real.</p>
-    <p style="color: #888;">When you are ready —</p>
- 
-<div style="display:flex; gap:16px; justify-content:center; margin: 80px auto 60px auto;">
-    <a href="/ops" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
-        <span>OPS</span>
-        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Operations Console</span>
-    </a>
-    <a href="/fig" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
-        <span>FIG</span>
-        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Financial Information Gateway</span>
-    </a>
-    <a href="/cph" style="padding: 20px 48px; background: #2E5FA3; color: white; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; display:flex; flex-direction:column; gap:4px;">
-        <span>CPH</span>
-        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Central Processing Hub</span>
-    </a>
-    <a href="/api/v1/docs" style="padding: 20px 48px; background: transparent; color: #2E5FA3; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; border: 1px solid #2E5FA3; display:flex; flex-direction:column; gap:4px;">
-        <span>API DOCS</span>
-        <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">REST Interface</span>
-    </a>
-    <a href="/oversight" style="padding: 20px 48px; background: #7a5a08; color: #e6a817; font-size: 1.1em; text-decoration: none; text-align: center; letter-spacing: 2px; font-family: Georgia, serif; border: 1px solid #b8860b; display:flex; flex-direction:column; gap:4px;">
-         <span>Oversight</span>
-         <span style="font-size:0.55em; letter-spacing:1px; opacity:0.8;">Governance Console</span>
-</a>
-</div>
-</div>
-    <div class="footer">
-        Visibility &nbsp;·&nbsp; Chest Financial Systems &nbsp;·&nbsp; Henry J. Murphy, Founder &nbsp;·&nbsp; Confidential
+    <!-- Brand -->
+    <div class="brand">
+        <img src="/static/visibility.png" alt="Visibility">
+        <div class="brand-title">Visibility</div>
+        <div class="brand-sub">Financial Information Platform</div>
     </div>
+
+    <div class="divider"></div>
+
+    <!-- Welcome -->
+    <div class="welcome">
+
+        <div class="exclusive">Invitation Only</div>
+
+        <p class="lead">
+            What you are seeing is a live, working financial information system
+            unlike anything currently available.
+        </p>
+
+        <p>
+            Built on a temporal, event-driven architecture, Visibility redefines
+            what investment accounting software can be — not as an incremental
+            improvement on legacy platforms, but as a different foundation entirely.
+        </p>
+
+        <p>
+            This is not a demo environment. This is the system in active
+            development — processing real data, generating real journal entries,
+            in real time. No database. No reconciliation layer. No compromises
+            made in the name of convention.
+        </p>
+
+        <p>
+            Few possessed the cross between Silicon Valley and Wall Street experience to see what was missing — and fewer still recognized, three years ago, that the convergence of domain expertise, artificial intelligence, and modern architecture created a singular opportunity to build something entirely new from the ground up. Visibility is the result of that vision
+        </p>
+
+        <p>
+            Access to this environment is by invitation only.
+            You are among the first to see it.
+        </p>
+
+        <p class="closing">Thank you for your interest.</p>
+
+    </div>
+
+    <!-- Console Buttons -->
+    <div class="consoles">
+        <a href="/ops" class="console-btn primary">
+            <span class="console-label">OPS</span>
+            <span class="console-desc">Operations</span>
+        </a>
+        <a href="/fig" class="console-btn primary">
+            <span class="console-label">FIG</span>
+            <span class="console-desc">Reports</span>
+        </a>
+        <a href="/cph" class="console-btn primary">
+            <span class="console-label">CPH</span>
+            <span class="console-desc">Processing</span>
+        </a>
+        <a href="/oversight" class="console-btn oversight">
+            <span class="console-label">Oversight</span>
+            <span class="console-desc">Governance</span>
+        </a>
+        <a class="console-btn stub">
+            <span class="console-label">FA</span>
+            <span class="console-desc">Coming Soon</span>
+        </a>
+        <a class="console-btn stub">
+            <span class="console-label">PERF</span>
+            <span class="console-desc">Coming Soon</span>
+        </a>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        Visibility &nbsp;·&nbsp; Chest Financial Systems &nbsp;·&nbsp;
+        Henry J. Murphy, Founder &nbsp;·&nbsp; Confidential
+    </div>
+
+</div>
 </body>
 </html>
 """
