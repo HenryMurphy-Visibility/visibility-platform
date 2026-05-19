@@ -165,11 +165,33 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
             existing = json.load(f)
         print(f">>> BOOTSTRAP | {portfolio} | already built | "
               f"{existing.get('count', 0)} investments | skipping")
+
+        # Still build marks if missing — marks file may not have been created
+        marks_path = _marks_path(portfolio)
+        if not marks_path.exists() or os.path.getsize(marks_path) == 0:
+            print(f">>> BOOTSTRAP | {portfolio} | marks missing — rebuilding")
+            from kernel_utilities import from_csv_date_to_app_new
+            first_trade_dates = {}
+            events_path = _events_path(portfolio)
+            if events_path.exists():
+                with open(events_path, newline="") as f:
+                    for row in csv.DictReader(f):
+                        inv = (row.get("investment") or "").strip()
+                        td_raw = (row.get("tradedate") or "").strip()
+                        if inv and td_raw:
+                            try:
+                                td = from_csv_date_to_app_new(td_raw)
+                                if inv not in first_trade_dates or td < first_trade_dates[inv]:
+                                    first_trade_dates[inv] = td
+                            except Exception:
+                                pass
+            _create_marks(portfolio, first_trade_dates)
+
         return {
-            "candidates":       set(existing.get("investments", [])),
-            "currencies":       set(existing.get("currencies", [])),
+            "candidates": set(existing.get("investments", [])),
+            "currencies": set(existing.get("currencies", [])),
             "investment_count": existing.get("count", 0),
-            "bond_count":       0,
+            "bond_count": 0,
         }
 
     # ── 1. DERIVE CANDIDATES FROM EVENTS ─────────────────────────
