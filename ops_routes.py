@@ -855,6 +855,107 @@ def get_bond_accrual(
 
 
 # ============================================================
+# PORTFOLIO BOND INFO
+# ============================================================
+
+@ops_router.post("/portfolio/{portfolio_id}/bond_info")
+def add_bond_info(portfolio_id: str, bond_info: dict):
+    """
+    Add or update bond info record in portfolio RefData/bond_info.csv.
+    Called by OPS UI when user clicks 'Add Bond Info' from global master.
+    """
+    try:
+        portfolio_dir  = Path(FUNDS_PATH) / portfolio_id
+        if not portfolio_dir.exists():
+            raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
+
+        bond_info_path = portfolio_dir / "RefData" / "bond_info.csv"
+        investment     = bond_info.get("investment", "").strip()
+
+        if not investment:
+            raise HTTPException(status_code=400, detail="investment field required")
+
+        # Load existing — check for duplicate
+        existing = []
+        fieldnames = None
+        if bond_info_path.exists():
+            with open(bond_info_path, newline="") as f:
+                reader = csv.DictReader(f)
+                fieldnames = reader.fieldnames or []
+                for row in reader:
+                    if row.get("investment", "").strip().upper() == investment.upper():
+                        raise HTTPException(status_code=409,
+                            detail=f"Bond info for '{investment}' already exists in {portfolio_id}")
+                    existing.append(row)
+
+        if not fieldnames:
+            fieldnames = list(bond_info.keys())
+
+        write_hdr = not bond_info_path.exists() or os.path.getsize(bond_info_path) == 0
+        with open(bond_info_path, "a", newline="") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
+            if write_hdr:
+                writer.writeheader()
+            writer.writerow(bond_info)
+
+        print(f">>> BOND INFO ADDED | {portfolio_id} | {investment}")
+        return {"status": "added", "portfolio_id": portfolio_id, "investment": investment}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# GLOBAL INVESTMENT LOOKUP
+# ============================================================
+
+@ops_router.get("/global/investment/{investment}")
+def get_global_investment(investment: str):
+    """
+    Look up an investment in the global master.
+    Returns the record if found — used by OPS UI to offer
+    one-click add to portfolio IM and bond info.
+    """
+    try:
+        global_im   = Path(REFDATA_PATH) / "investment_master.csv"
+        bond_info   = Path(REFDATA_PATH) / "bond_info.csv"
+
+        im_record   = None
+        bond_record = None
+
+        if global_im.exists():
+            with open(global_im, newline="") as f:
+                for row in csv.DictReader(f):
+                    if row.get("investment", "").strip().upper() == investment.upper():
+                        im_record = dict(row)
+                        break
+
+        if im_record and im_record.get("investment_type", "").upper() == "BOND":
+            if bond_info.exists():
+                with open(bond_info, newline="") as f:
+                    for row in csv.DictReader(f):
+                        if row.get("investment", "").strip().upper() == investment.upper():
+                            bond_record = dict(row)
+                            break
+
+        if im_record:
+            return {
+                "found":       True,
+                "investment":  im_record,
+                "bond_info":   bond_record,
+            }
+        else:
+            return {"found": False, "investment": None, "bond_info": None}
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # JE VIEWER
 # ============================================================
 
