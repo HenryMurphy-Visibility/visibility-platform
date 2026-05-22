@@ -276,8 +276,7 @@ def _find_rate(index: dict, key_prefix: str, date: str,
         # On non-business days prefer backward (prior business day)
         # On business days search both directions equally
         if not _is_business_day(date):
-            # Prior business day first, then forward
-            search_order = [-1, 1]
+            search_order = [-1]  # prior business day only — no forward search
         else:
             search_order = [-1, 1]
         for days in range(1, tolerance_days + 1):
@@ -586,6 +585,12 @@ def pillar_settle_fx(events: list, jes_by_period: dict,
 # Change in unrealized chains correctly period over period
 # ============================================================
 
+# ============================================================
+# PILLAR 4 — MARK VERIFICATION
+# Period end MV = qty × price × pricing_factor × fx_rate
+# Change in unrealized chains correctly period over period
+# ============================================================
+
 def pillar_marks(events: list, im: dict, calendar_records: list,
                  jes_by_period: dict, price_index: dict,
                  fx_index: dict) -> ProofResult:
@@ -595,19 +600,30 @@ def pillar_marks(events: list, im: dict, calendar_records: list,
     2. Compare against MV in JEs
     3. Verify change in unrealized chains period over period
     """
+    from datetime import date as _date
+
     result = ProofResult("marks")
 
     if not calendar_records:
         result.skip("No calendar records found")
         return result
 
-    # Build position quantities by period from JEs
-    # Sum quantity for each investment across all JEs in period
     prev_mv = {}  # investment → MV at end of previous period
 
     for rec in sorted(calendar_records, key=lambda r: r.get("period_name", "")):
         period_name = rec.get("period_name", "")
-        period_end  = _norm_date(rec.get("current_period_cutoff", ""))
+        period_end = _norm_date(rec.get("current_period_cutoff", ""))
+
+        # ── OPEN PERIOD SKIP ──────────────────────────────────────
+        # If period end is in the future — month not closed yet
+        # Not a proof failure — data simply doesn't exist yet
+        try:
+            pe_date = datetime.strptime(period_end, "%Y-%m-%d").date()
+            if pe_date > _date.today():
+                result.skip(f"{period_name} — open period (end {period_end} > today)")
+                continue
+        except Exception:
+            pass
 
         if period_name not in jes_by_period:
             result.skip(f"{period_name} — no JEs processed")
@@ -616,63 +632,54 @@ def pillar_marks(events: list, im: dict, calendar_records: list,
         jes = jes_by_period[period_name]
 
         # Accumulate per-investment from JEs across ALL periods up to this one
-        # We need cumulative balances — not just this period
-        qty_by_inv         = defaultdict(float)
-        cost_by_inv        = defaultdict(float)
+        qty_by_inv = defaultdict(float)
+        cost_by_inv = defaultdict(float)
         unreal_price_by_inv = defaultdict(float)
-        unreal_fx_by_inv    = defaultdict(float)
+        unreal_fx_by_inv = defaultdict(float)
 
-        # Scan ALL periods up to and including current to get cumulative state
         for pn, pjes in jes_by_period.items():
             if pn > period_name:
-                continue  # only periods up to current
+                continue
             for je in pjes:
-                fa   = str(_je_val(je, "financial_account") or "")
-                ls   = str(_je_val(je, "ls") or "")
-                inv  = str(_je_val(je, "investment") or "")
-                qty  = _safe_float(_je_val(je, "quantity")) or 0.0
-                book = _safe_float(_je_val(je, "book"))    or 0.0
+                fa = str(_je_val(je, "financial_account") or "")
+                ls = str(_je_val(je, "ls") or "")
+                inv = str(_je_val(je, "investment") or "")
+                qty = _safe_float(_je_val(je, "quantity")) or 0.0
+                book = _safe_float(_je_val(je, "book")) or 0.0
 
                 if fa == "Cost" and ls in ("l", "s"):
-                    qty_by_inv[inv]  += qty
+                    qty_by_inv[inv] += qty
                     cost_by_inv[inv] += book
                 elif fa == "UnrealizedPriceGL" or fa == "UnrealPriceGL":
                     unreal_price_by_inv[inv] += book
                 elif fa == "UnrealizedFXGL" or fa == "UnrealFXGL":
                     unreal_fx_by_inv[inv] += book
 
-        # Verify MV for each holding
         for inv, qty in qty_by_inv.items():
             if not inv or inv in ("USD", ""):
                 continue
             if abs(qty) < QTY_TOLERANCE:
                 continue
 
-            # Skip currencies
             if inv in im and im[inv].get("investment_type", "").upper() == "CURRENCY":
                 continue
 
-            # Get pricing factor and currency from IM
-            pf  = 1.0
+            pf = 1.0
             ccy = "USD"
             if inv in im:
-                pf      = _safe_float(im[inv].get("pricing_factor")) or 1.0
+                pf = _safe_float(im[inv].get("pricing_factor")) or 1.0
                 raw_ccy = (im[inv].get("currency") or "").strip()
-                # Guard against misaligned columns — fall back to asset_class
                 if not raw_ccy or raw_ccy == "0" or len(raw_ccy) > 3:
                     raw_ccy = (im[inv].get("asset_class") or "USD").strip()
                 ccy = raw_ccy if (raw_ccy and len(raw_ccy) <= 3) else "USD"
 
-            # Get period end price
             price, price_gap = _find_rate(price_index, inv, period_end)
             if price is None:
                 result.warn(f"{period_name} · {inv} — no price on {period_end} for MV check")
                 continue
 
-            # Get FX rate from fx_index — fx_master.csv has rates as USD per unit of foreign currency
-            # price_master prices currencies at 1 (self-referential, not an exchange rate)
             fx_rate = 1.0
-            fx_gap  = 0
+            fx_gap = 0
             if ccy != "USD":
                 fx_rate, fx_gap = _find_rate(fx_index, ccy, period_end)
                 if fx_rate is None:
@@ -680,16 +687,13 @@ def pillar_marks(events: list, im: dict, calendar_records: list,
                     continue
 
             # ── THE PROOF EQUATION ───────────────────────────────
-            # MVBase = CostBase + UnrealPriceGL + UnrealFXGL
-            # MVBase = qty × price × pf × fx_rate  (calculated from raw inputs)
-            # If both sides agree — Pillar 4 passes for this holding/period
-            mv_local   = qty * price * pf           # local currency
-            mv_base    = mv_local * fx_rate         # base currency — first class
+            mv_local = qty * price * pf
+            mv_base = mv_local * fx_rate
 
-            cost_base       = cost_by_inv.get(inv, 0.0)
+            cost_base = cost_by_inv.get(inv, 0.0)
             unreal_price_gl = unreal_price_by_inv.get(inv, 0.0)
-            unreal_fx_gl    = unreal_fx_by_inv.get(inv, 0.0)
-            acct_mv_base    = cost_base + unreal_price_gl + unreal_fx_gl
+            unreal_fx_gl = unreal_fx_by_inv.get(inv, 0.0)
+            acct_mv_base = cost_base + unreal_price_gl + unreal_fx_gl
 
             gap_note = ""
             if price_gap: gap_note += f" price {price_gap}d gap"
@@ -708,27 +712,24 @@ def pillar_marks(events: list, im: dict, calendar_records: list,
             else:
                 result.fail(
                     f"{period_name} · {inv} — MVBase MISMATCH\n"
-                    f"         VAI Calc   : {mv_base:,.2f} USD  (qty × px × pf × fx from raw inputs)\n"
-                    f"         Accounting : {acct_mv_base:,.2f} USD  (cost + unrealPx + unrealFX from JEs)\n"
+                    f"         VAI Calc   : qty={qty:,.0f} × px={price:.4f} × pf={pf} × fx={fx_rate:.6f} = {mv_base:,.2f} USD\n"
+                    f"         Accounting : cost={cost_base:,.2f} + unrealPx={unreal_price_gl:,.2f} + unrealFX={unreal_fx_gl:,.2f} = {acct_mv_base:,.2f} USD\n"
                     f"         Diff       : {abs(mv_base - acct_mv_base):,.4f} USD"
                     + (f"  [{gap_note.strip()}]" if gap_note else "")
                 )
 
-            # Track for period-over-period unrealized chain
+            # ── DELTA UNREALIZED CHECK ────────────────────────────
             if inv in prev_mv:
-                prior_mv       = prev_mv[inv]
-                chg_unrealized = mv_base - prior_mv
-                result.ok(f"{period_name} · {inv} — "
-                         f"Δ unrealized (base) = {chg_unrealized:+,.2f} USD "
-                         f"({prior_mv:,.2f} → {mv_base:,.2f})")
+                delta_acct = acct_mv_base - prev_mv[inv]
+                result.ok(
+                    f"{period_name} · {inv} — Δ unrealized (base) = "
+                    f"{delta_acct:+,.2f} USD "
+                    f"({prev_mv[inv]:,.2f} → {acct_mv_base:,.2f})"
+                )
 
-            prev_mv[inv] = mv_base
-
-    if result.total == 0:
-        result.skip("No closing MV entries found in JEs")
+            prev_mv[inv] = acct_mv_base
 
     return result
-
 
 # ============================================================
 # PRINT HELPERS
