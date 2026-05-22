@@ -1,27 +1,6 @@
 # ============================================================
 # ops_routes.py
 # Visibility — Operations REST API Routes
-#
-# Ops endpoints. Registered in app.py via:
-#   from ops_routes import ops_router
-#   app.include_router(ops_router)
-#
-# Ops is the gateway. Everything that enters the system
-# goes through Ops. These endpoints express that workflow.
-#
-# Temporal methods — closing_method, accrual_method, amort_method
-# are stored as histories. get_method_as_of() returns the
-# correct value for any given date. No restatement needed.
-# New selection simply appends to history.
-#
-# Non-temporal — base_currency, domicile_country, inception_date
-# are foundational. Set once. Never changed.
-#
-# Temporal event corrections:
-#   Reverse — stamps kdend on original. Event ceases to exist.
-#   Modify  — reverse + new corrected record with kdbegin = kdend + 1ms
-#
-# Henry J. Murphy — Chest Financial Systems
 # ============================================================
 
 from fastapi import APIRouter, Query, HTTPException
@@ -49,7 +28,7 @@ class PortfolioConfig(BaseModel):
     portfolio_id:     str
     base_currency:    str             = "USD"
     domicile_country: str             = "US"
-    inception_date:   str             # YYYY-MM-DD
+    inception_date:   str
     managers:         List[str]       = []
     description:      Optional[str]   = None
     closing_method:   str             = "FIFO"
@@ -80,7 +59,7 @@ class EventRecord(BaseModel):
     portfolio:         str
     method:            str
     investment:        str
-    tradedate:         str             # MM/DD/YYYY:HH:MM:SS
+    tradedate:         str
     settledate:        str
     kdbegin:           str
     kdend:             str             = "12/31/2099:00:00:00"
@@ -118,7 +97,6 @@ class ModifyRequest(BaseModel):
     tranid:            int
     reason:            str
     actor:             str   = "ops"
-    # Corrected fields — only supply what changed
     method:            Optional[str]   = None
     investment:        Optional[str]   = None
     tradedate:         Optional[str]   = None
@@ -146,16 +124,33 @@ class ModifyRequest(BaseModel):
 
 
 # ============================================================
+# EVENT SCHEMA — single source of truth
+# Must match events file exactly. Never add columns here
+# without explicit domain agreement.
+# ============================================================
+
+EVENT_COLUMNS = [
+    "portfolio", "method", "source", "tradedate", "settledate",
+    "kdbegin", "kdend", "investment", "payment_currency", "tdate_fx",
+    "location", "strategy", "quantity", "price", "notional",
+    "original_face", "total_amount", "total_amount_base", "tranid",
+    "transaction", "accrued_local", "accrued_book", "new_shares",
+    "old_shares", "per_share", "legin", "legout",
+    "allocation_entities", "allocation_percents", "financial_account",
+    "buy_currency", "sell_currency", "buy_amt", "sell_amt",
+    "feeder", "put_call", "mark_price", "mark_fx",
+    "per_100FV_accrual", "per_100FV_amort", "closing_method",
+]
+
+
+# ============================================================
 # TEMPORAL METHOD HELPER
 # ============================================================
 
 def get_method_as_of(history: list, as_of_date: str) -> Optional[str]:
     if not history:
         return None
-    applicable = [
-        h for h in history
-        if h.get("effective_from", "") <= as_of_date
-    ]
+    applicable = [h for h in history if h.get("effective_from", "") <= as_of_date]
     if not applicable:
         return history[0]["value"]
     return applicable[-1]["value"]
@@ -164,10 +159,7 @@ def get_method_as_of(history: list, as_of_date: str) -> Optional[str]:
 def get_portfolio_config(portfolio_id: str) -> dict:
     config_path = Path(FUNDS_PATH) / portfolio_id / "portfolio.json"
     if not config_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail=f"Portfolio '{portfolio_id}' not found"
-        )
+        raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
     with open(config_path) as f:
         return json.load(f)
 
@@ -184,48 +176,27 @@ def save_portfolio_config(portfolio_id: str, config: dict) -> None:
 
 @ops_router.post("/portfolio")
 def create_portfolio(config: PortfolioConfig):
-    """
-    ## Create Portfolio
-
-    Creates a new portfolio with its complete directory structure
-    and saves the portfolio configuration.
-    """
     try:
-        portfolio_id = config.portfolio_id.strip()
-
+        portfolio_id  = config.portfolio_id.strip()
         if not portfolio_id:
             raise HTTPException(status_code=400, detail="portfolio_id is required")
-
         if not config.inception_date:
             raise HTTPException(status_code=400, detail="inception_date is required")
 
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
-
         if portfolio_dir.exists():
-            raise HTTPException(
-                status_code=409,
-                detail=f"Portfolio '{portfolio_id}' already exists"
-            )
+            raise HTTPException(status_code=409, detail=f"Portfolio '{portfolio_id}' already exists")
 
-        # ── CREATE DIRECTORY STRUCTURE ────────────────────────────
-        dirs = [
-            portfolio_dir,
-            portfolio_dir / "Candidates",
-            portfolio_dir / "Events",
-            portfolio_dir / "RefData",
-            portfolio_dir / "Calendars",
-        ]
-        for d in dirs:
+        for d in [portfolio_dir, portfolio_dir / "Candidates", portfolio_dir / "Events",
+                  portfolio_dir / "RefData", portfolio_dir / "Calendars"]:
             d.mkdir(parents=True, exist_ok=True)
 
-        # ── RESOLVE CALENDARS FROM PRESET OR EXPLICIT LIST ───────
         calendars = config.calendars
         if config.calendar_preset and config.calendar_preset in CALENDAR_PRESETS:
             calendars = CALENDAR_PRESETS[config.calendar_preset]
         if not calendars:
             calendars = ["Monthly"]
 
-        # ── BUILD CONFIG WITH TEMPORAL METHOD HISTORIES ───────────
         config_data = {
             "portfolio_id":     portfolio_id,
             "base_currency":    config.base_currency,
@@ -236,50 +207,23 @@ def create_portfolio(config: PortfolioConfig):
             "status":           "active",
             "created_at":       datetime.now().isoformat(),
             "calendars":        calendars,
-            "closing_method_history": [
-                {"value": config.closing_method, "effective_from": config.inception_date}
-            ],
-            "accrual_method_history": [
-                {"value": config.accrual_method, "effective_from": config.inception_date}
-            ],
-            "amort_method_history": [
-                {"value": config.amort_method, "effective_from": config.inception_date}
-            ],
+            "closing_method_history": [{"value": config.closing_method, "effective_from": config.inception_date}],
+            "accrual_method_history": [{"value": config.accrual_method, "effective_from": config.inception_date}],
+            "amort_method_history":   [{"value": config.amort_method,   "effective_from": config.inception_date}],
         }
 
-        # ── SAVE PORTFOLIO CONFIG ─────────────────────────────────
-        config_path = portfolio_dir / "portfolio.json"
-        with open(config_path, "w") as f:
+        with open(portfolio_dir / "portfolio.json", "w") as f:
             json.dump(config_data, f, indent=2)
 
-        # ── GENERATE CALENDAR FILES ───────────────────────────────
         calendar_results = generate_calendars(
-            portfolio      = portfolio_id,
-            calendars      = calendars,
-            inception_date = config.inception_date,
+            portfolio=portfolio_id, calendars=calendars, inception_date=config.inception_date
         )
 
-        # ── CREATE EMPTY EVENT FILES ──────────────────────────────
-        event_columns = [
-            "portfolio", "method", "source", "tradedate", "settledate",
-            "kdbegin", "kdend", "investment", "payment_currency", "tdate_fx",
-            "location", "strategy", "quantity", "price", "notional",
-            "original_face", "total_amount", "total_amount_base", "tranid",
-            "transaction", "accrued_local", "accrued_book", "new_shares",
-            "old_shares", "per_share", "legin", "legout",
-            "allocation_entities", "allocation_percents", "financial_account",
-            "buy_currency", "sell_currency", "buy_amt", "sell_amt",
-            "feeder", "put_call", "mark_price", "mark_fx",
-            "per_100FV_accrual", "per_100FV_amort", "closing_method",
-            "reversal_of", "correction_reason",
-        ]
-
+        # Create empty event files — correct schema, no rogue columns
         for fname in [f"{portfolio_id}.csv", f"{portfolio_id}_marks.csv"]:
-            path = portfolio_dir / "Events" / fname
-            with open(path, "w", newline="") as f:
-                csv.DictWriter(f, fieldnames=event_columns).writeheader()
+            with open(portfolio_dir / "Events" / fname, "w", newline="") as f:
+                csv.DictWriter(f, fieldnames=EVENT_COLUMNS).writeheader()
 
-        # ── CREATE EMPTY PORTFOLIO IM ─────────────────────────────
         im_columns = [
             "investment", "ticker", "full_name", "investment_type",
             "tradedate", "kdbegin", "kdend", "asset_class", "currency",
@@ -287,19 +231,12 @@ def create_portfolio(config: PortfolioConfig):
             "industry", "contract_size", "pricing_factor",
             "underlying", "put_call", "strike",
         ]
-        im_path = portfolio_dir / "RefData" / "investment_master.csv"
-        with open(im_path, "w", newline="") as f:
+        with open(portfolio_dir / "RefData" / "investment_master.csv", "w", newline="") as f:
             csv.DictWriter(f, fieldnames=im_columns).writeheader()
 
         print(f">>> PORTFOLIO CREATED | {portfolio_id}")
-
-        return {
-            "status":       "created",
-            "portfolio_id": portfolio_id,
-            "path":         str(portfolio_dir),
-            "calendars":    calendar_results,
-            "config":       config_data,
-        }
+        return {"status": "created", "portfolio_id": portfolio_id,
+                "path": str(portfolio_dir), "calendars": calendar_results, "config": config_data}
 
     except HTTPException:
         raise
@@ -332,7 +269,6 @@ def list_portfolios():
         funds_dir  = Path(FUNDS_PATH)
         portfolios = []
         today      = datetime.now().strftime("%Y-%m-%d")
-
         for d in sorted(funds_dir.iterdir()):
             if not d.is_dir():
                 continue
@@ -341,7 +277,6 @@ def list_portfolios():
                 continue
             with open(config_path) as f:
                 config = json.load(f)
-
             portfolios.append({
                 "portfolio_id":     config.get("portfolio_id"),
                 "description":      config.get("description"),
@@ -355,50 +290,32 @@ def list_portfolios():
                 "accrual_method":   get_method_as_of(config.get("accrual_method_history", []), today),
                 "amort_method":     get_method_as_of(config.get("amort_method_history", []), today),
             })
-
         return {"portfolios": portfolios, "count": len(portfolios)}
-
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 
 @ops_router.post("/portfolio/{portfolio_id}/method")
-def update_method(
-    portfolio_id:   str,
-    method_type:    str = Query(...),
-    value:          str = Query(...),
-    effective_from: str = Query(...),
-):
+def update_method(portfolio_id: str, method_type: str = Query(...),
+                  value: str = Query(...), effective_from: str = Query(...)):
     try:
         valid_types = {"closing_method", "accrual_method", "amort_method"}
         if method_type not in valid_types:
             raise HTTPException(status_code=400, detail=f"method_type must be one of: {sorted(valid_types)}")
-
         config      = get_portfolio_config(portfolio_id)
         history_key = f"{method_type}_history"
-
         if history_key not in config:
             config[history_key] = []
-
         if effective_from < config.get("inception_date", ""):
-            raise HTTPException(
-                status_code=400,
-                detail=f"effective_from cannot be before inception_date ({config.get('inception_date')})"
-            )
-
+            raise HTTPException(status_code=400,
+                detail=f"effective_from cannot be before inception_date ({config.get('inception_date')})")
         config[history_key].append({"value": value, "effective_from": effective_from})
         config[history_key].sort(key=lambda h: h["effective_from"])
         save_portfolio_config(portfolio_id, config)
-
-        print(f">>> METHOD UPDATED | {portfolio_id} | {method_type}={value} from {effective_from}")
-
-        return {
-            "status": "updated", "portfolio_id": portfolio_id,
-            "method_type": method_type, "value": value,
-            "effective_from": effective_from, "history": config[history_key],
-        }
-
+        return {"status": "updated", "portfolio_id": portfolio_id,
+                "method_type": method_type, "value": value,
+                "effective_from": effective_from, "history": config[history_key]}
     except HTTPException:
         raise
     except Exception as e:
@@ -414,26 +331,20 @@ def update_method(
 def add_investment(portfolio_id: str, investment: InvestmentRecord):
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
-
         if not portfolio_dir.exists():
             raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
 
         im_path = portfolio_dir / "RefData" / "investment_master.csv"
-
-        existing   = {}
-        fieldnames = None
+        existing = {}
         if im_path.exists():
             with open(im_path, newline="") as f:
                 reader = csv.DictReader(f)
-                fieldnames = reader.fieldnames or []
                 for row in reader:
                     existing[row["investment"]] = row
 
         if investment.investment in existing:
-            raise HTTPException(
-                status_code=409,
-                detail=f"Investment '{investment.investment}' already exists in {portfolio_id}"
-            )
+            raise HTTPException(status_code=409,
+                detail=f"Investment '{investment.investment}' already exists in {portfolio_id}")
 
         now = datetime.now().strftime("%m/%d/%Y:%H:%M:%S")
         record = {
@@ -461,7 +372,6 @@ def add_investment(portfolio_id: str, investment: InvestmentRecord):
 
         cols      = list(record.keys())
         write_hdr = not im_path.exists() or os.path.getsize(im_path) == 0
-
         with open(im_path, "a", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=cols)
             if write_hdr:
@@ -476,15 +386,11 @@ def add_investment(portfolio_id: str, investment: InvestmentRecord):
                     global_existing.add(row.get("investment", ""))
             if investment.investment not in global_existing:
                 with open(global_im, "a", newline="") as f:
-                    writer = csv.DictWriter(f, fieldnames=cols)
-                    writer.writerow(record)
+                    csv.DictWriter(f, fieldnames=cols).writerow(record)
 
         print(f">>> INVESTMENT ADDED | {portfolio_id} | {investment.investment}")
-
-        return {
-            "status": "added", "portfolio_id": portfolio_id,
-            "investment": investment.investment, "record": record,
-        }
+        return {"status": "added", "portfolio_id": portfolio_id,
+                "investment": investment.investment, "record": record}
 
     except HTTPException:
         raise
@@ -515,98 +421,81 @@ def list_investments(portfolio_id: str):
 
 @ops_router.post("/portfolio/{portfolio_id}/event")
 def add_event(portfolio_id: str, event: EventRecord):
-    """
-    Add a single event to the portfolio's event file.
-    closing_method is stamped from portfolio config as of trade date.
-    """
+    """Add a single event. Schema matches EVENT_COLUMNS exactly — no rogue columns."""
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
-
         if not portfolio_dir.exists():
             raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
 
         config       = get_portfolio_config(portfolio_id)
         trade_date   = _csv_date_to_ymd(event.tradedate)
         closing_meth = get_method_as_of(config.get("closing_method_history", []), trade_date) or "FIFO"
-
-        is_mark     = event.method == "mark_prices"
-        events_file = portfolio_dir / "Events" / (
+        is_mark      = event.method == "mark_prices"
+        events_file  = portfolio_dir / "Events" / (
             f"{portfolio_id}_marks.csv" if is_mark else f"{portfolio_id}.csv"
         )
-
         tranid      = _next_tranid(portfolio_dir)
         transaction = _method_to_transaction(event.method)
 
         row = {
-            "portfolio":         portfolio_id,
-            "method":            event.method,
-            "source":            event.source,
-            "tradedate":         event.tradedate,
-            "settledate":        event.settledate,
-            "kdbegin":           event.kdbegin,
-            "kdend":             event.kdend,
-            "investment":        event.investment,
-            "payment_currency":  event.payment_currency,
-            "tdate_fx":          0,
-            "location":          event.location,
-            "strategy":          event.strategy,
-            "quantity":          event.quantity,
-            "price":             event.price,
-            "notional":          event.notional,
-            "original_face":     event.original_face,
-            "total_amount":      event.total_amount,
-            "total_amount_base": event.total_amount_base,
-            "tranid":            tranid,
-            "transaction":       transaction,
-            "accrued_local":     event.accrued_local,
-            "accrued_book":      event.accrued_book,
-            "new_shares":        event.new_shares,
-            "old_shares":        event.old_shares,
-            "per_share":         event.per_share,
-            "legin":             "",
-            "legout":            "",
+            "portfolio":           portfolio_id,
+            "method":              event.method,
+            "source":              event.source,
+            "tradedate":           event.tradedate,
+            "settledate":          event.settledate,
+            "kdbegin":             event.kdbegin,
+            "kdend":               event.kdend,
+            "investment":          event.investment,
+            "payment_currency":    event.payment_currency,
+            "tdate_fx":            0,
+            "location":            event.location,
+            "strategy":            event.strategy,
+            "quantity":            event.quantity,
+            "price":               event.price,
+            "notional":            event.notional,
+            "original_face":       event.original_face,
+            "total_amount":        event.total_amount,
+            "total_amount_base":   event.total_amount_base,
+            "tranid":              tranid,
+            "transaction":         transaction,
+            "accrued_local":       event.accrued_local,
+            "accrued_book":        event.accrued_book,
+            "new_shares":          event.new_shares,
+            "old_shares":          event.old_shares,
+            "per_share":           event.per_share,
+            "legin":               "",
+            "legout":              "",
             "allocation_entities": "",
             "allocation_percents": "",
-            "financial_account": event.financial_account or "",
-            "buy_currency":      event.buy_currency or "",
-            "sell_currency":     event.sell_currency or "",
-            "buy_amt":           event.buy_amt,
-            "sell_amt":          event.sell_amt,
-            "feeder":            "",
-            "put_call":          "",
-            "mark_price":        event.mark_price,
-            "mark_fx":           event.mark_fx,
-            "per_100FV_accrual": 0,
-            "per_100FV_amort":   0,
-            "closing_method":    closing_meth,
-            "reversal_of":       "",
-            "correction_reason": "",
+            "financial_account":   event.financial_account or "",
+            "buy_currency":        event.buy_currency or "",
+            "sell_currency":       event.sell_currency or "",
+            "buy_amt":             event.buy_amt,
+            "sell_amt":            event.sell_amt,
+            "feeder":              "",
+            "put_call":            "",
+            "mark_price":          event.mark_price,
+            "mark_fx":             event.mark_fx,
+            "per_100FV_accrual":   0,
+            "per_100FV_amort":     0,
+            "closing_method":      closing_meth,
         }
 
-        fieldnames = list(row.keys())
-        write_hdr  = not events_file.exists() or os.path.getsize(events_file) == 0
-
+        write_hdr = not events_file.exists() or os.path.getsize(events_file) == 0
         with open(events_file, "a", newline="") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer = csv.DictWriter(f, fieldnames=EVENT_COLUMNS)
             if write_hdr:
                 writer.writeheader()
             writer.writerow(row)
 
-        # Clear event cache so next process picks up fresh
         _clear_event_cache(portfolio_id)
-
         print(f">>> EVENT ADDED | {portfolio_id} | {event.method} | "
-              f"{event.investment} | tranid={tranid} | method={closing_meth}")
+              f"{event.investment} | tranid={tranid}")
 
-        return {
-            "status":         "added",
-            "portfolio_id":   portfolio_id,
-            "method":         event.method,
-            "investment":     event.investment,
-            "tranid":         tranid,
-            "closing_method": closing_meth,
-            "file":           "marks" if is_mark else "events",
-        }
+        return {"status": "added", "portfolio_id": portfolio_id,
+                "method": event.method, "investment": event.investment,
+                "tranid": tranid, "closing_method": closing_meth,
+                "file": "marks" if is_mark else "events"}
 
     except HTTPException:
         raise
@@ -616,19 +505,13 @@ def add_event(portfolio_id: str, event: EventRecord):
 
 
 @ops_router.get("/portfolio/{portfolio_id}/events")
-def list_events(
-    portfolio_id: str,
-    investment:   Optional[str] = Query(None),
-    method:       Optional[str] = Query(None),
-    show_reversed: bool         = Query(False, description="Include reversed events"),
-    limit:        int           = Query(100, ge=1, le=10000),
-):
-    """List events. By default hides reversed events (kdend != 12/31/2099)."""
+def list_events(portfolio_id: str, investment: Optional[str] = Query(None),
+                method: Optional[str] = Query(None),
+                show_reversed: bool = Query(False), limit: int = Query(100, ge=1, le=10000)):
     try:
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
         if not events_file.exists():
             return {"events": [], "count": 0}
-
         events = []
         with open(events_file, newline="") as f:
             for row in csv.DictReader(f):
@@ -636,15 +519,12 @@ def list_events(
                     continue
                 if method and row.get("method") != method:
                     continue
-                # Hide reversed events unless explicitly requested
                 if not show_reversed and row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
                     continue
                 events.append(dict(row))
                 if len(events) >= limit:
                     break
-
         return {"events": events, "count": len(events)}
-
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -656,16 +536,7 @@ def list_events(
 
 @ops_router.post("/portfolio/{portfolio_id}/event/reverse")
 def reverse_event(portfolio_id: str, req: ReverseRequest):
-    """
-    ## Reverse Event
-
-    Stamps kdend on the target event with the current timestamp.
-    The event ceases to exist from this point forward.
-    The original record is preserved — never deleted.
-
-    To rebook: call this endpoint then add a new corrected event.
-    The new event should reference reversal_of = original tranid.
-    """
+    """Stamps kdend on event. Writes audit record. No schema changes."""
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -675,12 +546,10 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
         if not events_file.exists():
             raise HTTPException(status_code=404, detail="Events file not found")
 
-        now_stamp = datetime.now().strftime("%m/%d/%Y:%H:%M:%S")
-
-        # Read all rows, find and stamp the target
-        rows      = []
-        found     = False
-        original  = None
+        now_stamp  = datetime.now().strftime("%m/%d/%Y:%H:%M:%S")
+        rows       = []
+        found      = False
+        original   = None
         fieldnames = None
 
         with open(events_file, newline="") as f:
@@ -689,48 +558,31 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
             for row in reader:
                 if int(row.get("tranid", 0)) == req.tranid:
                     if row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
-                        raise HTTPException(
-                            status_code=409,
-                            detail=f"Event tranid={req.tranid} is already reversed"
-                        )
-                    original = dict(row)
-                    row["kdend"]             = now_stamp
-                    row["correction_reason"] = req.reason or "Reversed"
-                    found = True
+                        raise HTTPException(status_code=409,
+                            detail=f"Event tranid={req.tranid} is already reversed")
+                    original      = dict(row)
+                    row["kdend"]  = now_stamp
+                    found         = True
                 rows.append(row)
 
         if not found:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Event tranid={req.tranid} not found in {portfolio_id}"
-            )
+            raise HTTPException(status_code=404,
+                detail=f"Event tranid={req.tranid} not found in {portfolio_id}")
 
-        # Ensure new columns exist in fieldnames
-        for col in ["reversal_of", "correction_reason"]:
-            if col not in fieldnames:
-                fieldnames.append(col)
-
-        # Write back
         with open(events_file, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
 
-        # Clear event cache
+        _write_audit(portfolio_id, "REVERSE", req.tranid, None, req.actor, req.reason)
         _clear_event_cache(portfolio_id)
 
         print(f">>> EVENT REVERSED | {portfolio_id} | tranid={req.tranid} | "
               f"by={req.actor} | reason={req.reason}")
 
-        return {
-            "status":      "reversed",
-            "portfolio_id": portfolio_id,
-            "tranid":       req.tranid,
-            "kdend":        now_stamp,
-            "reason":       req.reason,
-            "actor":        req.actor,
-            "original":     original,
-        }
+        return {"status": "reversed", "portfolio_id": portfolio_id,
+                "tranid": req.tranid, "kdend": now_stamp,
+                "reason": req.reason, "actor": req.actor, "original": original}
 
     except HTTPException:
         raise
@@ -740,25 +592,12 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
 
 
 # ============================================================
-# MODIFY EVENT (REVERSE + REBOOK)
+# MODIFY EVENT
 # ============================================================
 
 @ops_router.post("/portfolio/{portfolio_id}/event/modify")
 def modify_event(portfolio_id: str, req: ModifyRequest):
-    """
-    ## Modify Event — Temporal Correction
-
-    Reverses the original event and creates a corrected replacement.
-
-    Steps:
-      1. Stamp kdend on original = now
-      2. Write new corrected record with kdbegin = now + 1 second
-         and reversal_of = original tranid
-      3. Clear event cache
-
-    Only supply the fields that changed in the request.
-    All other fields are carried forward from the original.
-    """
+    """Temporal correction. Reverse original + new corrected record. Writes audit."""
     try:
         if not req.reason or not req.reason.strip():
             raise HTTPException(status_code=400, detail="Correction reason is required")
@@ -771,9 +610,9 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
         if not events_file.exists():
             raise HTTPException(status_code=404, detail="Events file not found")
 
-        now          = datetime.now()
-        now_stamp    = now.strftime("%m/%d/%Y:%H:%M:%S")
-        new_kdbegin  = (now + timedelta(seconds=1)).strftime("%m/%d/%Y:%H:%M:%S")
+        now         = datetime.now()
+        now_stamp   = now.strftime("%m/%d/%Y:%H:%M:%S")
+        new_kdbegin = (now + timedelta(seconds=1)).strftime("%m/%d/%Y:%H:%M:%S")
 
         rows       = []
         found      = False
@@ -786,41 +625,26 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
             for row in reader:
                 if int(row.get("tranid", 0)) == req.tranid:
                     if row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
-                        raise HTTPException(
-                            status_code=409,
-                            detail=f"Event tranid={req.tranid} is already reversed — rebook directly"
-                        )
-                    original = dict(row)
-                    # Stamp the original closed
-                    row["kdend"]             = now_stamp
-                    row["correction_reason"] = req.reason
-                    found = True
+                        raise HTTPException(status_code=409,
+                            detail=f"Event tranid={req.tranid} is already reversed — rebook directly")
+                    original     = dict(row)
+                    row["kdend"] = now_stamp
+                    found        = True
                 rows.append(row)
 
         if not found:
-            raise HTTPException(
-                status_code=404,
-                detail=f"Event tranid={req.tranid} not found in {portfolio_id}"
-            )
+            raise HTTPException(status_code=404,
+                detail=f"Event tranid={req.tranid} not found in {portfolio_id}")
 
-        # Ensure correction columns exist
-        for col in ["reversal_of", "correction_reason"]:
-            if col not in fieldnames:
-                fieldnames.append(col)
-
-        # Build corrected record — start from original, apply changes
-        config       = get_portfolio_config(portfolio_id)
-        new_tranid   = _next_tranid(portfolio_dir) + 1  # +1 for the write about to happen
+        config     = get_portfolio_config(portfolio_id)
+        new_tranid = _next_tranid(portfolio_dir) + 1
 
         corrected = dict(original)
-        corrected["kdbegin"]          = new_kdbegin
-        corrected["kdend"]            = "12/31/2099:00:00:00"
-        corrected["tranid"]           = new_tranid
-        corrected["source"]           = "correction"
-        corrected["reversal_of"]      = str(req.tranid)
-        corrected["correction_reason"] = req.reason
+        corrected["kdbegin"] = new_kdbegin
+        corrected["kdend"]   = "12/31/2099:00:00:00"
+        corrected["tranid"]  = new_tranid
+        corrected["source"]  = "correction"
 
-        # Apply only the fields the user changed
         modifiable = [
             "method", "investment", "tradedate", "settledate", "payment_currency",
             "location", "strategy", "quantity", "price", "notional", "original_face",
@@ -833,39 +657,29 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
             if val is not None:
                 corrected[field] = val
 
-        # Re-stamp closing method from config as of (possibly new) trade date
-        trade_date   = _csv_date_to_ymd(corrected.get("tradedate", ""))
-        closing_meth = get_method_as_of(
-            config.get("closing_method_history", []), trade_date
-        ) or "FIFO"
-        corrected["closing_method"] = closing_meth
-        corrected["transaction"]    = _method_to_transaction(corrected.get("method", ""))
+        trade_date            = _csv_date_to_ymd(corrected.get("tradedate", ""))
+        corrected["closing_method"] = get_method_as_of(
+            config.get("closing_method_history", []), trade_date) or "FIFO"
+        corrected["transaction"] = _method_to_transaction(corrected.get("method", ""))
 
         rows.append(corrected)
 
-        # Write back
         with open(events_file, "w", newline="") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames, extrasaction="ignore")
             writer.writeheader()
             writer.writerows(rows)
 
-        # Clear event cache
+        _write_audit(portfolio_id, "MODIFY", req.tranid, new_tranid, req.actor, req.reason)
         _clear_event_cache(portfolio_id)
 
         print(f">>> EVENT MODIFIED | {portfolio_id} | "
               f"original={req.tranid} → correction={new_tranid} | "
               f"by={req.actor} | reason={req.reason}")
 
-        return {
-            "status":           "modified",
-            "portfolio_id":     portfolio_id,
-            "original_tranid":  req.tranid,
-            "correction_tranid": new_tranid,
-            "reason":           req.reason,
-            "actor":            req.actor,
-            "original":         original,
-            "corrected":        corrected,
-        }
+        return {"status": "modified", "portfolio_id": portfolio_id,
+                "original_tranid": req.tranid, "correction_tranid": new_tranid,
+                "reason": req.reason, "actor": req.actor,
+                "original": original, "corrected": corrected}
 
     except HTTPException:
         raise
@@ -875,24 +689,20 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
 
 
 # ============================================================
-# GET SINGLE EVENT (for pre-population in UI)
+# GET SINGLE EVENT
 # ============================================================
 
 @ops_router.get("/portfolio/{portfolio_id}/event/{tranid}")
 def get_event(portfolio_id: str, tranid: int):
-    """Retrieve a single event by tranid for display or pre-population."""
     try:
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
         if not events_file.exists():
             raise HTTPException(status_code=404, detail="Events file not found")
-
         with open(events_file, newline="") as f:
             for row in csv.DictReader(f):
                 if int(row.get("tranid", 0)) == tranid:
                     return {"event": dict(row)}
-
         raise HTTPException(status_code=404, detail=f"Event tranid={tranid} not found")
-
     except HTTPException:
         raise
     except Exception as e:
@@ -901,88 +711,144 @@ def get_event(portfolio_id: str, tranid: int):
 
 
 # ============================================================
-# VIEW CORRECTIONS (reverse/rebook pairs)
+# VIEW CORRECTIONS — reads audit file
 # ============================================================
 
 @ops_router.get("/portfolio/{portfolio_id}/corrections")
-def list_corrections(
-    portfolio_id: str,
-    investment:   Optional[str] = Query(None),
-    limit:        int           = Query(100, ge=1, le=10000),
-):
-    """
-    Return correction pairs — reversed events linked with their replacements.
-    Shows accountants the full correction audit trail.
-    """
+def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
+                     limit: int = Query(100, ge=1, le=10000)):
+    """Read correction audit trail from audit file."""
     try:
+        audit_path = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
-        if not events_file.exists():
+
+        if not audit_path.exists():
             return {"corrections": [], "count": 0}
 
-        all_rows = []
-        with open(events_file, newline="") as f:
-            for row in csv.DictReader(f):
-                all_rows.append(dict(row))
+        # Load all events for cross-reference
+        all_rows = {}
+        if events_file.exists():
+            with open(events_file, newline="") as f:
+                for row in csv.DictReader(f):
+                    tid = row.get("tranid", "")
+                    all_rows[tid] = dict(row)
 
-        # Index by tranid
-        by_tranid = {int(r.get("tranid", 0)): r for r in all_rows}
-
-        # Find reversed events (kdend != 12/31/2099) and their corrections
         corrections = []
-        seen = set()
+        with open(audit_path, newline="") as f:
+            for row in csv.DictReader(f):
+                original_tranid = str(row.get("original_tranid", ""))
+                new_tranid      = str(row.get("new_tranid", ""))
+                action          = row.get("action", "")
 
-        for row in all_rows:
-            tranid = int(row.get("tranid", 0))
-            reversal_of = row.get("reversal_of", "").strip()
+                original   = all_rows.get(original_tranid, {})
+                correction = all_rows.get(new_tranid, {}) if new_tranid else None
 
-            # This is a correction record pointing back to original
-            if reversal_of and reversal_of.isdigit():
-                orig_tranid = int(reversal_of)
-                if orig_tranid in seen:
-                    continue
-                seen.add(orig_tranid)
-
-                original = by_tranid.get(orig_tranid, {})
                 if investment and original.get("investment") != investment:
                     continue
 
                 corrections.append({
-                    "type":       "modify",
-                    "original":   original,
-                    "correction": row,
-                    "reason":     row.get("correction_reason", ""),
-                    "reversed_at": original.get("kdend", ""),
+                    "type":        "modify" if action == "MODIFY" else "reversal",
+                    "original":    original,
+                    "correction":  correction,
+                    "reason":      row.get("reason", ""),
+                    "reversed_at": row.get("timestamp", ""),
+                    "actor":       row.get("actor", ""),
                 })
 
-            # Reversed with no replacement (pure reversal)
-            elif row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
-                if tranid in seen:
-                    continue
-                # Check no correction record points back to this
-                has_correction = any(
-                    r.get("reversal_of", "") == str(tranid)
-                    for r in all_rows
-                )
-                if has_correction:
-                    continue  # already handled above
-                seen.add(tranid)
-
-                if investment and row.get("investment") != investment:
-                    continue
-
-                corrections.append({
-                    "type":       "reversal",
-                    "original":   row,
-                    "correction": None,
-                    "reason":     row.get("correction_reason", ""),
-                    "reversed_at": row.get("kdend", ""),
-                })
-
-            if len(corrections) >= limit:
-                break
+                if len(corrections) >= limit:
+                    break
 
         return {"corrections": corrections, "count": len(corrections)}
 
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# BOND ACCRUAL ENDPOINT
+# ============================================================
+
+@ops_router.get("/bond/accrual")
+def get_bond_accrual(
+    portfolio:   str   = Query(..., description="Portfolio ID"),
+    investment:  str   = Query(..., description="Bond ticker e.g. BND000"),
+    settle_date: str   = Query(..., description="Settlement date YYYY-MM-DD"),
+):
+    """
+    Calculate accrued interest for a bond transaction based on settlement date.
+    Looks up bond reference data from global bond_info.csv.
+    Coupon rate stored as real percentage (5 = 5%).
+    """
+    try:
+        from bond_calc import calculate_accrued_interest as _calc_accrual
+
+        # Look in portfolio RefData first, fall back to global
+        bond_info_path = Path(FUNDS_PATH) / portfolio / "RefData" / "bond_info.csv"
+        if not bond_info_path.exists():
+            bond_info_path = Path(REFDATA_PATH) / "bond_info.csv"
+        if not bond_info_path.exists():
+            raise HTTPException(status_code=404,
+                detail=f"Bond info not found for portfolio {portfolio}")
+
+        bond = None
+        with open(bond_info_path, newline="") as f:
+            for row in csv.DictReader(f):
+                if row.get("investment", "").strip().upper() == investment.upper():
+                    bond = row
+                    break
+
+        if bond is None:
+            raise HTTPException(status_code=404,
+                detail=f"Bond '{investment}' not found in bond info")
+
+        coupon_rate       = float(bond.get("coupon_rate", 0))
+        payment_frequency = bond.get("payment_frequency", "SEMI_ANNUAL")
+        day_count         = bond.get("day_count_convention", "30E/360")
+        fv                = float(bond.get("face_value", 100))
+        semi_split        = bond.get("semi_split", "A")
+
+        # Parse settle_date from YYYY-MM-DD
+        try:
+            sd = datetime.strptime(settle_date, "%Y-%m-%d")
+            settle_str = sd.strftime("%m/%d/%Y")
+        except Exception:
+            settle_str = settle_date
+
+        result = _calc_accrual(
+            issue_date           = bond.get("issue_date", ""),
+            first_coupon_date    = bond.get("first_coupon_date", ""),
+            maturity_date        = bond.get("maturity_date", ""),
+            settlement_date      = settle_str,
+            coupon_rate          = coupon_rate,
+            payment_frequency    = payment_frequency,
+            day_count_convention = day_count,
+            face_value           = fv,
+            semi_split           = semi_split,
+        )
+
+        def _fmt(d):
+            return d.strftime("%Y-%m-%d") if hasattr(d, "strftime") else str(d)
+
+        return {
+            "investment":         investment,
+            "settle_date":        settle_date,
+            "last_coupon_date":   _fmt(result["last_coupon_date"]),
+            "next_coupon_date":   _fmt(result["next_coupon_date"]),
+            "days_of_accrual":    result["days_of_accrual"],
+            "days_in_period":     result["days_in_period"],
+            "coupon_rate_pct":    result["coupon_rate_pct"],
+            "semi_annual_coupon": result["semi_annual_coupon"],
+            "daily_per_100":      result["daily_per_100"],
+            "accrued_per_100":    result["accrued_per_100"],
+            "face_value":         fv,
+            "day_count":          day_count,
+            "payment_frequency":  payment_frequency,
+            "note":               result.get("note", ""),
+        }
+
+    except HTTPException:
+        raise
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -993,73 +859,41 @@ def list_corrections(
 # ============================================================
 
 @ops_router.get("/portfolio/{portfolio_id}/je")
-def get_journal_entries(
-    portfolio_id: str,
-    calendar:     str           = Query("Monthly"),
-    tranid:       Optional[int] = Query(None, description="Filter by tranid. Omit to return all."),
-    limit:        int           = Query(1000, ge=1, le=50000),
-):
-    """
-    ## Journal Entries
-
-    Returns raw journal entries from Journals PKL files.
-    Filter by tranid or omit to return all entries up to limit.
-    Reads exactly as the kernel wrote them — no computation, no FIG.
-    """
+def get_journal_entries(portfolio_id: str, calendar: str = Query("Monthly"),
+                        tranid: Optional[int] = Query(None), limit: int = Query(1000, ge=1, le=50000)):
     import pickle
-
     try:
-        journals_dir = (
-            Path(FUNDS_PATH) / portfolio_id / "Calendars" / calendar / "Journals"
-        )
-
+        journals_dir = Path(FUNDS_PATH) / portfolio_id / "Calendars" / calendar / "Journals"
         if not journals_dir.exists():
-            raise HTTPException(
-                status_code=404,
-                detail=f"Journals folder not found for {portfolio_id}/{calendar}. "
-                       f"Has this portfolio been processed?"
-            )
+            raise HTTPException(status_code=404,
+                detail=f"Journals folder not found for {portfolio_id}/{calendar}.")
 
         pkl_files = sorted(journals_dir.glob("*.pkl"))
         if not pkl_files:
-            raise HTTPException(
-                status_code=404,
-                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals"
-            )
+            raise HTTPException(status_code=404,
+                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals")
 
         matching = []
-
         for pkl_file in pkl_files:
             try:
                 with open(pkl_file, "rb") as f:
-                    journal_entries = pickle.load(f)
-
+                    data = pickle.load(f)
+                journal_entries = data.get("journals", []) if isinstance(data, dict) else data
                 for je in journal_entries:
                     if tranid is None or getattr(je, "tranid", None) == tranid:
                         matching.append(_je_to_dict(je))
                     if len(matching) >= limit:
                         break
-
             except Exception as e:
                 print(f"    WARNING: Could not read {pkl_file.name}: {e}")
                 continue
-
             if len(matching) >= limit:
                 break
 
-        # Sort by ibor_date then entry_type
-        matching.sort(key=lambda x: (
-            str(x.get("ibor_date") or ""),
-            str(x.get("entry_type") or "")
-        ))
+        matching.sort(key=lambda x: (str(x.get("ibor_date") or ""), str(x.get("entry_type") or "")))
 
-        return {
-            "portfolio": portfolio_id,
-            "calendar":  calendar,
-            "tranid":    tranid,
-            "je_count":  len(matching),
-            "entries":   matching,
-        }
+        return {"portfolio": portfolio_id, "calendar": calendar,
+                "tranid": tranid, "je_count": len(matching), "entries": matching}
 
     except HTTPException:
         raise
@@ -1069,16 +903,12 @@ def get_journal_entries(
 
 
 def _je_to_dict(je) -> dict:
-    """Convert a JE object to a serializable dict using the class's own to_dict method."""
     try:
         return je.to_dict()
     except Exception:
-        # Fallback to getattr if to_dict unavailable
         def _safe(val):
-            if val is None:
-                return None
-            if hasattr(val, "isoformat"):
-                return val.isoformat()[:10]
+            if val is None: return None
+            if hasattr(val, "isoformat"): return val.isoformat()[:10]
             return val
         return {
             "tranid":            getattr(je, "tranid",            None),
@@ -1107,8 +937,29 @@ def _je_to_dict(je) -> dict:
 # HELPERS
 # ============================================================
 
+def _write_audit(portfolio_id: str, action: str, original_tranid: int,
+                 new_tranid, actor: str, reason: str) -> None:
+    """Write correction record to audit file. Never touches events file."""
+    audit_path = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
+    fieldnames = ["timestamp", "action", "original_tranid", "new_tranid", "actor", "reason"]
+    write_hdr  = not audit_path.exists() or os.path.getsize(audit_path) == 0
+    row = {
+        "timestamp":       datetime.now().strftime("%m/%d/%Y:%H:%M:%S"),
+        "action":          action,
+        "original_tranid": original_tranid,
+        "new_tranid":      new_tranid or "",
+        "actor":           actor or "ops",
+        "reason":          reason or "",
+    }
+    with open(audit_path, "a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        if write_hdr:
+            writer.writeheader()
+        writer.writerow(row)
+    print(f">>> AUDIT | {portfolio_id} | {action} | original={original_tranid} new={new_tranid}")
+
+
 def _clear_event_cache(portfolio_id: str) -> None:
-    """Clear the process_portfolio event cache for this portfolio."""
     try:
         from process_portfolio import clear_event_cache
         clear_event_cache(portfolio_id)
@@ -1118,7 +969,6 @@ def _clear_event_cache(portfolio_id: str) -> None:
 
 
 def _next_tranid(portfolio_dir: Path) -> int:
-    """Generate next transaction ID."""
     tranid = 1
     for fname in [
         portfolio_dir / "Events" / f"{portfolio_dir.name}.csv",
@@ -1132,12 +982,7 @@ def _next_tranid(portfolio_dir: Path) -> int:
 
 def _csv_date_to_ymd(csv_date: str) -> str:
     try:
-        dt = datetime.strptime(
-            csv_date.split(":")[0] + ":" +
-            csv_date.split(":")[1] + ":" +
-            csv_date.split(":")[2],
-            "%m/%d/%Y"
-        )
+        dt = datetime.strptime(csv_date.split(":")[0], "%m/%d/%Y")
         return dt.strftime("%Y-%m-%d")
     except Exception:
         try:
@@ -1149,28 +994,28 @@ def _csv_date_to_ymd(csv_date: str) -> str:
 
 def _method_to_transaction(method: str) -> str:
     mapping = {
-        "buy_equity":         "EquityPurchase",
-        "sell_equity":        "EquitySale",
-        "short_equity":       "EquityShort",
-        "cover_equity":       "EquityCover",
-        "buy_bond":           "BondPurchase",
-        "sell_bond":          "BondSale",
-        "buy_future":         "FuturePurchase",
-        "sell_future":        "FutureSale",
-        "short_future":       "FutureShort",
-        "cover_future":       "FutureCover",
-        "buy_option":         "OptionPurchase",
-        "sell_option":        "OptionSale",
-        "short_option":       "OptionShort",
-        "cover_option":       "OptionCover",
-        "deposit_currency":   "CurrencyDeposit",
-        "withdraw_currency":  "CurrencyWithdrawal",
-        "spot_fx":            "SpotFX",
-        "dividend_equity":    "DividendEquity",
-        "bond_coupon":        "BondCoupon",
-        "split_equity":       "StockSplit",
-        "mark_prices":        "PriceMark",
-        "expense":            "Expense",
-        "allocate":           "Allocation",
+        "buy_equity":        "EquityPurchase",
+        "sell_equity":       "EquitySale",
+        "short_equity":      "EquityShort",
+        "cover_equity":      "EquityCover",
+        "buy_bond":          "BondPurchase",
+        "sell_bond":         "BondSale",
+        "buy_future":        "FuturePurchase",
+        "sell_future":       "FutureSale",
+        "short_future":      "FutureShort",
+        "cover_future":      "FutureCover",
+        "buy_option":        "OptionPurchase",
+        "sell_option":       "OptionSale",
+        "short_option":      "OptionShort",
+        "cover_option":      "OptionCover",
+        "deposit_currency":  "CurrencyDeposit",
+        "withdraw_currency": "CurrencyWithdrawal",
+        "spot_fx":           "SpotFX",
+        "dividend_equity":   "DividendEquity",
+        "bond_coupon":       "BondCoupon",
+        "split_equity":      "StockSplit",
+        "mark_prices":       "PriceMark",
+        "expense":           "Expense",
+        "allocate":          "Allocation",
     }
     return mapping.get(method, method)

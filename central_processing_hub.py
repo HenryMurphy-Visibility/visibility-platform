@@ -416,6 +416,7 @@ def cph_run_and_materialize(
     replay_start,
     events,
     is_first_calendar_period,
+    smf
 ):
     """
     CENTRAL PROCESSING HUB — PURE EXECUTION
@@ -490,6 +491,7 @@ def cph_run_and_materialize(
             qualifying_events=events,
             space=space,
             scheduler=scheduler,
+            smf=smf
         )
         mark("t_pass1a_schedule_end")
 
@@ -533,6 +535,7 @@ def cph_run_and_materialize(
             qualifying_events=events,
             space=space,
             scheduler=scheduler,
+            smf=smf
         )
         mark("t_pass1b_schedule_end")
 
@@ -593,6 +596,7 @@ def cph_run_and_materialize(
         qualifying_events=events,
         space=space,
         scheduler=scheduler,
+        smf=smf
     )
     mark("t_pass2_schedule_end")
 
@@ -637,6 +641,7 @@ def cph_run_and_materialize(
     # ============================================================
     # MATERIALIZE
     # ============================================================
+    space.chores = smf
     mark("t_materialize_start")
     materialize_period_outputs(
         space=space,

@@ -156,7 +156,7 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
     """
 
     print(f"\n>>> BOOTSTRAP | {portfolio}")
-
+    clear_event_cache(portfolio)
     candidates_path = _candidates_dir(portfolio) / "candidates.json"
 
     # Skip if already built and not forced
@@ -165,33 +165,11 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
             existing = json.load(f)
         print(f">>> BOOTSTRAP | {portfolio} | already built | "
               f"{existing.get('count', 0)} investments | skipping")
-
-        # Still build marks if missing — marks file may not have been created
-        marks_path = _marks_path(portfolio)
-        if not marks_path.exists() or os.path.getsize(marks_path) == 0:
-            print(f">>> BOOTSTRAP | {portfolio} | marks missing — rebuilding")
-            from kernel_utilities import from_csv_date_to_app_new
-            first_trade_dates = {}
-            events_path = _events_path(portfolio)
-            if events_path.exists():
-                with open(events_path, newline="") as f:
-                    for row in csv.DictReader(f):
-                        inv = (row.get("investment") or "").strip()
-                        td_raw = (row.get("tradedate") or "").strip()
-                        if inv and td_raw:
-                            try:
-                                td = from_csv_date_to_app_new(td_raw)
-                                if inv not in first_trade_dates or td < first_trade_dates[inv]:
-                                    first_trade_dates[inv] = td
-                            except Exception:
-                                pass
-            _create_marks(portfolio, first_trade_dates)
-
         return {
-            "candidates": set(existing.get("investments", [])),
-            "currencies": set(existing.get("currencies", [])),
+            "candidates":       set(existing.get("investments", [])),
+            "currencies":       set(existing.get("currencies", [])),
             "investment_count": existing.get("count", 0),
-            "bond_count": 0,
+            "bond_count":       0,
         }
 
     # ── 1. DERIVE CANDIDATES FROM EVENTS ─────────────────────────
@@ -213,11 +191,12 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
                 if td_raw:
                     try:
                         from kernel_utilities import from_csv_date_to_app_new
-                        td = from_csv_date_to_app_new(td_raw)
+                        td = datetime.strptime(td_raw, "%m/%d/%Y:%H:%M:%S")
                         if inv not in first_trade_dates or td < first_trade_dates[inv]:
                             first_trade_dates[inv] = td
-                    except Exception:
-                        pass
+                    except Exception as e:
+                        print(f"    date parse failed: inv={inv} td_raw={td_raw} error={e}")
+
 
             for col in ["payment_currency", "buy_currency", "sell_currency"]:
                 val = (row.get(col) or "").strip()
@@ -265,61 +244,78 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
 
 def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
     """
-    Create the marks file for a portfolio from price/fx master.
-    Calls create_portfolio_marks from core_ingest_loaders.
+    Create or append to the portfolio marks file.
 
-    Skips if marks file already has content (not just a header).
-    Use force=True in bootstrap_portfolio to rebuild.
+    - If marks file does not exist — create from scratch for all candidates
+    - If marks file exists — check which investments are already covered
+      and append only for new investments not yet in the file
+    - Never rebuilds existing marks — append only
     """
-    marks_path = _marks_path(portfolio)
+    import os
+    import csv
+    from datetime import date
 
-    # Skip if marks already populated
-    if marks_path.exists():
-        with open(marks_path, newline="") as f:
-            reader = csv.DictReader(f)
-            rows   = list(reader)
-            if rows:
-                print(f"    Marks: already present ({len(rows)} rows) — skipping")
-                return len(rows)
+    marks_path = _marks_path(portfolio)
 
     if not first_trade_dates:
         print(f"    Marks: no events to derive marks from — skipping")
         return 0
 
+    # ── FIND WHICH INVESTMENTS ARE ALREADY COVERED ────────────────
+    covered = set()
+    existing_count = 0
+
+    if marks_path.exists():
+        with open(marks_path, newline="") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                inv = row.get("investment", "").strip()
+                if inv:
+                    covered.add(inv)
+                    existing_count += 1
+
+    # ── FIND INVESTMENTS THAT NEED MARKS ─────────────────────────
+    needed = {
+        inv: td
+        for inv, td in first_trade_dates.items()
+        if inv not in covered
+    }
+    print(f"    Marks: first_trade_dates={first_trade_dates}")
+    print(f"    Marks: needed={needed}")
+    if not needed:
+        print(f"    Marks: all investments covered ({existing_count} rows) — skipping")
+        return existing_count
+
+    print(f"    Marks: {len(needed)} new investment(s) need marks — appending: {list(needed.keys())}")
+
     try:
         from core_ingest_loaders import create_portfolio_marks
 
-        # Build candidates dict: {(portfolio, investment): first_trade_date}
         candidates_dict = {
             (portfolio, inv): td
-            for inv, td in first_trade_dates.items()
+            for inv, td in needed.items()
         }
 
-        history_start = min(first_trade_dates.values())
-        history_end   = date.today()
-
-        print(f"    Marks: building from {history_start} → {history_end} "
-              f"for {len(candidates_dict)} investments...")
+        history_start = min(needed.values())
+        history_end = date.today()
 
         marks_count = create_portfolio_marks(
-            portfolio     = portfolio,
-            candidates    = candidates_dict,
-            history_start = history_start,
-            history_end   = history_end,
+            portfolio=portfolio,
+            candidates=candidates_dict,
+            history_start=history_start,
+            history_end=history_end,
         )
 
-        print(f"    Marks: {marks_count} marks created")
-        return marks_count
+        print(f"    Marks: {marks_count} marks appended")
+        return existing_count + marks_count
 
     except ImportError as e:
         print(f"    Marks: WARNING — could not import core_ingest_loaders: {e}")
         return 0
     except Exception as e:
-        print(f"    Marks: WARNING — marks creation failed: {e}")
         import traceback
         traceback.print_exc()
-        return 0
-
+        raise RuntimeError(f"Marks creation HARD STOP: {e}")
 
 def _extract_portfolio_im(portfolio: str, candidates: set) -> int:
     """Extract portfolio-specific IM from global master."""
@@ -358,11 +354,8 @@ def _extract_portfolio_im(portfolio: str, candidates: set) -> int:
     missing    = needed - global_map.keys()
 
     if missing:
-        raise RuntimeError(
-            f"BOOTSTRAP FAILED — {len(missing)} investment(s) not found "
-            f"in global investment master: {sorted(missing)}. "
-            f"Add to global IM before processing."
-        )
+        print(f"    WARNING: {len(missing)} investments not in global IM: "
+              f"{sorted(missing)[:10]}")
 
     to_write  = [global_map[inv] for inv in needed if inv in global_map]
     write_hdr = not portfolio_im.exists()
@@ -557,6 +550,18 @@ def run_period(
         flush=True
     )
 
+    from bookkeeping import SettlementChores
+    import pickle
+
+    if selected_snapshot_path:
+        with open(selected_snapshot_path, "rb") as f:
+            snapshot = pickle.load(f)
+        smf = snapshot["state"].get("chores", SettlementChores())
+    else:
+        smf = SettlementChores()
+
+
+
     metrics = cph_run_and_materialize(
         portfolio=portfolio,
         calendar=calendar,
@@ -565,6 +570,7 @@ def run_period(
         replay_start=replay_start,
         events=event_pool,
         is_first_calendar_period=is_first,
+        smf=smf,
     )
 
     return metrics

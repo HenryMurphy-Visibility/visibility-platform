@@ -155,9 +155,9 @@ def bond_lot_iterator_by_location(investment, space):
     return result
 
 
-def buy_bond(portfolio, investment, location, quantity, local, book, journal_entries, space, tranid, transaction,
+def buy_bond(portfolio, investment, location, quantity, local, book, space, tranid, transaction,
              tradedate, settledate, kdbegin, kdend, payment_currency, smf,
-             accrued_local, accrued_book):
+             accrued_local, accrued_book, entry_type):
     # Create a new je Open IBM
 
     ls = "l"
@@ -166,7 +166,7 @@ def buy_bond(portfolio, investment, location, quantity, local, book, journal_ent
 
     je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, quantity, local, book,
                   None, None, tranid,
-                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
     space.post_journal_entry(je)
 
     if accrued_local is not None and accrued_local != 0:
@@ -468,7 +468,7 @@ def bond_coupon(portfolio, investment, space, tranid,
             if ls == 's':
                 qty = -qty
 
-            coupon = qty * per_share
+            coupon = qty * per_share /100
 
             # Set financial account based on the type of position
             if coupon > 0:
@@ -484,7 +484,7 @@ def bond_coupon(portfolio, investment, space, tranid,
                              transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
             space.post_journal_entry(bcoup)
 
-            bcoupRE = Journals(portfolio, investment, ld, ld, ls, location, faie, 0, -coupon, -coupon,
+            bcoupRE = Journals(portfolio, investment, 0,0, ls, location, faie, 0, -coupon, -coupon,
                                None, None, tranid,
                                transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
                                "Revenue/Expense/Capital")

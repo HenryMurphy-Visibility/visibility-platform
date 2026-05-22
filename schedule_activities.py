@@ -258,8 +258,8 @@ def marks_from_scratch(
                 # ---- MARK EXTENSIONS ----
                 "mark_price": price,
                 "mark_fx": fx,
-                "mark_100FV_accrue": "",
-                "mark_100FV_amort": "",
+                "per_100FV_accrue": "",
+                "per_100FV_amort": "",
             })
 
             # --------------------------------------------------

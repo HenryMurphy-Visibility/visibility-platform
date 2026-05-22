@@ -377,19 +377,22 @@ def derive_position_windows(events, current_period_cutoff):
 
 
 def create_portfolio_marks(
-    *,
-    portfolio: str,
-    candidates: dict,   # {(portfolio, investment): first_trade_date}
-    history_start,
-    history_end,
+        *,
+        portfolio: str,
+        candidates: dict,  # {(portfolio, investment): first_trade_date}
+        history_start,
+        history_end,
 ):
     """
-    CREATE FULL PORTFOLIO MARKS (ONCE)
+    CREATE FULL PORTFOLIO MARKS
 
     - Pure historical fact generation
     - No period semantics
-    - No append
-    - No interpretation
+    - Append only — never rebuilds existing rows
+    - Schema matches main events file exactly
+    - Two separate event rows per business day for bond investments:
+        1. mark_prices        — price and FX for all investments
+        2. mark_bond_accruals — accrual per 100 FV for bonds only
     """
 
     import os
@@ -403,37 +406,35 @@ def create_portfolio_marks(
         price_rows_to_app,
         app_event_to_events_csv_row,
     )
+    import bond_calc
 
-
-    MARK_TRANID_START = 10_000_000
+    MARK_TRANID_START = 100_000_000
     tranid = MARK_TRANID_START
 
     # ==================================================
-    # PATHS + SCHEMA
+    # SCHEMA — must match ops_routes.py EVENT_COLUMNS exactly
     # ==================================================
 
     EVENT_COLUMNS = [
-        "portfolio", "method", "transaction", "tranid",
-        "tradedate", "settledate",
-        "kdbegin", "kdend", "knowledge_date",
-        "investment", "payment_currency",
-        "quantity", "price", "notional",
-        "original_face", "total_amount", "total_amount_base",
-        "local", "book", "accrued_local", "accrued_book",
-        "new_shares", "old_shares", "per_share",
-        "buy_amt", "sell_amt", "buy_currency", "sell_currency",
-        "legin", "legout",
-        "allocation_entities", "allocation_percents",
-        "financial_account", "location", "strategy",
-        "source",
-        "mark_price", "mark_fx",
-        "mark_100FV_accrue", "mark_100FV_amort",
+        "portfolio", "method", "source", "tradedate", "settledate",
+        "kdbegin", "kdend", "investment", "payment_currency", "tdate_fx",
+        "location", "strategy", "quantity", "price", "notional",
+        "original_face", "total_amount", "total_amount_base", "tranid",
+        "transaction", "accrued_local", "accrued_book", "new_shares",
+        "old_shares", "per_share", "legin", "legout",
+        "allocation_entities", "allocation_percents", "financial_account",
+        "buy_currency", "sell_currency", "buy_amt", "sell_amt",
+        "feeder", "put_call", "mark_price", "mark_fx",
+        "per_100FV_accrue", "per_100FV_amort", "closing_method",
     ]
 
     base_path = "C:/Users/hjmne/PycharmProjects/chest"
-
     fx_path = f"{base_path}/refdata/fx_master.csv"
     price_path = f"{base_path}/refdata/price_master.csv"
+    bond_info_path = f"{base_path}/funds/{portfolio}/RefData/bond_info.csv"
+
+    if not os.path.exists(bond_info_path):
+        bond_info_path = f"{base_path}/refdata/bond_info.csv"
 
     marks_dir = f"{base_path}/funds/{portfolio}/Events"
     marks_path = f"{marks_dir}/{portfolio}_marks.csv"
@@ -441,7 +442,7 @@ def create_portfolio_marks(
     os.makedirs(marks_dir, exist_ok=True)
 
     # ==================================================
-    # REBUILD FILE
+    # REBUILD FILE — header only
     # ==================================================
 
     with open(marks_path, "w", newline="") as f:
@@ -468,6 +469,20 @@ def create_portfolio_marks(
     }
 
     # ==================================================
+    # LOAD BOND INFO (ONCE)
+    # ==================================================
+
+    bond_info_lookup = {}
+
+    if os.path.exists(bond_info_path):
+        with open(bond_info_path, newline="") as f:
+            for row in csv.DictReader(f):
+                inv = row.get("investment", "").strip()
+                if inv:
+                    bond_info_lookup[inv] = row
+        print(f"    Marks: loaded bond info for {len(bond_info_lookup)} bond(s)")
+
+    # ==================================================
     # GENERATE MARKS (GLOBAL WINDOW)
     # ==================================================
 
@@ -477,6 +492,8 @@ def create_portfolio_marks(
     for (_, investment), first_open in candidates.items():
 
         window_start = max(first_open, history_start)
+        bond_info = bond_info_lookup.get(investment)
+        is_bond = bond_info is not None
 
         for trade_dt in business_days:
             if trade_dt < window_start:
@@ -490,50 +507,117 @@ def create_portfolio_marks(
             if fx is None:
                 continue
 
+            # ── ROW 1 — PRICE MARK (all investments) ──────────────
             tranid += 1
 
             rows.append({
                 "portfolio": portfolio,
                 "method": "mark_prices",
-                "transaction": "Price Mark",
-                "tranid": tranid,
+                "source": "mark",
                 "tradedate": trade_dt,
                 "settledate": trade_dt,
                 "kdbegin": trade_dt,
                 "kdend": datetime(2099, 12, 31),
-                "knowledge_date": trade_dt,
                 "investment": investment,
                 "payment_currency": price["currency"],
+                "tdate_fx": 0,
+                "location": "",
+                "strategy": "",
                 "quantity": 0,
                 "price": "",
                 "notional": 0,
                 "original_face": 0,
                 "total_amount": 0,
                 "total_amount_base": 0,
-                "local": 0,
-                "book": 0,
+                "tranid": tranid,
+                "transaction": "Price Mark",
                 "accrued_local": 0,
                 "accrued_book": 0,
                 "new_shares": 0,
                 "old_shares": 0,
                 "per_share": 0,
-                "buy_amt": 0,
-                "sell_amt": 0,
-                "buy_currency": "",
-                "sell_currency": "",
                 "legin": "",
                 "legout": "",
                 "allocation_entities": "",
                 "allocation_percents": "",
                 "financial_account": "",
-                "location": "",
-                "strategy": "",
-                "source": "mark",
+                "buy_currency": "",
+                "sell_currency": "",
+                "buy_amt": 0,
+                "sell_amt": 0,
+                "feeder": "",
+                "put_call": "",
                 "mark_price": price["price"],
                 "mark_fx": fx,
-                "mark_100FV_accrue": "",
-                "mark_100FV_amort": "",
+                "per_100FV_accrue": "",
+                "per_100FV_amort": "",
+                "closing_method": "",
             })
+
+            # ── ROW 2 — ACCRUAL MARK (bonds only) ─────────────────
+            if is_bond:
+                per_100FV_accrue = ""
+                try:
+                    settle_str = trade_dt.strftime("%m/%d/%Y")
+                    result = bond_calc.calculate_accrued_interest(
+                        issue_date=bond_info.get("issue_date", ""),
+                        first_coupon_date=bond_info.get("first_coupon_date", ""),
+                        maturity_date=bond_info.get("maturity_date", ""),
+                        settlement_date=settle_str,
+                        coupon_rate=float(bond_info.get("coupon_rate", 0)),
+                        payment_frequency=bond_info.get("payment_frequency", "SEMI_ANNUAL"),
+                        day_count_convention=bond_info.get("day_count_convention", "30E/360"),
+                        face_value=float(bond_info.get("face_value", 100)),
+                    )
+                    per_100FV_accrue = result["daily_per_100"]
+                except Exception as e:
+                    print(f"    Marks: bond accrual calc failed for {investment} on {trade_dt}: {e}")
+
+                if per_100FV_accrue != "":
+                    tranid += 1
+                    rows.append({
+                        "portfolio": portfolio,
+                        "method": "mark_bond_accruals",
+                        "source": "mark",
+                        "tradedate": trade_dt,
+                        "settledate": trade_dt,
+                        "kdbegin": trade_dt,
+                        "kdend": datetime(2099, 12, 31),
+                        "investment": investment,
+                        "payment_currency": price["currency"],
+                        "tdate_fx": 0,
+                        "location": "",
+                        "strategy": "",
+                        "quantity": 0,
+                        "price": "",
+                        "notional": 0,
+                        "original_face": 0,
+                        "total_amount": 0,
+                        "total_amount_base": 0,
+                        "tranid": tranid,
+                        "transaction": "Bond Accrual",
+                        "accrued_local": 0,
+                        "accrued_book": 0,
+                        "new_shares": 0,
+                        "old_shares": 0,
+                        "per_share": 0,
+                        "legin": "",
+                        "legout": "",
+                        "allocation_entities": "",
+                        "allocation_percents": "",
+                        "financial_account": "",
+                        "buy_currency": "",
+                        "sell_currency": "",
+                        "buy_amt": 0,
+                        "sell_amt": 0,
+                        "feeder": "",
+                        "put_call": "",
+                        "mark_price": "",
+                        "mark_fx": fx,
+                        "per_100FV_accrue": per_100FV_accrue,
+                        "per_100FV_amort": "",
+                        "closing_method": "",
+                    })
 
     # ==================================================
     # WRITE ONCE

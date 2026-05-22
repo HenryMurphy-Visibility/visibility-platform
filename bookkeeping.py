@@ -144,6 +144,7 @@ class EventScheduler:
             'split_equity': 1065, 'dividend_equity': 1068,
             'mark_prices': 9000, 'perf_mark': 9000,
             'allocate': 9500,
+            'schedule_update_smf_record_status': 1045,
             'settle_bond_flows_in': 1050,
             'settle_bond_flows_out': 1053,
             'settle_single_flow_in': 1051,
@@ -909,6 +910,7 @@ class SettlementChores:
         record = self.records.get(tranid, {})
         if record and record.get('portfolio') == portfolio:
             self.records[tranid]['status'] = new_status
+            self.position_cache.clear()  # invalidate — status changed
             print(f"Status of record {tranid} updated to {new_status}.")
         else:
             print(f"Record not found for TranID {tranid} with portfolio {portfolio}.")
@@ -1289,27 +1291,13 @@ class BookkeepingSpace:
     # ============================================================
 
     def get_attribute_field(self, investment, field_type, attribute):
-        """
-        LEGACY-COMPATIBLE READ ACCESSOR.
+        repo = self.asset_liability_repository
+        sub = repo.investment_attributes.get(investment)
+        if not sub:
+            return None
+        attributes = sub.investment_attributes.get(field_type, {})
+        return attributes.get(attribute.lower())
 
-        BookkeepingSpace does NOT store semantic metadata.
-        This method exists solely to preserve existing call sites.
-
-        All reads delegate to the AssetLiabilityRepository,
-        which is the authoritative metadata source.
-        """
-
-        if not hasattr(self, "asset_liability_repository"):
-            raise RuntimeError(
-                "BookkeepingSpace missing asset_liability_repository "
-                "(cannot retrieve investment metadata)"
-            )
-
-        return self.asset_liability_repository.get_attribute_field(
-            investment,
-            field_type,
-            attribute,
-        )
 
     def get_position_space(self, investment):
         """
@@ -1519,9 +1507,9 @@ class AssetLiabilityRepository:
         sub = self.get_position_space(investment)
         return sub.entries
 
-    def get_attribute_field(self, investment, attribute):
-        sub = self.get_attribute_space(investment)
-        return sub.investment_attributes.get("AIF", {}).get(attribute)
+    # def get_attribute_field(self, investment, attribute):
+    #     sub = self.get_attribute_space(investment)
+    #     return sub.investment_attributes.get("AIF", {}).get(attribute)
 
     # ========================================================
     # AGGREGATION

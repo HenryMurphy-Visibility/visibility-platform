@@ -1,30 +1,30 @@
-
 import utilities
 
-
-
 import equity_domain
-import  bond_domain
+import bond_domain
 import futures_domain
 import global_domain
 import schedule_activities
-from global_domain import mark_prices
+from global_domain import mark_prices, mark_bond_accruals
 
-
-from bookkeeping import  EventScheduler, Event
+from bookkeeping import EventScheduler, Event
 import currency_domain
-event = Event()
-# 0. Create the main bookkeeping space
 
-# Enable duplicate checking for debugging or specific operations
-#bookkeeping_space.enable_duplicate_check()
+event = Event()
+
 on = 0
 tranid = 0
 import validate
+
 journal_entries = []
+events = []
 
-events = []  # This is a heap-based priority queue
-
+# ── TRANID NUMBER SERIES ──────────────────────────────────────────────
+# Regular trades:       1         →  99,999,999
+# Marks:                100,000,000 → 199,999,999
+# Dependent events:     200,000,000 → 299,999,999
+MARK_TRANID_START = 100_000_000
+DEPENDENT_TRANID_START = 200_000_000
 
 def normalize_numeric(value):
     """
@@ -38,11 +38,148 @@ def normalize_numeric(value):
     else:  # Default fallback
         return 0.0
 
+# =======================================================================
+# 🔹 BUILD BOND CANDIDATES
+# =======================================================================
+
+# ── BUILD BOND CANDIDATES ─────────────────────────────────────────────
+def build_bond_candidates(retrieved_events_records, period_end, space):
+    """
+    Build mapping of (portfolio, investment) → first tradedate
+    filtered to BOND investments only.
+    Uses repo.investment_attributes — authoritative AIF source.
+    """
+    candidates = {}
+    repo = space.asset_liability_repository
+
+    for er in retrieved_events_records:
+        tradedate = er["tradedate"]
+        if tradedate > period_end:
+            continue
+
+        inv = er["investment"]
+        port = er["portfolio"]
+
+        sub = repo.investment_attributes.get(inv)
+        if not sub:
+            continue
+
+        attributes = sub.investment_attributes.get("AIF", {})
+        if attributes.get("investment_type") == "BOND":
+            key = (port, inv)
+            if key not in candidates:
+                candidates[key] = tradedate
+
+    return candidates
+
+
+# ── GENERATE COUPON DATES — exact month arithmetic ────────────────────
+def generate_coupon_dates(first_coupon_date, maturity_date, payment_frequency,
+                          period_start, period_end):
+    """
+    Generate coupon dates within period using exact month arithmetic.
+    Uses relativedelta — no timedelta approximation.
+    """
+    from dateutil.relativedelta import relativedelta
+
+    freq_months = {
+        "annual": 12,
+        "semi-annual": 6,
+        "quarterly": 3,
+        "monthly": 1,
+        "ANNUAL": 12,
+        "SEMI_ANNUAL": 6,
+        "QUARTERLY": 3,
+        "MONTHLY": 1,
+    }
+
+    months = freq_months.get(payment_frequency)
+    if months is None:
+        raise ValueError(f"Unknown payment frequency: {payment_frequency}")
+
+    cur = first_coupon_date
+    cds = []
+
+    while cur <= maturity_date and cur <= period_end:
+        if cur >= period_start:
+            cds.append(cur)
+        cur += relativedelta(months=months)
+
+    return cds
+
+
+# ── SCHEDULE BOND COUPONS ─────────────────────────────────────────────
+def schedule_bond_coupons(
+        scheduler, bond_candidates, portfolio, investment,
+        space, tranid, transaction,
+        tradedate, settledate, period_start, period_end,
+        payment_currency, per_share, smf
+):
+    """
+    Schedule bond coupon events for the current period.
+    Reads AIF data from space — time series aware, handles floaters.
+    """
+    if not bond_candidates:
+        return
+
+    repo = space.asset_liability_repository
+    sub = repo.investment_attributes.get(investment)
+    if not sub:
+        return
+
+    attributes = sub.investment_attributes.get("AIF", {})
+
+    issue_date_str = attributes.get("issue_date")
+    first_coupon_date_str = attributes.get("first_coupon_date")
+    maturity_date_str = attributes.get("maturity_date")
+    freq = attributes.get("payment_frequency")
+    coupon_rate = float(attributes.get("coupon_rate", 0))
+
+    if not all([issue_date_str, first_coupon_date_str, maturity_date_str, freq]):
+        print(f"    schedule_bond_coupons: missing AIF data for {investment} — skipping")
+        return
+
+    from datetime import datetime
+    def _parse(d):
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%Y:%H:%M:%S", "%Y-%m-%d:%H:%M:%S"):
+            try:
+                return datetime.strptime(d.strip(), fmt)
+            except:
+                continue
+        raise ValueError(f"Cannot parse date: {d}")
+
+    first_coupon_date = _parse(first_coupon_date_str)
+    maturity_date = _parse(maturity_date_str)
+
+    # Periodic coupon amount
+    freq_divisor = {
+        "annual": 1, "ANNUAL": 1,
+        "semi-annual": 2, "SEMI_ANNUAL": 2,
+        "quarterly": 4, "QUARTERLY": 4,
+        "monthly": 12, "MONTHLY": 12,
+    }
+    divisor = freq_divisor.get(freq, 2)
+    per_share = coupon_rate / divisor
+
+    coupon_dates = generate_coupon_dates(
+        first_coupon_date, maturity_date, freq, period_start, period_end
+    )
+
+    for cd in coupon_dates:
+        scheduler.schedule_event(
+            cd, bond_domain.bond_coupon,
+            portfolio, investment,
+            space, tranid, "BondCoupon",
+            cd, settledate, period_start, period_end,
+            payment_currency, per_share, smf
+        )
+
 def core_schedule_events(
     interpretation_ctx,
     qualifying_events,
     space,
-    scheduler
+    scheduler,
+    smf
 ):
     """
     Mechanical wrapper around existing scheduling logic.
@@ -115,8 +252,8 @@ def core_schedule_events(
         sell_amt = normalize_numeric(event_record_args['sell_amt'])
         mark_price = normalize_numeric(event_record_args.get('mark_price'))
         mark_fx = normalize_numeric(event_record_args.get('mark_fx'))
-        mark_100FV_accrue = normalize_numeric(event_record_args.get('mark_100FV_accrue'))
-        mark_100FV_amort = normalize_numeric(event_record_args.get('mark_100FV_amort'))
+        per_100FV_accrue = normalize_numeric(event_record_args.get('per_100FV_accrue'))
+        per_100FV_amort = normalize_numeric(event_record_args.get('per_100FV_amort'))
 
         # ------------------------------------------------------------------
         # EVENT QUALIFICATION — PURE VISIBILITY FILTER
@@ -168,6 +305,7 @@ def core_schedule_events(
                                          space, tranid, "Settlement", tradedate, settledate,
                                          kdbegin, kdend, fx_data)
 
+
         if method == "buy_bond":
             scheduler.schedule_event(tradedate, bond_domain.buy_bond, portfolio,
                                      investment,
@@ -195,7 +333,7 @@ def core_schedule_events(
                 )
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio, payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, smf, accrued_local, accrued_book, fx_data)
@@ -275,7 +413,7 @@ def core_schedule_events(
             )
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_in, portfolio,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in, portfolio,
                                          payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, smf, accrued_local, accrued_book, fx_data)
@@ -356,7 +494,7 @@ def core_schedule_events(
                 )
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_in,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in,
                                          portfolio, payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, smf, accrued_local, accrued_book, fx_data)
@@ -428,7 +566,7 @@ def core_schedule_events(
             )
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio,
                                          payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
@@ -458,7 +596,7 @@ def core_schedule_events(
         elif method == "dividend_equity":
             scheduler.schedule_event(tradedate, equity_domain.dividend_equity, portfolio, investment,
                                      space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, per_share, current_period_start)
+                                     payment_currency, per_share)
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
                 financial_account_in = "DividendsReceivable"
@@ -638,57 +776,66 @@ def core_schedule_events(
                                          "Settlement", tradedate, settledate, kdbegin, kdend, fx_data)
 
         elif method == "mark_prices":
-            scheduler.schedule_event(
-                tradedate,
-                mark_prices,
-                portfolio,
-                investment,
-                tradedate,
-                space,
-                tranid,
-                mark_price,
-                mark_fx,
-                mark_100FV_accrue,
-                mark_100FV_amort
-            )
+                # ── PRICE MARKS — all investments ─────────────────────────
+                scheduler.schedule_event(
+                    tradedate,
+                    mark_prices,
+                    portfolio,
+                    investment,
+                    tradedate,
+                    space,
+                    tranid,
+                    mark_price,
+                    mark_fx,
+                    per_100FV_accrue,
+                    per_100FV_amort
+                )
 
 
-                # ------------------------------------------------------------
-                # BOND COUPON / ACCRUAL SCHEDULING (UNCHANGED)
-                # ------------------------------------------------------------
-       #      bond_candidates = schedule_activities.build_bond_candidates(
-       #          events_for_scheduler,
-       #          interpretation_ctx["trade_window_cutoff"],
-       #          space
-       #      )
-       #      scheduler.schedule_event(
-       #          tradedate,
-       #          mark_prices,
-       #          portfolio,
-       #          investment,
-       #          tradedate,
-       #          space,
-       #          tranid,
-       #          mark_price,
-       #          mark_fx,
-       #          mark_100FV_accrue,
-       #          mark_100FV_amort)
-       #
-       #      schedule_activities.schedule_bond_coupons(
-       #          scheduler,
-       #          bond_candidates,
-       #          portfolio,
-       #          investment,
-       #          space,
-       #          tranid,
-       #          transaction,
-       #          tradedate,
-       #          settledate,
-       #          current_period_start,
-       #          interpretation_ctx["trade_window_cutoff"],
-       #          payment_currency,
-       #          per_share,
-       # #         smf
-       #      )
+        elif method == "mark_bond_accruals":
+                # ── BOND ACCRUALS — self-guards for non-BOND investments ──
+                # mark_bond_accruals checks investment_type == BOND internally
+                # returns immediately for equities, currencies, futures
+                scheduler.schedule_event(
+                    tradedate,
+                    mark_bond_accruals,
+                    portfolio,
+                    investment,
+                    tradedate,
+                    space,
+                    tranid,
+                    mark_price,
+                    mark_fx,
+                    per_100FV_accrue,
+                    per_100FV_amort,
+                    smf
+                )
+
+        # ── BOND COUPONS — per period, derived from AIF state ─────
+        # Builds bond candidates from qualifying events for this period
+        # Uses AIF data from space (loaded from snapshot or bootstrap)
+        # Handles floaters correctly — coupon rate from AIF is time series aware
+    bond_candidates = build_bond_candidates(
+        qualifying_events,
+        interpretation_ctx["trade_window_cutoff"],
+        space
+    )
+
+    schedule_bond_coupons(
+        scheduler,
+        bond_candidates,
+        portfolio,
+        investment,
+        space,
+        tranid,
+        transaction,
+        tradedate,
+        settledate,
+        interpretation_ctx["replay_start"],
+        interpretation_ctx["trade_window_cutoff"],
+        payment_currency,
+        per_share,
+        smf
+    )
 
     return scheduler

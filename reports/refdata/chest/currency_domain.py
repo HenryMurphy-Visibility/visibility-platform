@@ -214,7 +214,7 @@ def settle_single_flow_in(portfolio, payment_currency, location, quantity, local
     return
 
 
-def settle_bond_flow_out(portfolio, payment_currency, investment, location, quantity, local,
+def settle_bond_flows_out(portfolio, payment_currency, investment, location, quantity, local,
                           book, journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
                           kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
     principal_flow_fa = "Payable"
@@ -286,7 +286,7 @@ def settle_bond_flow_out(portfolio, payment_currency, investment, location, quan
 
 
     return
-def settle_bond_flow_in(portfolio, payment_currency, investment, location, quantity, local,
+def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
                           book, journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
                           kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
     principal_flow_fa = "Receivable"

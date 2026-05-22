@@ -466,7 +466,14 @@
       <hr class="section-divider">
       <div id="mf-qty-price" class="method-fields"><div class="form-group"><label>Quantity</label><input id="ev-qty" type="number" value="0"></div><div class="form-group"><label>Price</label><input id="ev-price" type="number" value="0"></div><div class="form-group"><label>Total Amount (Local)</label><input id="ev-local" type="number" value="0"></div><div class="form-group"><label>Total Amount (Base)</label><input id="ev-book" type="number" value="0"></div></div>
       <div id="mf-deposit" class="method-fields"><div class="form-group"><label>Amount (Local)</label><input id="ev-dep-local" type="number" value="0"></div><div class="form-group"><label>Amount (Base)</label><input id="ev-dep-book" type="number" value="0"></div></div>
-      <div id="mf-bond" class="method-fields"><div class="form-group"><label>Accrued Interest (Local)</label><input id="ev-accrued-local" type="number" value="0"></div><div class="form-group"><label>Accrued Interest (Base)</label><input id="ev-accrued-book" type="number" value="0"></div><div class="form-group"><label>Original Face</label><input id="ev-oface" type="number" value="0"></div><div class="form-group"><label>Notional</label><input id="ev-notional" type="number" value="0"></div></div>
+      <div id="mf-bond" class="method-fields"><div class="form-group"><label>Accrued Interest (Local)</label><input id="ev-accrued-local" type="number" value="0"></div><div class="form-group"><label>Accrued Interest (Base)</label><input id="ev-accrued-book" type="number" value="0"></div><div class="form-group"><label>Original Face</label><input id="ev-oface" type="number" value="0"><div class="field-hint">ABS only — leave 0 for standard bonds</div></div><div class="form-group"><label>Notional</label><input id="ev-notional" type="number" value="0"></div>
+        <div class="form-group full" style="margin-top:8px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-secondary" onclick="calcBondAccrual()" style="font-size:0.7em;padding:6px 14px">⟳ Calc Accrued</button>
+            <div id="bond-accrual-info" style="font-family:var(--mono);font-size:0.68em;color:var(--muted)">Enter quantity and settle date first</div>
+          </div>
+        </div>
+      </div>
       <div id="mf-dividend" class="method-fields"><div class="form-group"><label>Per Share Amount</label><input id="ev-per-share" type="number" value="0"></div></div>
       <div id="mf-split" class="method-fields"><div class="form-group"><label>New Shares</label><input id="ev-new-shares" type="number" value="0"></div><div class="form-group"><label>Old Shares</label><input id="ev-old-shares" type="number" value="0"></div></div>
       <div id="mf-spot" class="method-fields"><div class="form-group"><label>Buy Currency</label><input id="ev-buy-ccy" placeholder="e.g. EUR"></div><div class="form-group"><label>Sell Currency</label><input id="ev-sell-ccy" placeholder="e.g. USD"></div><div class="form-group"><label>Buy Amount</label><input id="ev-buy-amt" type="number" value="0"></div><div class="form-group"><label>Sell Amount</label><input id="ev-sell-amt" type="number" value="0"></div></div>
@@ -1094,6 +1101,89 @@ async function viewJEs() {
     }
   } catch(e) { st.textContent = 'Connection error'; }
   sp.classList.remove('show');
+}
+
+// ── BOND ACCRUAL CALC ──────────────────────────────────────
+async function calcBondAccrual() {
+  const portfolio  = document.getElementById('ev-portfolio').value.trim();
+  const investment = document.getElementById('ev-investment').value.trim().toUpperCase();
+  const settle     = document.getElementById('ev-settledate').value;
+  const qty        = parseFloat(document.getElementById('ev-qty')?.value) || 0;
+  const info       = document.getElementById('bond-accrual-info');
+
+  if (!portfolio || !investment || !settle) {
+    if (info) info.textContent = 'Portfolio, investment and settle date required';
+    return;
+  }
+  if (info) info.textContent = 'Calculating...';
+
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/bond/accrual?portfolio=${portfolio}&investment=${investment}&settle_date=${settle}`);
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (info) info.textContent = `Error: ${data.detail}`;
+      return;
+    }
+
+    // accrued = accrued_per_100 × quantity / 100
+    // quantity IS the face value for standard bonds
+    const accrued = data.accrued_per_100 * qty / 100;
+
+    const accrLocal = document.getElementById('ev-accrued-local');
+    const accrBook  = document.getElementById('ev-accrued-book');
+    if (accrLocal) accrLocal.value = accrued.toFixed(2);
+    if (accrBook)  accrBook.value  = accrued.toFixed(2);
+
+    if (info) info.textContent =
+      `${data.days_of_accrual}d · last coupon ${data.last_coupon_date} · ` +
+      `daily=${data.daily_per_100.toFixed(4)}/100 · accrued=${accrued.toLocaleString('en-US',{minimumFractionDigits:2})}`;
+
+  } catch(e) {
+    if (info) info.textContent = 'Connection error';
+  }
+}
+
+// ── BOND ACCRUAL CALC ──────────────────────────────────────
+async function calcBondAccrual() {
+  const portfolio  = document.getElementById('ev-portfolio').value.trim();
+  const investment = document.getElementById('ev-investment').value.trim().toUpperCase();
+  const settle     = document.getElementById('ev-settledate').value;
+  const qty        = parseFloat(document.getElementById('ev-qty')?.value) || 0;
+  const info       = document.getElementById('bond-accrual-info');
+
+  if (!portfolio || !investment || !settle) {
+    if (info) info.textContent = 'Portfolio, investment and settle date required';
+    return;
+  }
+  if (info) info.textContent = 'Calculating...';
+
+  try {
+    const res  = await fetch(BASE + '/api/v1/ops/bond/accrual?portfolio=' + portfolio + '&investment=' + investment + '&settle_date=' + settle);
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (info) info.textContent = 'Error: ' + data.detail;
+      return;
+    }
+
+    // accrued = accrued_per_100 x quantity / 100
+    // quantity IS the face value for standard bonds
+    const accrued = data.accrued_per_100 * qty / 100;
+
+    const accrLocal = document.getElementById('ev-accrued-local');
+    const accrBook  = document.getElementById('ev-accrued-book');
+    if (accrLocal) accrLocal.value = accrued.toFixed(2);
+    if (accrBook)  accrBook.value  = accrued.toFixed(2);
+
+    if (info) info.textContent =
+      data.days_of_accrual + 'd · last coupon ' + data.last_coupon_date + ' · ' +
+      'daily=' + data.daily_per_100.toFixed(4) + '/100 · accrued=' +
+      accrued.toLocaleString('en-US',{minimumFractionDigits:2});
+
+  } catch(e) {
+    if (info) info.textContent = 'Connection error';
+  }
 }
 
 async function process() {

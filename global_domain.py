@@ -87,7 +87,7 @@ def global_lot_iterator(investment, space):
 def mark_prices(
     portfolio, investment, mark_date,
     space, tranid,
-    mark_price, mark_fx, mark_100FV_accrue, mark_100FV_amort
+    mark_price, mark_fx, per_100FV_accrue, per_100FV_amort
 ):
     from business_days import is_non_business_day
 
@@ -298,8 +298,9 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     )
     space.post_journal_entry(unreal_gl_fx_entry)
 
+
 def mark_bond_accruals(portfolio, investment, mark_date,
-    stat_repo, space, tranid, mark_price, mark_fx, mark_100FV_accrue, mark_100FV_amort):
+    space, tranid, mark_price, mark_fx, per_100FV_accrue, mark_100FV_amort, smf):
     from bookkeeping import Journals
     from business_days import is_non_business_day
 
@@ -309,8 +310,14 @@ def mark_bond_accruals(portfolio, investment, mark_date,
         return
 
     # Only process bonds
-    investment_type = space.get_attribute_field(investment, 'AIF', 'Investment_Type')
-    currency = space.get_attribute_field(investment, 'AIF', 'Currency')
+    repo = space.asset_liability_repository
+    sub = repo.investment_attributes.get(investment)
+    if not sub:
+        return
+    attributes = sub.investment_attributes.get("AIF", {})
+    investment_type = attributes.get("investment_type")
+    currency = attributes.get("currency")
+
     if investment_type != "BOND":
         return
 
@@ -323,7 +330,7 @@ def mark_bond_accruals(portfolio, investment, mark_date,
         return
 
     # Use the accrued interest per 100 FV for bonds
-    accrued_interest_per_100fv = mark_100FV_accrue
+    accrued_interest_per_100fv = per_100FV_accrue
     fx_rate = mark_fx
 
     if accrued_interest_per_100fv > 0:
@@ -335,22 +342,22 @@ def mark_bond_accruals(portfolio, investment, mark_date,
                 account_key, lot_qty, lot_local, lot_book, lot_notional = lot_info
 
                 # Calculate accrued interest for the bond and post journal entries
-                accrued_interest_local = lot_qty * accrued_interest_per_100fv
+                accrued_interest_local = lot_qty * accrued_interest_per_100fv /100
                 accrued_interest_book = accrued_interest_local * float(fx_rate)
 
                 # Post accrued interest journal entries
                 accrued_interest_receivable_entry = Journals(
-                    portfolio, currency, account_key[2], None, lot_ls, lot_location,
+                    portfolio, currency, 0, None, lot_ls, lot_location,
                     'AccruedInterestReceivable', accrued_interest_local, accrued_interest_local, accrued_interest_book, None, None,
-                    account_key[2], "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
+                    tranid, "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
                     "Asset/Liability"
                 )
                 space.post_journal_entry(accrued_interest_receivable_entry)
 
                 accrued_interest_income_entry = Journals(
-                    portfolio, investment, account_key[2], account_key[3], lot_ls, lot_location,
+                    portfolio, investment, 0,0, lot_ls, lot_location,
                     'InterestIncome', 0, -accrued_interest_local, -accrued_interest_book, None, None,
-                    account_key[2], "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
+                    tranid, "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
                     "Revenue/Expense/Capital"
                 )
                 space.post_journal_entry(accrued_interest_income_entry)

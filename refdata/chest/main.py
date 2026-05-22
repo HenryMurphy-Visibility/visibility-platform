@@ -455,7 +455,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                      transaction, tradedate, settledate, kdbegin, kdend, payment_currency, smf, accrued_local, accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio, payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, smf, accrued_local, accrued_book, fx_data)
@@ -496,7 +496,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                      accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_in, portfolio,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in, portfolio,
                                          payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend,  smf, accrued_local, accrued_book)
@@ -537,7 +537,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                      transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
                                       smf, accrued_local, accrued_book)
 
-            def settle_bond_flow_in(portfolio, payment_currency, investment, location, quantity, local,
+            def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
                                     book, journal_entries, sub_ledger, tranid, transaction, tradedate,
                                     settledate,
                                     kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
@@ -578,7 +578,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                      accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio,
                                          payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,

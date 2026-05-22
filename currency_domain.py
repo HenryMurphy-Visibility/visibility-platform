@@ -215,12 +215,12 @@ def settle_single_flow_out(portfolio, payment_currency, location, quantity, loca
                                "FXGainCurrency", 0, 0, -gl, None, None, tranid, transaction,
                                tradedate, settledate, kdbegin, kdend,  ibor_date, "Revenue/Expense/Capital")
         space.post_journal_entry(currglx)
-
-
     return
 
-def settle_bond_flow_out(portfolio, payment_currency, investment, location, quantity, local,
-                          book, journal_entries, space, tranid, transaction, tradedate, settledate,
+
+
+def settle_bond_flows_out(portfolio, payment_currency, investment, location, quantity, local,
+                          book, space, tranid, transaction, tradedate, settledate,
                           kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
 
     ibor_date = settledate
@@ -292,16 +292,16 @@ def settle_bond_flow_out(portfolio, payment_currency, investment, location, quan
 
 
     # ------------------------------------------------------------------
-    # 🚩 FINAL STEP: Remove bond stats ONLY after settlement AND netting
+    # 🚩 FINAL STEP: Remove bond stats ONLY after settlement AND netting= legacy? statacct?
     # ------------------------------------------------------------------
-    if smf.is_fully_settled_and_netted(tranid):
-        space.statistical_repository.delete_investment(portfolio, investment)
+    # if smf.is_fully_settled_and_netted(tranid):
+    #     space.statistical_repository.delete_investment(portfolio, investment)
 
 
     return
 
-def settle_bond_flow_in(portfolio, payment_currency, investment, location, quantity, local,
-                          book, journal_entries, space, tranid, transaction, tradedate, settledate,
+def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
+                          book,  space, tranid, transaction, tradedate, settledate,
                           kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
 
     # close receivable
