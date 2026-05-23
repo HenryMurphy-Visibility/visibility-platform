@@ -24,7 +24,7 @@ def schedule_update_smf_record_status(smf, tranid, new_status, portfolio):
 
 
 def close_bond_lots(investment: str, location: str, quantity: float, local: float, book: float, closing_method: str,
-                    tax_date: datetime, journal_entries, space, ls: str, tranid) -> List[
+                    tax_date: datetime, space, ls: str, tranid) -> List[
     Tuple[str, str, int, datetime.datetime, float, float, float, float]]:
     bs_entries = space.asset_liability_repository.get_position_entries(investment)
 
@@ -170,9 +170,8 @@ def buy_bond(portfolio, investment, location, quantity, local, book, space, tran
     space.post_journal_entry(je)
 
     if accrued_local is not None and accrued_local != 0:
-        ls = "l"
         financial_account = "PurchasedInterest"  # use tranid for payable receivable to close
-        je = Journals(portfolio, investment, tranid, None, ls, location, financial_account, accrued_local,
+        je = Journals(portfolio, investment, tranid, 0, "l", location, financial_account, accrued_local,
                       accrued_local, accrued_book, None, None, tranid,
                       transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
@@ -185,273 +184,182 @@ def buy_bond(portfolio, investment, location, quantity, local, book, space, tran
     return
 
 
-def sell_bond(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
+def sell_bond(portfolio, investment, location, quantity, local, book, closing_method,
               space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
               smf, accrued_local, accrued_book):
+    ibor_date = tradedate
     ls = "l"
-    ibor_date = tradedate
-    financial_account = "Receivable"  # use tranid for payable receivable to close
-    je = Journals(portfolio, payment_currency, tranid, tradedate, ls, location, financial_account, local, local, book,
-                  None, None, tranid,
-                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
-    space.post_journal_entry(je)
 
+    # ── SOLD INTEREST — accrued interest sold to buyer ──────────
     if accrued_local is not None and accrued_local != 0:
-        ls = "s"
-        financial_account = "SoldInterest"  # use tranid for payable receivable to close
-        je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, -accrued_local,
-                      -accrued_local,
-                      -accrued_book, None, None, tranid,
-                      transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+        je = Journals(portfolio, investment, tranid, 0, "s", location, "SoldInterest",
+                      -accrued_local, -accrued_local, -accrued_book,
+                      None, None, tranid, transaction,
+                      tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
-        # pass 'ls' flag into closelots - determine if l or is is being closed
-        # Close the lots for the given investment and quantity using the specified closing method
 
-    lots_returned = close_bond_lots(investment, location, quantity, local, book, closing_method, "", journal_entries,
-                                    space, "l", tranid)
+    # ── CLOSE COST LOTS ──────────────────────────────────────────
+    lots_returned = close_bond_lots(investment, location, quantity, local, book,
+                                    closing_method, "", space, "l", tranid)
 
     for lot in lots_returned:
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lot
 
-        fxrate = book / local if closed_local != 0 else 0
+        fxrate = book / local if local != 0 else 0
         pgain_local = closed_proceeds - closed_local
         pgain_book = pgain_local * fxrate
         glbook = closed_proceeds * fxrate - closed_book - pgain_book
         realized_gl = (closed_proceeds - closed_local) * fxrate * -1
 
-        # Create journal entry for the closed lot
-        closed_lot_journal = Journals(
-            portfolio=portfolio,
-            investment=investment,
-            lotid=lotid,
-            tax_date=tax_date,
-            ls="l",
-            location=location,  # Assuming location is a string like "Bond Market"
+        # Cost lot closure
+        space.post_journal_entry(Journals(
+            portfolio=portfolio, investment=investment,
+            lotid=lotid, tax_date=tax_date, ls="l", location=location,
             financial_account="Cost",
-            quantity=-closed_qty,
-            local=-closed_local,
-            book=-closed_book,
-            tranid=tranid,
-            transaction=transaction,
-            tradedate=tradedate,
-            settledate=settledate,
-            kdbegin=kdbegin,
-            kdend=kdend,
-            ibor_date=ibor_date,
+            quantity=-closed_qty, local=-closed_local, book=-closed_book,
+            notional=None, oface=None, tranid=tranid, transaction=transaction,
+            tradedate=tradedate, settledate=settledate,
+            kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
             entry_type="Asset/Liability"
-        )
-        space.post_journal_entry(closed_lot_journal)
+        ))
 
-        # Handle price gain/loss
+        # Price gain/loss
         if pgain_local != 0:
-            pg_journal = Journals(
-                portfolio=portfolio,
-                investment=investment,
-                lotid=lotid,
-                tax_date=tax_date,
-                ls=ls,
-                location=location,
+            space.post_journal_entry(Journals(
+                portfolio=portfolio, investment=investment,
+                lotid=lotid, tax_date=tax_date, ls=ls, location=location,
                 financial_account="PriceGainInvestment",
-                quantity=0,
-                local=-pgain_local,
-                book=-pgain_book,
-                notional=None,
-                oface=None,
-                tranid=tranid,
-                transaction=transaction,
-                tradedate=tradedate,
-                settledate=settledate,
-                kdbegin=kdbegin,
-                kdend=kdend,
-                ibor_date=ibor_date,
+                quantity=0, local=-pgain_local, book=-pgain_book,
+                notional=None, oface=None, tranid=tranid, transaction=transaction,
+                tradedate=tradedate, settledate=settledate,
+                kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
                 entry_type="Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(pg_journal)
+            ))
 
-        # Handle foreign exchange gain/loss
+        # FX gain/loss
         if realized_gl != 0:
-            fx_journal = Journals(
-                portfolio=portfolio,
-                investment=investment,
-                lotid=lotid,
-                tax_date=tax_date,
-                ls=ls,
-                location=location,
+            space.post_journal_entry(Journals(
+                portfolio=portfolio, investment=investment,
+                lotid=lotid, tax_date=tax_date, ls=ls, location=location,
                 financial_account="FXGainInvestment",
-                quantity=0,
-                local=0,
-                book=-glbook,
-                notional=None,
-                oface=None,
-                tranid=tranid,
-                transaction=transaction,
-                tradedate=tradedate,
-                settledate=settledate,
-                kdbegin=kdbegin,
-                kdend=kdend,
-                ibor_date=ibor_date,
+                quantity=0, local=0, book=-glbook,
+                notional=None, oface=None, tranid=tranid, transaction=transaction,
+                tradedate=tradedate, settledate=settledate,
+                kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
                 entry_type="Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(fx_journal)
+            ))
 
-            # Record the settlement information to SMF
-            # Record the settlement information to SMF
-            smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long',
-                           position_effect='close', location=location,
-                           currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
+    # ── SMF — one record per trade, outside lot loop ─────────────
+    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment,
+                   position='long', position_effect='close', location=location,
+                   currency=payment_currency, qty=quantity, currency_amount=local,
+                   status='Unsettled')
+
     return
 
 
-def short_bond(portfolio, investment, location, quantity, local, book, journal_entries, space, tranid,
-               transaction,
-               tradedate, settledate, kdbegin, kdend, payment_currency, smf,
+def short_bond(portfolio, investment, location, quantity, local, book, space, tranid,
+               transaction, tradedate, settledate, kdbegin, kdend, payment_currency, smf,
                accrued_local, accrued_book, entry_type="Asset/Liability"):
-    # Create a new je Open IBM
-
     ls = "s"
-    financial_account = "Cost"
     ibor_date = tradedate
 
-    je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, -quantity, -local, -book,
-                  None, None, tranid,
-                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
+    # ── SHORT COST — opens short position ────────────────────
+    je = Journals(portfolio, investment, tranid, 0, ls, location, "Cost",
+                  -quantity, -local, -book,
+                  None, None, tranid, transaction,
+                  tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
     space.post_journal_entry(je)
 
+    # ── SOLD INTEREST — accrued interest on short side ───────
     if accrued_local is not None and accrued_local != 0:
-        ls = "s"
-        financial_account = "SoldInterest"  # use tranid for payable receivable to close
-        je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, -accrued_local,
-                      -accrued_local,
-                      -accrued_book, None, None, tranid,
-                      transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+        je = Journals(portfolio, investment, tranid, None, ls, location, "SoldInterest",
+                      -accrued_local, -accrued_local, -accrued_book,
+                      None, None, tranid, transaction,
+                      tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
 
-    # Record the settlement information to SMF
-    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short', position_effect='open',
-                   location=location,
-                   currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
+    # ── SMF — one record per trade ────────────────────────────
+    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment,
+                   position='short', position_effect='open', location=location,
+                   currency=payment_currency, qty=quantity, currency_amount=local,
+                   status='Unsettled')
 
     return
 
 
-def cover_bond(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
-               space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-               smf, accrued_local, accrued_book):
-    ls = "s"
+def cover_bond(portfolio, investment, location, quantity, local, book, closing_method,
+               space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+               payment_currency, smf, accrued_local, accrued_book):
     ibor_date = tradedate
-    financial_account = "Payable"  # use tranid for payable receivable to close
-    je = Journals(portfolio, payment_currency, tranid, tradedate, ls, location, financial_account, -local, -local,
-                  -book, None, None, tranid,
-                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset*/Liability")
-    space.post_journal_entry(je)
+    ls = "s"
 
+    # ── PURCHASED INTEREST — accrued interest on cover side ──
     if accrued_local is not None and accrued_local != 0:
-        ls = "l"
-        financial_account = "PurchasedInterest"  # use tranid for payable receivable to close
-        je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, accrued_local,
-                      accrued_local,
-                      accrued_book, None, None, tranid,
-                      transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+        je = Journals(portfolio, investment, tranid,0, "l", location, "PurchasedInterest",
+                      accrued_local, accrued_local, accrued_book,
+                      None, None, tranid, transaction,
+                      tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
-        # pass 'ls' flag into closelots - determine if l or is is being closed
-        # Close the lots for the given investment and quantity using the specified closing method
 
-    lots_returned = close_bond_lots(investment, location, -quantity, -local, -book, closing_method, "", journal_entries,
-                                    space, "s", tranid)
+    # ── CLOSE SHORT COST LOTS ─────────────────────────────────
+    lots_returned = close_bond_lots(investment, location, quantity, local, book,
+                                    closing_method, "", space, "s", tranid)
 
     for lot in lots_returned:
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lot
 
-        fxrate = book / local if closed_local != 0 else 0
-        pgain_local = closed_proceeds - closed_local
+        fxrate = book / local if local != 0 else 0
+        pgain_local = closed_local - closed_proceeds  # reversed — gain when price falls
         pgain_book = pgain_local * fxrate
         glbook = closed_proceeds * fxrate - closed_book - pgain_book
-        realized_gl = (closed_proceeds - closed_local) * fxrate * -1
+        realized_gl = (closed_local - closed_proceeds) * fxrate
 
-        # Create journal entry for the closed lot
-        closed_lot_journal = Journals(
-            portfolio=portfolio,
-            investment=investment,
-            lotid=lotid,
-            tax_date=tax_date,
-            ls="l",
-            location=location,  # Assuming location is a string like "Bond Market"
+        # Cost lot closure
+        space.post_journal_entry(Journals(
+            portfolio=portfolio, investment=investment,
+            lotid=lotid, tax_date=tax_date, ls="s", location=location,
             financial_account="Cost",
-            quantity=-closed_qty,
-            local=-closed_local,
-            book=-closed_book,
-            notional=None,
-            oface=None,
-            tranid=tranid,
-            transaction=transaction,
-            tradedate=tradedate,
-            settledate=settledate,
-            kdbegin=kdbegin,
-            kdend=kdend,
-            ibor_date=ibor_date,
+            quantity=closed_qty, local=closed_local, book=closed_book,
+            notional=None, oface=None, tranid=tranid, transaction=transaction,
+            tradedate=tradedate, settledate=settledate,
+            kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
             entry_type="Asset/Liability"
-        )
-        space.post_journal_entry(closed_lot_journal)
+        ))
 
-        # Handle price gain/loss
+        # Price gain/loss
         if pgain_local != 0:
-            pg_journal = Journals(
-                portfolio=portfolio,
-                investment=investment,
-                lotid=lotid,
-                tax_date=tax_date,
-                ls=ls,
-                location=location,
+            space.post_journal_entry(Journals(
+                portfolio=portfolio, investment=investment,
+                lotid=lotid, tax_date=tax_date, ls=ls, location=location,
                 financial_account="PriceGainInvestment",
-                quantity=0,
-                local=-pgain_local,
-                book=-pgain_book,
-                notional=None,
-                oface=None,
-                tranid=tranid,
-                transaction=transaction,
-                tradedate=tradedate,
-                settledate=settledate,
-                kdbegin=kdbegin,
-                kdend=kdend,
-                ibor_date=ibor_date,
+                quantity=0, local=-pgain_local, book=-pgain_book,
+                notional=None, oface=None, tranid=tranid, transaction=transaction,
+                tradedate=tradedate, settledate=settledate,
+                kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
                 entry_type="Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(pg_journal)
+            ))
 
-        # Handle foreign exchange gain/loss
+        # FX gain/loss
         if realized_gl != 0:
-            fx_journal = Journals(
-                portfolio=portfolio,
-                investment=investment,
-                lotid=lotid,
-                tax_date=tax_date,
-                ls=ls,
-                location=location,
+            space.post_journal_entry(Journals(
+                portfolio=portfolio, investment=investment,
+                lotid=lotid, tax_date=tax_date, ls=ls, location=location,
                 financial_account="FXGainInvestment",
-                quantity=0,
-                local=0,
-                book=-glbook,
-                notional=None,
-                oface=None,
-                tranid=tranid,
-                transaction=transaction,
-                tradedate=tradedate,
-                settledate=settledate,
-                kdbegin=kdbegin,
-                kdend=kdend,
-                ibor_date=ibor_date,
+                quantity=0, local=0, book=-glbook,
+                notional=None, oface=None, tranid=tranid, transaction=transaction,
+                tradedate=tradedate, settledate=settledate,
+                kdbegin=kdbegin, kdend=kdend, ibor_date=ibor_date,
                 entry_type="Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(fx_journal)
+            ))
 
-            # Record the settlement information to SMF
-            # Record the settlement information to SMF
-            smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short',
-                           position_effect='close', location=location,
-                           currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
+    # ── SMF — one record per trade, outside lot loop ──────────
+    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment,
+                   position='short', position_effect='close', location=location,
+                   currency=payment_currency, qty=quantity, currency_amount=local,
+                   status='Unsettled')
+
     return
-
 
 def bond_coupon(portfolio, investment, space, tranid,
                 transaction, tradedate, settledate, kdbegin, kdend, payment_currency, per_share, smf):

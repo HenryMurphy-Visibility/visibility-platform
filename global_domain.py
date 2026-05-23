@@ -298,6 +298,15 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     )
     space.post_journal_entry(unreal_gl_fx_entry)
 
+def calculate_net_long_qty(self, portfolio, investment, date, status='Settled'):
+    net_positions = self.calculate_net_positions(portfolio, investment, date, status)
+    total = 0
+    for location, positions in net_positions.items():
+        total += positions.get('long_open', 0)
+        total -= positions.get('long_close', 0)
+        total -= positions.get('short_open', 0)
+        total += positions.get('short_close', 0)
+    return total
 
 def mark_bond_accruals(portfolio, investment, mark_date,
     space, tranid, mark_price, mark_fx, per_100FV_accrue, mark_100FV_amort, smf):
@@ -321,12 +330,21 @@ def mark_bond_accruals(portfolio, investment, mark_date,
     if investment_type != "BOND":
         return
 
-    # Calculate net positions for the bond before proceeding with mark event
-    net_positions = smf.calculate_net_positions(portfolio=portfolio, investment=investment, date=mark_date, status="Settled")
+    # ── NET SETTLED QUANTITY ──────────────────────────────────
+    # Accounts for long opens, long closes, short opens, short covers
+    # Zero or negative = no accrual entitlement
+    net_qty = smf.calculate_net_long_qty(
+        portfolio=portfolio,
+        investment=investment,
+        date=mark_date,
+        status="Settled"
+    )
 
-    # If net positions are zero, skip this event
-    if not net_positions or net_positions == 0:
-        print(f"Net position is zero for portfolio {portfolio}, investment {investment} on {mark_date}. Skipping bond mark event.")
+    if net_qty <= 0:
+        print(
+            f"Net position is zero or short for portfolio {portfolio}, "
+            f"investment {investment} on {mark_date}. Skipping bond mark event."
+        )
         return
 
     # Use the accrued interest per 100 FV for bonds
@@ -341,29 +359,31 @@ def mark_bond_accruals(portfolio, investment, mark_date,
             for lot_info in lots:
                 account_key, lot_qty, lot_local, lot_book, lot_notional = lot_info
 
-                # Calculate accrued interest for the bond and post journal entries
-                accrued_interest_local = lot_qty * accrued_interest_per_100fv /100
-                accrued_interest_book = accrued_interest_local * float(fx_rate)
+                # Calculate accrued interest for this lot
+                accrued_interest_local = lot_qty * accrued_interest_per_100fv
+                accrued_interest_book  = accrued_interest_local * float(fx_rate)
 
-                # Post accrued interest journal entries
-                accrued_interest_receivable_entry = Journals(
+                # AccruedInterestReceivable
+                space.post_journal_entry(Journals(
                     portfolio, currency, 0, None, lot_ls, lot_location,
-                    'AccruedInterestReceivable', accrued_interest_local, accrued_interest_local, accrued_interest_book, None, None,
-                    tranid, "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
+                    'AccruedInterestReceivable',
+                    accrued_interest_local, accrued_interest_local, accrued_interest_book,
+                    None, None, tranid, "BondAccrual",
+                    mark_date, mark_date, mark_date, mark_date, mark_date,
                     "Asset/Liability"
-                )
-                space.post_journal_entry(accrued_interest_receivable_entry)
+                ))
 
-                accrued_interest_income_entry = Journals(
-                    portfolio, investment, 0,0, lot_ls, lot_location,
-                    'InterestIncome', 0, -accrued_interest_local, -accrued_interest_book, None, None,
-                    tranid, "BondAccrual", mark_date, mark_date, mark_date, mark_date, mark_date,
+                # InterestIncome
+                space.post_journal_entry(Journals(
+                    portfolio, investment, 0, 0, lot_ls, lot_location,
+                    'InterestIncome',
+                    0, -accrued_interest_local, -accrued_interest_book,
+                    None, None, tranid, "BondAccrual",
+                    mark_date, mark_date, mark_date, mark_date, mark_date,
                     "Revenue/Expense/Capital"
-                )
-                space.post_journal_entry(accrued_interest_income_entry)
+                ))
 
     print(f"Bond accruals processed for portfolio {portfolio}, investment {investment} on {mark_date}.")
-
 def allocate(portfolio,  investment, location, quantity, local, book, fund_structures_space_journal_entries,
             tranid, transaction, tradedate, settledate, kdbegin, kdend, period_start,
             period_cutoff, investment_accounting_space, fund_structures_space, allocation_entities, allocation_currency, allocation_percents):

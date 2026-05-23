@@ -31,6 +31,11 @@ from pathlib import Path
 from datetime import datetime, timedelta, date as date_type
 from collections import defaultdict
 
+import os
+from v_config import REFDATA_PATH
+
+COA_PATH = os.path.join(REFDATA_PATH, "chart_of_accounts.csv")
+
 # US Market Holidays 2019-2027
 US_HOLIDAYS = {
     date_type(2019,1,1),date_type(2019,1,21),date_type(2019,2,18),date_type(2019,4,19),
@@ -578,13 +583,6 @@ def pillar_settle_fx(events: list, jes_by_period: dict,
 
     return result
 
-
-# ============================================================
-# PILLAR 4 — MARK VERIFICATION
-# Period end MV = qty × price × pricing_factor × fx_rate
-# Change in unrealized chains correctly period over period
-# ============================================================
-
 # ============================================================
 # PILLAR 4 — MARK VERIFICATION
 # Period end MV = qty × price × pricing_factor × fx_rate
@@ -732,6 +730,60 @@ def pillar_marks(events: list, im: dict, calendar_records: list,
     return result
 
 # ============================================================
+# PILLAR 5 — CHART OF ACCOUNTS VALIDATION
+# Every financial_account posted must exist in chart_of_accounts.csv
+# ============================================================
+
+def pillar_chart_of_accounts(jes_by_period: dict) -> ProofResult:
+    import csv
+    from v_config import REFDATA_PATH
+
+    result = ProofResult("chart_of_accounts")
+
+    coa_path = os.path.join(REFDATA_PATH, "chart_of_accounts.csv")
+
+    if not os.path.exists(coa_path):
+        result.skip("chart_of_accounts.csv not found")
+        return result
+
+    valid_accounts = set()
+    with open(coa_path, newline="", encoding="utf-8") as f:
+        for row in csv.DictReader(f):
+            name = row.get("System_Name", "").strip()
+            if name:
+                valid_accounts.add(name)
+
+    if not valid_accounts:
+        result.skip("No System_Name entries found in chart_of_accounts.csv")
+        return result
+
+    unknown = {}
+    for period_name, jes in jes_by_period.items():
+        for je in jes:
+            fa = str(_je_val(je, "financial_account") or "").strip()
+            if not fa:
+                continue
+            if fa not in valid_accounts:
+                if fa not in unknown:
+                    unknown[fa] = set()
+                unknown[fa].add(period_name)
+
+    if unknown:
+        for fa, periods in sorted(unknown.items()):
+            result.fail(
+                f"Unknown account '{fa}' — not in COA "
+                f"(periods: {', '.join(sorted(periods))})"
+            )
+    else:
+        total_jes = sum(len(jes) for jes in jes_by_period.values())
+        result.ok(
+            f"All accounts valid — {total_jes} JEs checked "
+            f"against {len(valid_accounts)} COA entries"
+        )
+
+    return result
+
+# ============================================================
 # PRINT HELPERS
 # ============================================================
 
@@ -842,6 +894,12 @@ def run_proof(portfolio: str, calendar: str, period: str = None,
         results.append(r)
         _print_pillar_result(r, verbose)
 
+    if run_all or pillar_filter == "chart_of_accounts":
+        print(f"\n{CYAN}Running Pillar 5 — Chart of Accounts...{RESET}")
+        r5 = pillar_chart_of_accounts(jes_by_period)
+        _print_pillar_result(r5, verbose)
+        results.append(r5)
+
     # ── SUMMARY ────────────────────────────────────────────────
     total_pass = sum(len(r.passes)   for r in results)
     total_warn = sum(len(r.warnings) for r in results)
@@ -866,8 +924,9 @@ def run_proof(portfolio: str, calendar: str, period: str = None,
         print(f"  {CYAN}→ Re-run proof to verify fix{RESET}")
 
     print(f"{'═'*65}\n")
-    return results
 
+
+    return results
 
 # ============================================================
 # CLI
@@ -897,7 +956,7 @@ Examples:
     parser.add_argument("--tranid",     type=int,  help="Filter to single tranid")
     parser.add_argument("--investment", type=str,  help="Filter to single investment")
     parser.add_argument("--pillar",     type=str,
-                        choices=["availability", "balance", "settle_fx", "marks"],
+                        choices=["availability", "balance", "settle_fx", "marks", "chart_of_accounts"],
                         help="Run single pillar only")
     parser.add_argument("--verbose",   action="store_true",
                         help="Show passing checks too")

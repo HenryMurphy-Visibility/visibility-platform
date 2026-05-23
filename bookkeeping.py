@@ -957,7 +957,21 @@ class SettlementChores:
         # Assuming there's a way to check if the position is netted to zero (simplified here)
         return record['status'] == 'Settled' and record['net_position'] == 0
 
-
+    def calculate_net_long_qty(self, portfolio, investment, date, status='Settled'):
+        """
+        Returns net settled quantity as a single number.
+        Long opens add, long closes subtract.
+        Short opens subtract, short closes add.
+        Zero or negative means no accrual entitlement.
+        """
+        net_positions = self.calculate_net_positions(portfolio, investment, date, status)
+        total = 0
+        for location, positions in net_positions.items():
+            total += positions.get('long_open', 0)
+            total -= positions.get('long_close', 0)
+            total -= positions.get('short_open', 0)
+            total += positions.get('short_close', 0)
+        return total
 class BookkeepingSpace:
     """
     BOOKKEEPING SPACE (CONDUCTOR)

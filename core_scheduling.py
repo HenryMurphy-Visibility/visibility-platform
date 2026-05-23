@@ -306,42 +306,7 @@ def core_schedule_events(
                                          kdbegin, kdend, fx_data)
 
 
-        if method == "buy_bond":
-            scheduler.schedule_event(tradedate, bond_domain.buy_bond, portfolio,
-                                     investment,
-                                     location, quantity, local, book, space, tranid,
-                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                                     smf, accrued_local, accrued_book, "Asset/Liability")
 
-            scheduler.schedule_event(
-                tradedate,
-                currency_domain.open_payable,
-                portfolio, payment_currency,
-                location, local, book, space,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                "Payable"
-            )
-
-            if accrued_local is not None and accrued_local != 0:
-                scheduler.schedule_event(
-                    tradedate,
-                    currency_domain.open_payable,
-                    portfolio, payment_currency,
-                    location, accrued_local, accrued_book, space,
-                    tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                    "PurchasedInterestPayable"
-                )
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
-                                         portfolio, payment_currency, investment, location, quantity, local, book,
-                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local, accrued_book, fx_data)
-
-                # Schedule another event to update SMF record status
-
-                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status, smf,
-                                         tranid, "Settled", portfolio)
         if method == "buy_future":
             scheduler.schedule_event(tradedate, futures_domain.buy_future, portfolio, investment,
                                      location, quantity, local, book, space, tranid,
@@ -386,6 +351,33 @@ def core_schedule_events(
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, fx_data)
 
+        if method == "buy_bond":
+            scheduler.schedule_event(tradedate, bond_domain.buy_bond, portfolio,
+                                     investment,
+                                     location, quantity, local, book, space, tranid,
+                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
+                                     smf, accrued_local, accrued_book, "Asset/Liability")
+
+            scheduler.schedule_event(
+                tradedate,
+                currency_domain.open_payable,
+                portfolio, payment_currency,
+                location, local + accrued_local, book + accrued_book, space,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                "Payable"
+            )
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
+                                         portfolio, payment_currency, investment, location, quantity, local, book,
+                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
+                                         kdend, smf, accrued_local, accrued_book, fx_data, "l")
+
+                # Schedule another event to update SMF record status
+
+                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status, smf,
+                                         tranid, "Settled", portfolio)
+
         elif method == "sell_bond":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, bond_domain.sell_bond, portfolio, investment,
@@ -398,29 +390,126 @@ def core_schedule_events(
                 tradedate,
                 currency_domain.open_receivable,
                 portfolio, payment_currency,
-                location, local, book, space,
+                location, accrued_local + local, accrued_book + book, space,
                 tranid, transaction, tradedate, settledate, kdbegin, kdend,
                 "Receivable"
-            )
-
-            scheduler.schedule_event(
-                tradedate,
-                currency_domain.open_receivable,
-                portfolio, payment_currency,
-                location, local, book, space,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                "SoldInterestReceivable"
             )
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
                 scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in, portfolio,
                                          payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local, accrued_book, fx_data)
+                                         kdend, smf, accrued_local, accrued_book, fx_data,"l")
                 # Schedule another event to update SMF record status
                 scheduler.schedule_event(settledate,
                                          bond_domain.schedule_update_smf_record_status, smf,
                                          tranid, "Settled", portfolio)
+
+        elif method == "short_bond":
+            scheduler.schedule_event(tradedate, bond_domain.short_bond, portfolio,
+                                     investment, location, quantity, local, book, space,
+                                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                                     payment_currency, smf, accrued_local, accrued_book,
+                                     "Asset/Liability")
+
+            scheduler.schedule_event(
+                tradedate,
+                currency_domain.open_receivable,
+                portfolio, payment_currency,
+                location, local + accrued_local, book + accrued_book, space,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                "Receivable"
+            )
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in,
+                                         portfolio, payment_currency, investment, location,
+                                         quantity, local, book, space, tranid, "Settlement",
+                                         tradedate, settledate, kdbegin, kdend, smf,
+                                         accrued_local, accrued_book, fx_data,"s")
+
+                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status,
+                                         smf, tranid, "Settled", portfolio)
+
+
+        elif method == "cover_bond":
+            closing_method = "FIFO"
+            scheduler.schedule_event(tradedate, bond_domain.cover_bond, portfolio,
+                                     investment, location, quantity, local, book, closing_method,
+                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                                     payment_currency, smf, accrued_local, accrued_book)
+
+            scheduler.schedule_event(
+                tradedate,
+                currency_domain.open_payable,
+                portfolio, payment_currency,
+                location, local + accrued_local, book + accrued_book, space,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                "Payable"
+            )
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
+                                         portfolio, payment_currency, investment, location,
+                                         quantity, local, book, space, tranid, "Settlement",
+                                         tradedate, settledate, kdbegin, kdend, smf,
+                                         accrued_local, accrued_book, fx_data,"s")
+
+                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status,
+                                         smf, tranid, "Settled", portfolio)
+
+        if method == "short_future":
+            scheduler.schedule_event(tradedate, futures_domain.short_future, portfolio, investment,
+                                     location, quantity, local, book, space, tranid,
+                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
+                                     tdate_fx, notional, price)
+
+            if local != 0:
+                scheduler.schedule_event(
+                    tradedate,
+                    currency_domain.open_payable,
+                    portfolio, payment_currency,
+                    location, local, book, space,
+                    tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                    "Payable"
+                )
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"] and local != 0:
+                scheduler.schedule_event(settledate, currency_domain.settle_pay_rec_by_tranid, portfolio,
+                                         payment_currency, location, quantity, local, book,
+                                         space, tranid, "FuturesSettlement", tradedate, settledate, kdbegin,
+                                         kdend, payment_currency, smf, fx_data)
+
+
+        elif method == "cover_equity" or method == "cover_option":
+            closing_method = "FIFO"
+            scheduler.schedule_event(tradedate, equity_domain.cover_equity, portfolio, investment,
+                                     location, quantity, local, book, closing_method,
+                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                                     payment_currency, tdate_fx)
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
+                scheduler.schedule_event(settledate, currency_domain.settle_single_flow_out, portfolio,
+                                         payment_currency, location, quantity, local, book,
+                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
+                                         kdend, fx_data)
+
+        elif method == "cover_future":
+            closing_method = "FIFO"
+            scheduler.schedule_event(tradedate, futures_domain.cover_future, portfolio, investment,
+                                     location, quantity, local, book, closing_method,
+                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                                     payment_currency, tdate_fx, notional, price, fx_data)
+
+            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
+                # Schedule settlement event
+                scheduler.schedule_event(
+                    settledate, currency_domain.settle_pay_rec_by_tranid, portfolio, investment, location, quantity,
+                    local, book,
+                    space, tranid, "FutureSettlement", tradedate, settledate, kdbegin,
+                    kdend, payment_currency, smf, fx_data)
+
+
         elif method == "sell_future":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, futures_domain.sell_future, portfolio, investment,
@@ -466,132 +555,6 @@ def core_schedule_events(
                                          payment_currency, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, fx_data)
-
-        if method == "short_bond":
-            scheduler.schedule_event(tradedate, bond_domain.buy_bond, portfolio,
-                                     investment,
-                                     location, quantity, local, book, space, tranid,
-                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                                     smf, accrued_local, accrued_book, "Asset/Liability")
-
-            scheduler.schedule_event(
-                tradedate,
-                currency_domain.open_receivable,
-                portfolio, payment_currency,
-                location, local, book, space,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                "Receivable"
-            )
-
-            if accrued_local is not None and accrued_local != 0:
-                scheduler.schedule_event(
-                    tradedate,
-                    currency_domain.open_receivable,
-                    portfolio, payment_currency,
-                    location, accrued_local, accrued_book, space,
-                    tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                    "SoldInterestReceivable"
-                )
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in,
-                                         portfolio, payment_currency, investment, location, quantity, local, book,
-                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local, accrued_book, fx_data)
-
-                # Schedule another event to update SMF record status
-
-                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status, smf,
-                                         tranid, "Settled", portfolio)
-
-        if method == "short_future":
-            scheduler.schedule_event(tradedate, futures_domain.short_future, portfolio, investment,
-                                     location, quantity, local, book, space, tranid,
-                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                                     tdate_fx, notional, price)
-
-            if local != 0:
-                scheduler.schedule_event(
-                    tradedate,
-                    currency_domain.open_payable,
-                    portfolio, payment_currency,
-                    location, local, book, space,
-                    tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                    "Payable"
-                )
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"] and local != 0:
-                scheduler.schedule_event(settledate, currency_domain.settle_pay_rec_by_tranid, portfolio,
-                                         payment_currency, location, quantity, local, book,
-                                         space, tranid, "FuturesSettlement", tradedate, settledate, kdbegin,
-                                         kdend, payment_currency, smf, fx_data)
-
-
-        elif method == "cover_equity" or method == "cover_option":
-            closing_method = "FIFO"
-            scheduler.schedule_event(tradedate, equity_domain.cover_equity, portfolio, investment,
-                                     location, quantity, local, book, closing_method,
-                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, tdate_fx)
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_single_flow_out, portfolio,
-                                         payment_currency, location, quantity, local, book,
-                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, fx_data)
-        elif method == "cover_bond":
-            closing_method = "FIFO"
-            scheduler.schedule_event(tradedate, bond_domain.cover_bond, portfolio, investment,
-                                     location, quantity, local, book, closing_method,
-                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, smf, accrued_local,
-                                     accrued_book)
-
-            scheduler.schedule_event(
-                tradedate,
-                currency_domain.open_payable,
-                portfolio, payment_currency,
-                location, local, book, space,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                "Payable"
-            )
-
-            scheduler.schedule_event(
-                tradedate,
-                currency_domain.open_payable,
-                portfolio, payment_currency,
-                location, local, book, space,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                "PurchasedInterestPayable"
-            )
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
-                                         portfolio,
-                                         payment_currency, investment, location, quantity, local, book,
-                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local,
-                                         accrued_book, fx_data)
-                # Schedule another event to update SMF record status
-                scheduler.schedule_event(settledate,
-                                         bond_domain.schedule_update_smf_record_status, smf,
-                                         tranid, "Settled", portfolio)
-
-        elif method == "cover_future":
-            closing_method = "FIFO"
-            scheduler.schedule_event(tradedate, futures_domain.cover_future, portfolio, investment,
-                                     location, quantity, local, book, closing_method,
-                                     space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, tdate_fx, notional, price, fx_data)
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                # Schedule settlement event
-                scheduler.schedule_event(
-                    settledate, currency_domain.settle_pay_rec_by_tranid, portfolio, investment, location, quantity,
-                    local, book,
-                    space, tranid, "FutureSettlement", tradedate, settledate, kdbegin,
-                    kdend, payment_currency, smf, fx_data)
-
 
         elif method == "dividend_equity":
             scheduler.schedule_event(tradedate, equity_domain.dividend_equity, portfolio, investment,

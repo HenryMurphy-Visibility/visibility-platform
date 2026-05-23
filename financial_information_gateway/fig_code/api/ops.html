@@ -466,7 +466,7 @@
     <div class="widget-body">
       <div class="form-grid">
         <div class="form-group"><label>Portfolio *</label><input id="ev-portfolio" placeholder="e.g. Portfolio3"></div>
-        <div class="form-group"><label>Method *</label><select id="ev-method" onchange="onMethodChange()"><optgroup label="Currency"><option value="deposit_currency">Deposit Currency</option><option value="withdraw_currency">Withdraw Currency</option><option value="spot_fx">Spot FX</option></optgroup><optgroup label="Equity"><option value="buy_equity">Buy Equity</option><option value="sell_equity">Sell Equity</option><option value="short_equity">Short Equity</option><option value="cover_equity">Cover Equity</option><option value="dividend_equity">Dividend</option><option value="split_equity">Stock Split</option></optgroup><optgroup label="Bond"><option value="buy_bond">Buy Bond</option><option value="sell_bond">Sell Bond</option><option value="bond_coupon">Bond Coupon</option></optgroup><optgroup label="Future"><option value="buy_future">Buy Future</option><option value="sell_future">Sell Future</option><option value="short_future">Short Future</option><option value="cover_future">Cover Future</option></optgroup><optgroup label="Option"><option value="buy_option">Buy Option</option><option value="sell_option">Sell Option</option><option value="short_option">Write Option</option><option value="cover_option">Cover Option</option></optgroup></select></div>
+        <div class="form-group"><label>Method *</label><select id="ev-method" onchange="onMethodChange()"><optgroup label="Currency"><option value="deposit_currency">Deposit Currency</option><option value="withdraw_currency">Withdraw Currency</option><option value="spot_fx">Spot FX</option></optgroup><optgroup label="Equity"><option value="buy_equity">Buy Equity</option><option value="sell_equity">Sell Equity</option><option value="short_equity">Short Equity</option><option value="cover_equity">Cover Equity</option><option value="dividend_equity">Dividend</option><option value="split_equity">Stock Split</option></optgroup><optgroup label="Bond"><option value="buy_bond">Buy Bond</option><option value="sell_bond">Sell Bond</option><option value="short_bond">Short Bond</option><option value="cover_bond">Cover Bond</option><option value="bond_coupon">Bond Coupon</option></optgroup><optgroup label="Future"><option value="buy_future">Buy Future</option><option value="sell_future">Sell Future</option><option value="short_future">Short Future</option><option value="cover_future">Cover Future</option></optgroup><optgroup label="Option"><option value="buy_option">Buy Option</option><option value="sell_option">Sell Option</option><option value="short_option">Write Option</option><option value="cover_option">Cover Option</option></optgroup></select></div>
         <div class="form-group"><label>Investment *</label><input id="ev-investment" placeholder="e.g. AAPL" onblur="onInvestmentBlur()"><div id="ev-inv-preview" class="inv-preview"></div></div>
         <div class="form-group"><label>Payment Currency</label><input id="ev-currency" value="USD"></div>
         <div class="form-group"><label>Trade Date *</label><input type="date" id="ev-tradedate"></div>
@@ -641,11 +641,6 @@
           <input id="jv-portfolio" placeholder="e.g. Portfolio3">
         </div>
         <div class="form-group">
-          <label>Tran ID (optional)</label>
-          <input id="jv-tranid" type="number" placeholder="leave blank for all">
-          <div class="field-hint">Find in View Events</div>
-        </div>
-        <div class="form-group">
           <label>Calendar</label>
           <select id="jv-calendar">
             <option value="Monthly">Monthly</option>
@@ -653,6 +648,26 @@
             <option value="Quarterly">Quarterly</option>
             <option value="Yearly">Yearly</option>
           </select>
+        </div>
+        <div class="form-group">
+          <label>Period From (optional)</label>
+          <input id="jv-period-from" placeholder="e.g. 2026-01">
+          <div class="field-hint">Leave blank for all periods</div>
+        </div>
+        <div class="form-group">
+          <label>Period To (optional)</label>
+          <input id="jv-period-to" placeholder="e.g. 2026-03">
+          <div class="field-hint">Leave blank for all periods</div>
+        </div>
+        <div class="form-group">
+          <label>Investment (optional)</label>
+          <input id="jv-investment" placeholder="e.g. BND000">
+          <div class="field-hint">Filter by investment</div>
+        </div>
+        <div class="form-group">
+          <label>Tran ID (optional)</label>
+          <input id="jv-tranid" type="number" placeholder="leave blank for all">
+          <div class="field-hint">Find in View Events</div>
         </div>
       </div>
       <div class="btn-row">
@@ -847,7 +862,7 @@ const METHOD_TYPE_MAP = {
   deposit_currency:  'CURRENCY', withdraw_currency: 'CURRENCY', spot_fx: 'CURRENCY',
   buy_equity:        'EQUITY',   sell_equity:       'EQUITY',   short_equity: 'EQUITY',
   cover_equity:      'EQUITY',   dividend_equity:   'EQUITY',   split_equity: 'EQUITY',
-  buy_bond:          'BOND',     sell_bond:         'BOND',     bond_coupon:  'BOND',
+  buy_bond:          'BOND',     sell_bond:         'BOND',     short_bond:   'BOND',     cover_bond:   'BOND',     bond_coupon:  'BOND',
   short_bond:        'BOND',     cover_bond:        'BOND',
   buy_future:        'FUTURE',   sell_future:       'FUTURE',   short_future: 'FUTURE',   cover_future: 'FUTURE',
   buy_option:        'OPTION',   sell_option:       'OPTION',   short_option: 'OPTION',   cover_option: 'OPTION',
@@ -988,7 +1003,7 @@ async function addBondInfoToPortfolio(investment, portfolio) {
 }
 
 // ── METHOD FIELD SETS ──────────────────────────────────────
-const METHOD_FIELDS = { deposit_currency: ['mf-deposit'], withdraw_currency: ['mf-deposit'], spot_fx: ['mf-spot'], buy_equity: ['mf-qty-price'], sell_equity: ['mf-qty-price'], short_equity: ['mf-qty-price'], cover_equity: ['mf-qty-price'], dividend_equity: ['mf-dividend'], split_equity: ['mf-split'], buy_bond: ['mf-qty-price', 'mf-bond'], sell_bond: ['mf-qty-price', 'mf-bond'], bond_coupon: ['mf-dividend'], buy_future: ['mf-qty-price'], sell_future: ['mf-qty-price'], short_future: ['mf-qty-price'], cover_future: ['mf-qty-price'], buy_option: ['mf-qty-price'], sell_option: ['mf-qty-price'], short_option: ['mf-qty-price'], cover_option: ['mf-qty-price'] };
+const METHOD_FIELDS = { deposit_currency: ['mf-deposit'], withdraw_currency: ['mf-deposit'], spot_fx: ['mf-spot'], buy_equity: ['mf-qty-price'], sell_equity: ['mf-qty-price'], short_equity: ['mf-qty-price'], cover_equity: ['mf-qty-price'], dividend_equity: ['mf-dividend'], split_equity: ['mf-split'], buy_bond: ['mf-qty-price', 'mf-bond'], sell_bond: ['mf-qty-price', 'mf-bond'], short_bond: ['mf-qty-price', 'mf-bond'], cover_bond: ['mf-qty-price', 'mf-bond'], bond_coupon: ['mf-dividend'], buy_future: ['mf-qty-price'], sell_future: ['mf-qty-price'], short_future: ['mf-qty-price'], cover_future: ['mf-qty-price'], buy_option: ['mf-qty-price'], sell_option: ['mf-qty-price'], short_option: ['mf-qty-price'], cover_option: ['mf-qty-price'] };
 function onMethodChange() {
   const method = document.getElementById('ev-method').value;
   document.querySelectorAll('.method-fields').forEach(el => el.classList.remove('show'));
@@ -1302,9 +1317,12 @@ async function viewCorrections() {
 
 // ── JE VIEWER ──────────────────────────────────────────────
 async function viewJEs() {
-  const portfolio = document.getElementById('jv-portfolio').value.trim();
-  const tranid    = document.getElementById('jv-tranid').value.trim();
-  const calendar  = document.getElementById('jv-calendar').value;
+  const portfolio  = document.getElementById('jv-portfolio').value.trim();
+  const calendar   = document.getElementById('jv-calendar').value;
+  const tranid     = document.getElementById('jv-tranid').value.trim();
+  const investment = document.getElementById('jv-investment').value.trim().toUpperCase();
+  const periodFrom = document.getElementById('jv-period-from').value.trim();
+  const periodTo   = document.getElementById('jv-period-to').value.trim();
   const sp = document.getElementById('sp-jv');
   const st = document.getElementById('st-jv');
   const rb = document.getElementById('rb-jv');
@@ -1314,7 +1332,7 @@ async function viewJEs() {
   sp.classList.add('show'); st.textContent = 'Loading JEs...'; rb.classList.remove('show');
 
   try {
-    let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=5000`;
+    let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=50000`;
     if (tranid) url += `&tranid=${tranid}`;
 
     const res  = await fetch(url);
@@ -1330,10 +1348,25 @@ async function viewJEs() {
     const head = document.getElementById('je-thead');
     const body = document.getElementById('je-tbody');
 
-    if (data.entries && data.entries.length > 0) {
+    let entries = data.entries || [];
+
+    // ── CLIENT-SIDE FILTERS ─────────────────────────────────────
+    // Period filter — ibor_date is YYYY-MM-DD, period is YYYY-MM
+    if (periodFrom) {
+      entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) >= periodFrom);
+    }
+    if (periodTo) {
+      entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) <= periodTo);
+    }
+    // Investment filter
+    if (investment) {
+      entries = entries.filter(je => (je.investment || '').toUpperCase() === investment);
+    }
+
+    if (entries.length > 0) {
       const cols = ['tranid','entry_type','transaction','investment','lotid','ibor_date','tradedate','ls','financial_account','quantity','local','book','location'];
       head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
-      body.innerHTML = data.entries.map(je => `<tr>${cols.map(c => {
+      body.innerHTML = entries.map(je => `<tr>${cols.map(c => {
         let val = je[c] != null ? je[c] : '';
         if (c === 'local' || c === 'book') {
           const n = parseFloat(val);
@@ -1342,12 +1375,18 @@ async function viewJEs() {
         return `<td>${val}</td>`;
       }).join('')}</tr>`).join('');
       tbl.style.display = '';
-      st.textContent = `${data.je_count} JE line(s)${tranid ? ' for tranid=' + tranid : ''}`;
+
+      // Build filter description
+      const filters = [];
+      if (tranid)     filters.push(`tranid=${tranid}`);
+      if (investment) filters.push(`investment=${investment}`);
+      if (periodFrom || periodTo) filters.push(`period ${periodFrom||'start'}–${periodTo||'now'}`);
+      st.textContent = `${entries.length} JE line(s)${filters.length ? ' · ' + filters.join(' · ') : ''}`;
     } else {
       tbl.style.display = 'none';
       st.textContent = 'No JEs found';
       rb.className = 'result-box show info';
-      rb.textContent = `No journal entries found in ${portfolio}/${calendar}.\n\nPossible reasons:\n  · Not yet processed\n  · Try Force Bootstrap + Reprocess\n  · Wrong calendar selected`;
+      rb.textContent = `No journal entries found in ${portfolio}/${calendar}.\n\nPossible reasons:\n  · Not yet processed\n  · Try Force Bootstrap + Reprocess\n  · Wrong calendar selected\n  · Filter too narrow`;
       rb.style.display = 'block';
     }
   } catch(e) { st.textContent = 'Connection error'; }

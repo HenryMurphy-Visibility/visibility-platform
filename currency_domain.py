@@ -218,33 +218,22 @@ def settle_single_flow_out(portfolio, payment_currency, location, quantity, loca
     return
 
 
-
 def settle_bond_flows_out(portfolio, payment_currency, investment, location, quantity, local,
                           book, space, tranid, transaction, tradedate, settledate,
-                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
+                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data, ls="l"):
 
-    ibor_date = settledate
-    je = Journals(portfolio, payment_currency, tranid, tradedate, "s", location, "Payable", local, local,
-                  book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+    ibor_date = settledate #close total payable including accrued
+    je = Journals(portfolio, payment_currency, tranid, tradedate, "s", location, "Payable", local + accrued_local, accrued_local + local,
+                  accrued_book + book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
     space.post_journal_entry(je)
 
     if accrued_local != 0:
 
-        je = Journals(portfolio, payment_currency, tranid, tradedate, "s", location, "PurchasedInterestPayable",
-                      accrued_local, accrued_local,
-                      accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
-                      "Asset/Liability")
-        space.post_journal_entry(je)
-
-        je = Journals(portfolio, investment, tranid, None, "l", location, "PurchasedInterest", -accrued_local, -accrued_local,
+        je = Journals(portfolio, investment, tranid, 0, ls, location, "PurchasedInterest", -accrued_local, -accrued_local,
                       -accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
                       "Asset/Liability")
         space.post_journal_entry(je)
 
-        je = Journals(portfolio, payment_currency, tranid, None, "n", location, "AccruedInterestReceivable", accrued_local,
-                      accrued_local, accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
-                      "Revenue/Expense/Capital")
-        space.post_journal_entry(je)
 
     fx_rate = get_fx_rate(payment_currency, settledate, fx_data)
     # fx_rate =1
@@ -302,25 +291,18 @@ def settle_bond_flows_out(portfolio, payment_currency, investment, location, qua
 
 def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
                           book,  space, tranid, transaction, tradedate, settledate,
-                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
+                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data,ls ="l"):
 
     # close receivable
     ibor_date = settledate
-    je = Journals(portfolio, payment_currency, tranid, tradedate,"l", location,  "Receivable", -local, -local,
-                  -book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+    je = Journals(portfolio, payment_currency, tranid, tradedate,"l", location,  "Receivable", -accrued_local + -local, -accrued_local + -local,
+                 -accrued_book + -book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
     space.post_journal_entry(je)
 
     if accrued_local !=0:
-        je = Journals(portfolio, payment_currency, tranid, tradedate,"l", location, "SoldInterestReceivable", -accrued_local, -accrued_local,
-                      -accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
-        space.post_journal_entry(je)
 
-        je = Journals(portfolio, investment, tranid, tradedate,"s", location, "SoldInterest", accrued_local, accrued_local,
+        je = Journals(portfolio, investment, tranid, 0, ls, location, "SoldInterest", accrued_local, accrued_local,
                       accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
-        space.post_journal_entry(je)
-
-        je = Journals(portfolio, investment, tranid, settledate, "n", location, "AccruedInterestReceivable", -accrued_local, -accrued_local,
-                      -accrued_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Revenue/Expense/Capital")
         space.post_journal_entry(je)
 
     fx_rate = get_fx_rate(payment_currency, settledate, fx_data)
@@ -367,10 +349,10 @@ def settle_bond_flows_in(portfolio, payment_currency, investment, location, quan
     # ------------------------------------------------------------------
     # 🚩 FINAL STEP: Remove bond stats ONLY after settlement AND netting
     # ------------------------------------------------------------------
-    if smf.is_fully_settled_and_netted(tranid):
-        space.statistical_repository.delete_investment(portfolio, investment)
-
-    return
+    # if smf.is_fully_settled_and_netted(tranid):
+    #     space.statistical_repository.delete_investment(portfolio, investment)
+    #
+    # return
 
 
 
