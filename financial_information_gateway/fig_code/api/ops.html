@@ -310,8 +310,8 @@
     <div class="nav-item stub">Accruals &amp; Bond Info <span class="nav-stub-badge">sprint</span></div>
 
     <div class="nav-section">Calendars</div>
-    <div class="nav-item stub">View Calendar <span class="nav-stub-badge">sprint</span></div>
-    <div class="nav-item stub">Add Calendar <span class="nav-stub-badge">sprint</span></div>
+    <div class="nav-item" onclick="show('view-calendar', this)">View Calendar</div>
+
 
     <div class="nav-section">Processing</div>
     <div class="nav-item" onclick="show('process', this)">Process</div>
@@ -674,10 +674,9 @@
   <div class="widget widget-stub" id="w-fx"><div class="widget-head"><div class="widget-title">FX</div><div class="widget-desc">View and add foreign exchange rates</div></div><div class="widget-body"><div class="stub-icon">💱</div><div class="stub-title">FX Rate Management</div><div class="stub-desc">View FX rate history, add manual overrides, identify missing rates.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
   <div class="widget widget-stub" id="w-marks-management"><div class="widget-head"><div class="widget-title">Marks Management</div><div class="widget-desc">View marks file, identify gaps, trigger rebuild</div></div><div class="widget-body"><div class="stub-icon">📊</div><div class="stub-title">Marks Management</div><div class="stub-desc">Review the marks file, identify missing marks, trigger rebuild.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
   <div class="widget widget-stub" id="w-accruals"><div class="widget-head"><div class="widget-title">Accruals &amp; Bond Info</div><div class="widget-desc">Review and modify bond reference data</div></div><div class="widget-body"><div class="stub-icon">📎</div><div class="stub-title">Accruals &amp; Bond Info</div><div class="stub-desc">View and modify bond reference data including coupon rates, maturity dates, day count conventions.</div><div class="stub-sprint">Bond Sprint</div></div></div>
-  <div class="widget widget-stub" id="w-view-calendar"><div class="widget-head"><div class="widget-title">View Calendar</div><div class="widget-desc">Read-only period viewer</div></div><div class="widget-body"><div class="stub-icon">📅</div><div class="stub-title">Calendar Viewer</div><div class="stub-desc">View all periods for a portfolio calendar. Period management is in the Oversight Console.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
-  <div class="widget widget-stub" id="w-add-calendar"><div class="widget-head"><div class="widget-title">Add Calendar</div><div class="widget-desc">Add a new calendar type to an existing portfolio</div></div><div class="widget-body"><div class="stub-icon">🗓️</div><div class="stub-title">Add Calendar</div><div class="stub-desc">Add Daily, Quarterly, or Yearly calendars after portfolio creation.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
 
-  <!-- ── JE VIEWER ─────────────────────────────────────────── -->
+  <div class="widget" id="w-view-calendar"><div class="widget-head"><div class="widget-title">View Calendar</div><div class="widget-desc">Period structure for a portfolio calendar</div></div><div class="widget-body"><div class="form-grid"><div class="form-group"><label>Portfolio *</label><input id="vc2-portfolio" placeholder="e.g. Portfolio1"></div><div class="form-group"><label>Calendar</label><select id="vc2-calendar"><option value="Monthly">Monthly</option><option value="Daily">Daily</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select></div></div><div class="btn-row"><button class="btn btn-primary" onclick="viewCalendar()">Load</button><div class="spinner" id="sp-vc2"></div><div class="status info" id="st-vc2"></div></div><div style="overflow-x:auto;margin-top:16px"><table id="cal-table" style="display:none"><thead id="cal-thead"></thead><tbody id="cal-tbody"></tbody></table></div></div></div>
+
   <!-- ── JE VIEWER ─────────────────────────────────────────── -->
 <div class="widget" id="w-je-viewer">
   <div class="widget-head">
@@ -1512,6 +1511,31 @@ async function computeAmounts() {
     const hint = document.getElementById('ev-book-fx-hint');
     if (hint) hint.innerHTML = `FX: <span>${fxRate}</span>`;
   }
+}
+
+async function viewCalendar() {
+  const portfolio = document.getElementById('vc2-portfolio').value.trim();
+  const calendar  = document.getElementById('vc2-calendar').value;
+  const sp = document.getElementById('sp-vc2');
+  const st = document.getElementById('st-vc2');
+  if (!portfolio) { st.textContent = 'Portfolio required'; return; }
+  sp.classList.add('show'); st.textContent = 'Loading...';
+  try {
+    const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/calendar/${calendar}`);
+    const data = await res.json();
+    if (!res.ok) { st.textContent = `Error: ${data.detail}`; sp.classList.remove('show'); return; }
+    const tbl  = document.getElementById('cal-table');
+    const head = document.getElementById('cal-thead');
+    const body = document.getElementById('cal-tbody');
+    const cols = ['period_name', 'status', 'period_start', 'period_cutoff', 'knowledge'];
+    head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
+    body.innerHTML = (data.periods || []).map(p =>
+      `<tr>${cols.map(c => `<td>${p[c] || ''}</td>`).join('')}</tr>`
+    ).join('');
+    tbl.style.display = '';
+    st.textContent = `${data.period_count} periods`;
+  } catch(e) { st.textContent = 'Connection error'; }
+  sp.classList.remove('show');
 }
 
 </script>

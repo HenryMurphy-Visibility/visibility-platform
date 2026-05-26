@@ -689,6 +689,41 @@ def validate_event_endpoint(portfolio_id: str = Query(...), body: dict = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@ops_router.get("/portfolio/{portfolio_id}/calendar/{calendar}")
+def view_calendar(portfolio_id: str, calendar: str):
+    try:
+        cal_path = Path(FUNDS_PATH) / portfolio_id / "Calendars" / calendar / f"{calendar}.txt"
+        if not cal_path.exists():
+            raise HTTPException(status_code=404,
+                detail=f"Calendar '{calendar}' not found for {portfolio_id}")
+
+        periods = []
+        with open(cal_path) as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    rec = json.loads(line)
+                    periods.append({
+                        "period_name":   rec.get("period_name"),
+                        "status":        rec.get("period_status"),
+                        "period_start":  rec.get("current_period_start"),
+                        "period_cutoff": rec.get("current_period_cutoff"),
+                        "knowledge":     rec.get("current_period_knowledge"),
+                    })
+                except Exception:
+                    continue
+
+        return {"portfolio": portfolio_id, "calendar": calendar,
+                "period_count": len(periods), "periods": periods}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 # ============================================================
 # FX RATE LOOKUP
 # ============================================================
