@@ -17,6 +17,7 @@ FUNDS_PATH   = os.path.join(BASE_PATH, "funds")
 REFDATA_PATH = os.path.join(BASE_PATH, "refdata")
 REPORTS_PATH = os.path.join(BASE_PATH, "reports")
 VIEWS_PATH   = os.path.join(BASE_PATH, "views")
+CHEST_PATH   = BASE_PATH
 
 API_HOST     = os.environ.get("VISIBILITY_API_HOST", "127.0.0.1")
 API_PORT     = int(os.environ.get("VISIBILITY_API_PORT", "8000"))

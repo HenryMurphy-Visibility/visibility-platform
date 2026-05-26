@@ -170,6 +170,7 @@ def mark_prices(
         return
 
     pricing_factor = attributes.get("pricing_factor", 1)
+    contract_size = attributes.get("contract_size", 1)
 
     # --------------------------------------------------------------
     # 5. PROCESS EACH POSITION
@@ -180,11 +181,12 @@ def mark_prices(
             stat_repo, space,
             price, fx_rate,
             location, ls, pos_fields,
-            pricing_factor
+            pricing_factor,
+            contract_size
         )
 
 def process_position(portfolio, investment, mark_date, stat_repo, space,
-                     price, fx_rate, location, ls, position_data, pricing_factor):
+                     price, fx_rate, location, ls, position_data, pricing_factor, contract_size):
     """
     Processes a single position during mark pricing with safe numeric conversions.
     Preserves original valuation and posting logic; eliminates float('') crashes.
@@ -210,13 +212,14 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     px        = safe_float(price, 0.0)
     fx_rate_f = safe_float(fx_rate, 1.0)
     pf        = safe_float(pricing_factor, 1.0)
+    cs        = safe_float(contract_size, 1.0)
 
     # ---- Skip if no quantity ----
     if position_qty == 0.0:
         return
 
     # ---- Market values (preserve your formulae) ----
-    mktval_local = position_qty * px * pf - position_notional
+    mktval_local = position_qty * px * pf * cs - position_notional
     mktval_book  = mktval_local * fx_rate_f
 
     # ---- Post current market value ----

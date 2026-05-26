@@ -45,14 +45,14 @@ from financial_information_gateway.fig_code.compute_performance import (
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.api.app_routes import router
 
-from cph_routes import cph_router
-
-from ops_routes import ops_router
-
+from cph_routes       import cph_router
+from ops_routes       import ops_router
 from oversight_routes import oversight_router
-
-from tips_routes import tips_router
-
+from tips_routes      import tips_router
+from auth_routes      import auth_router
+from auth_manager     import init_auth
+from auth_middleware  import AuthMiddleware
+from v_config         import CHEST_PATH
 
 
 # ============================================================
@@ -78,6 +78,7 @@ def _parse_period_start(period_start: str) -> datetime:
         return datetime.strptime(period_start + "-01", "%Y-%m-%d")
     return datetime.strptime(period_start, "%Y-%m-%d")
 
+
 # ============================================================
 # STARTUP
 # ============================================================
@@ -89,29 +90,13 @@ async def lifespan(app):
     print("  Starting up...")
     print("=" * 60)
 
+    # ── AUTH ──────────────────────────────────────────────
+    init_auth(CHEST_PATH)
+    print(">>> Auth initialized")
+
     print(">>> Building price and FX indexes...")
     _ensure_price_index()
     print(">>> Price index ready")
-
-    # ── PERFORMANCE CACHE — uncomment for production ──────────
-    # print(">>> Building performance cache...")
-    # try:
-    #     prep = prep_state("Portfolio1", "Monthly", "2021-01", "2025-12")
-    #     compute_performance(
-    #         portfolio="Portfolio1",
-    #         calendar="Monthly",
-    #         period_start="2021-01",
-    #         period_end="2025-12",
-    #         level="investment",
-    #         cadence=None,
-    #         uber_filter=None,
-    #         prep=prep,
-    #     )
-    #     print(">>> Performance cache ready")
-    # except Exception as e:
-    #     print(f">>> Performance cache build FAILED: {e}")
-    #     traceback.print_exc()
-    #     print(">>> Server will continue")
 
     print(">>> All indexes ready — accepting requests")
     print("=" * 60)
@@ -142,8 +127,11 @@ app = FastAPI(
     openapi_url="/api/v1/openapi.json",
     lifespan=lifespan,
 )
+
 from fastapi.staticfiles import StaticFiles
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
+# ── MIDDLEWARE — order matters ─────────────────────────────
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(
     CORSMiddleware,
@@ -151,44 +139,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+app.add_middleware(AuthMiddleware)
+
+# ── ROUTERS ────────────────────────────────────────────────
+app.include_router(router)
+app.include_router(cph_router)
+app.include_router(ops_router)
+app.include_router(oversight_router)
+app.include_router(tips_router)
+app.include_router(auth_router)
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
 
-# ============================================================
-# IP WHITELIST
-# Add allowed IP addresses here.
-# "127.0.0.1" = localhost (always allow for your own testing)
-# Add ngrok recipient IPs as needed
-# ============================================================
-#
-# ALLOWED_IPS = {
-#     "127.0.0.1",       # localhost — always allowed
-#     "::1",             # localhost IPv6
-#     "2605:59ca:4246:5808:40e0:c5bd:2dd3:5cdb",
-#     "2600:1700:2923:1020:4906:2069:f7b9:67f1",
-#      "2601:195:8180:2520:2866:66f7:82ef:2901",
-#     "192.168.1.27"
-#     # "203.0.113.45",  # example — add recipient IPs here
-# }
-#
-# @app.middleware("http")
-# async def ip_whitelist(request: Request, call_next):
-#     client_ip = request.client.host
-#     if client_ip not in ALLOWED_IPS:
-#         return JSONResponse(
-#             status_code=403,
-#             content={"detail": f"Access denied."}
-#         )
-#     return await call_next(request)
-# Register all rev/exp and balance sheet routes
-app.include_router(router)
-app.include_router(cph_router)# After existing include_router lines
-app.include_router(ops_router)
 
-app.include_router(oversight_router)
+# ============================================================
+# LOGIN PAGE
+# ============================================================
 
-app.include_router(tips_router)
+@app.get("/login", response_class=HTMLResponse)
+def login_page():
+    import os
+    login_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "login.html")
+    with open(login_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
+# ============================================================
+# LANDING PAGE
+# ============================================================
 
 @app.get("/", response_class=HTMLResponse)
 def landing():
@@ -227,7 +206,6 @@ def landing():
             padding: 60px 40px;
         }
 
-        /* subtle radial glow behind logo */
         body::before {
             content: '';
             position: fixed;
@@ -248,7 +226,6 @@ def landing():
             gap: 0;
         }
 
-        /* ── LOGO + TITLE ─────────────────────────────── */
         .brand {
             display: flex;
             flex-direction: column;
@@ -283,7 +260,6 @@ def landing():
             margin-top: -8px;
         }
 
-        /* ── DIVIDER ──────────────────────────────────── */
         .divider {
             width: 100%;
             height: 1px;
@@ -292,7 +268,6 @@ def landing():
             margin-bottom: 40px;
         }
 
-        /* ── WELCOME TEXT ─────────────────────────────── */
         .welcome {
             text-align: center;
             margin-bottom: 52px;
@@ -335,7 +310,6 @@ def landing():
             margin: 0 auto;
         }
 
-        /* ── CONSOLE BUTTONS ──────────────────────────── */
         .consoles {
             display: flex;
             flex-wrap: wrap;
@@ -402,7 +376,6 @@ def landing():
             text-transform: uppercase;
         }
 
-        /* ── FOOTER ───────────────────────────────────── */
         .footer {
             font-family: var(--mono);
             font-size: 0.62em;
@@ -418,7 +391,6 @@ def landing():
 <body>
 <div class="container">
 
-    <!-- Brand -->
     <div class="brand">
         <img src="/static/visibility.png" alt="Visibility">
         <div class="brand-title">Visibility</div>
@@ -427,7 +399,6 @@ def landing():
 
     <div class="divider"></div>
 
-    <!-- Welcome -->
     <div class="welcome">
 
         <div class="exclusive">Invitation Only</div>
@@ -463,7 +434,6 @@ def landing():
 
     </div>
 
-    <!-- Console Buttons -->
     <div class="consoles">
         <a href="/ops" class="console-btn primary">
             <span class="console-label">OPS</span>
@@ -491,7 +461,6 @@ def landing():
         </a>
     </div>
 
-    <!-- Footer -->
     <div class="footer">
         Visibility &nbsp;·&nbsp; Chest Financial Systems &nbsp;·&nbsp;
         Henry J. Murphy, Founder &nbsp;·&nbsp; Confidential
@@ -502,6 +471,7 @@ def landing():
 </html>
 """
 
+
 @app.get("/console", response_class=HTMLResponse)
 def console():
     """Visibility compute console."""
@@ -510,7 +480,7 @@ def console():
     with open(console_path, "r") as f:
         return f.read()
 
-# After the /console route
+
 @app.get("/fig", response_class=HTMLResponse)
 def fig_console():
     import os
@@ -541,6 +511,8 @@ def oversight_console():
     oversight_path = os.path.join(os.path.dirname(__file__), "..", "..", "..", "oversight.html")
     with open(oversight_path, "r", encoding="utf-8") as f:
         return f.read()
+
+
 # ============================================================
 # HEALTH
 # ============================================================
@@ -582,16 +554,7 @@ def compute_accounting_ledger_endpoint(
     page_size:    int           = Query(1000, ge=1, le=10000),
     ppa_date:     Optional[str] = Query(None, description="PPA IBOR date YYYY-MM-DD. Defaults to first day of period."),
 ):
-
     print(f">>> LEDGER | ppa_date={ppa_date} | period_start={period_start} | period_end={period_end}")
-    """
-    ## Accounting Ledger (compute_accounting_ledger)
-
-    Complete financial state at tax lot level.
-    Every account. Every lot. Every journal entry.
-    Opening balances, activity, and closing balances —
-    consistent by construction.
-    """
     try:
         uber_filter   = {"investment": investment} if investment else None
         ppa_ibor_date = (
@@ -621,7 +584,6 @@ def compute_accounting_ledger_csv(
     investment:   Optional[str] = Query(None),
     ppa_date:     Optional[str] = Query(None),
 ):
-    """Accounting Ledger — CSV Download"""
     try:
         uber_filter   = {"investment": investment} if investment else None
         ppa_ibor_date = (
@@ -669,14 +631,6 @@ def compute_appraisal_endpoint(
     page:         int           = Query(1,              ge=1),
     page_size:    int           = Query(500,            ge=1, le=5000),
 ):
-    """
-    ## Portfolio Appraisal (compute_appraisal)
-
-    Point-in-time appraisal at tax lot level.
-    Market value and price gain calculated fresh from price data.
-    504 investments · 17,575 lots · 826,320 price observations.
-    Full portfolio: ~3.7 seconds V-side.
-    """
     try:
         uber_filter = {"investment": investment} if investment else None
         result      = compute_appraisal(
@@ -706,7 +660,6 @@ def compute_appraisal_csv(
     investment:   Optional[str] = Query(None),
     summary_only: bool          = Query(False),
 ):
-    """Appraisal — CSV Download"""
     try:
         uber_filter = {"investment": investment} if investment else None
         result      = compute_appraisal(
@@ -749,12 +702,6 @@ def compute_position_ledger_endpoint(
     page:         int           = Query(1,    ge=1),
     page_size:    int           = Query(1000, ge=1, le=10000),
 ):
-    """
-    ## Position Ledger (compute_position_ledger)
-
-    Position-level ledger — tax lots collapsed to investment level.
-    Opening balance, period activity, closing balance per investment.
-    """
     try:
         uber_filter   = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
@@ -779,7 +726,6 @@ def compute_position_ledger_csv(
     period_end:   str           = Query(...),
     investment:   Optional[str] = Query(None),
 ):
-    """Position Ledger — CSV Download"""
     try:
         uber_filter   = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
@@ -823,13 +769,6 @@ def compute_performance_endpoint(
     page:         int           = Query(1,            ge=1),
     page_size:    int           = Query(1000,         ge=1, le=10000),
 ):
-    """
-    ## Performance (compute_performance)
-
-    Chained Time-Weighted Returns for any period range, level, and cadence.
-    Daily grain is always the computational foundation.
-    Period_Index chained across all periods — unbroken from day 1.
-    """
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
         prep        = prep_state(portfolio, calendar, period_start, period_end)
@@ -857,7 +796,6 @@ def compute_performance_csv(
     cadence:      Optional[str] = Query(None),
     investment:   Optional[str] = Query(None),
 ):
-    """Performance — CSV Download"""
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
         prep        = prep_state(portfolio, calendar, period_start, period_end)
@@ -902,23 +840,6 @@ def compute_recon_endpoint(
     page:         int           = Query(1,    ge=1),
     page_size:    int           = Query(1000, ge=1, le=10000),
 ):
-    """
-    ## Master Reconciliation (compute_recon)
-
-    Proves the complete NAV equation for every investment:
-
-        Opening NAV
-        + Capital Flows
-        + Income
-        + Realized Gains
-        + Change in Unrealized
-        = Closing NAV
-
-    Look for **all_clear: true** in the performance block.
-
-    This is not a reconciliation process.
-    It is a proof that the architecture makes one unnecessary.
-    """
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
         prep        = prep_state(portfolio, calendar, period_start, period_end)
@@ -944,7 +865,6 @@ def compute_recon_endpoint(
 
 # ============================================================
 # GENERIC COMPUTE ENDPOINT
-# Builds prep_state automatically from request body params.
 # ============================================================
 
 @app.post("/api/v1/compute/{function_name}")
@@ -952,15 +872,6 @@ def compute_endpoint(
     function_name: str,
     params:        dict,
 ):
-    """
-    ## Generic Compute Endpoint
-
-    Calls any registered compute function by name.
-    prep_state built automatically from portfolio, calendar,
-    period_start, period_end in the request body.
-
-    Use /api/v1/registry to see all available functions.
-    """
     if function_name not in COMPUTE_REGISTRY:
         raise HTTPException(
             status_code=404,

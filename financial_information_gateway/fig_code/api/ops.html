@@ -59,7 +59,7 @@
   .nav-section:first-child { border-top: none; margin-top: 0; }
   .nav-item {
     display: block; padding: 9px 20px; font-family: var(--mono); font-size: 0.78em;
-    color: var(--muted); cursor: pointer; border-left: 2px solid transparent;
+    colo: var(--muted); cursor: pointer; border-left: 2px solid transparent;
     transition: all 0.15s; user-select: none;
   }
   .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
@@ -142,7 +142,7 @@
   .portfolio-list { display: flex; flex-direction: column; gap: 8px; }
   .portfolio-card { padding: 12px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 2px; display: flex; align-items: center; gap: 16px; font-family: var(--mono); font-size: 0.78em; }
   .portfolio-card .pid { color: #fff; font-size: 0.9em; }
-  .portfolio-card .pmeta { color: var(--muted); font-size: 0.85em; }
+  .portfolio-card .pmeta { color: var(--muted2); font-size: 0.85em; }
   .portfolio-card .pstatus { margin-left: auto; color: var(--success-t); }
 
   .checkbox-group { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 4px; }
@@ -154,7 +154,6 @@
   td { padding: 6px 10px; border-bottom: 1px solid rgba(26,30,46,0.5); white-space: nowrap; color: var(--text); }
   tr:hover td { background: rgba(46,95,163,0.05); }
 
-  /* Correction display */
   .correction-card {
     background: var(--bg); border: 1px solid var(--border);
     border-radius: 2px; margin-bottom: 12px; overflow: hidden;
@@ -180,7 +179,6 @@
   .correction-field span { color: var(--muted); margin-right: 6px; }
   .correction-field.changed { color: var(--warn-t); }
 
-  /* Event preview card */
   .event-preview {
     background: rgba(46,95,163,0.05); border: 1px solid rgba(46,95,163,0.2);
     padding: 14px 16px; margin-bottom: 16px; border-radius: 2px;
@@ -191,7 +189,6 @@
   .event-preview-field { color: var(--text); }
   .event-preview-field span { color: var(--muted); }
 
-  /* Warning banner */
   .action-banner {
     padding: 10px 14px; margin-bottom: 16px;
     font-family: var(--mono); font-size: 0.7em; line-height: 1.8;
@@ -200,7 +197,6 @@
   .action-banner.danger { background: rgba(122,42,42,0.1); border: 1px solid rgba(224,85,85,0.2); color: var(--fail-t); border-left: 3px solid var(--fail-t); }
   .action-banner.warn   { background: rgba(122,90,8,0.1);  border: 1px solid rgba(230,168,23,0.2); color: var(--warn-t); border-left: 3px solid var(--warn-t); }
 
-  /* VTips + UTips */
   .tips-toggle { display: inline-flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: 0.65em; letter-spacing: 1px; color: var(--muted); background: transparent; border: 1px solid var(--border); padding: 3px 10px; cursor: pointer; border-radius: 2px; transition: all 0.15s; margin-left: auto; user-select: none; }
   .tips-toggle:hover { border-color: var(--accent2); color: var(--text); }
   .tips-toggle.has-warning { border-color: #b8860b; color: #e6a817; }
@@ -257,7 +253,6 @@
   .utip-cancel-btn:hover { border-color: var(--muted); color: var(--text); }
   .tips-empty { padding: 16px; font-family: var(--mono); font-size: 0.7em; color: var(--muted); text-align: center; }
 
-  /* Investment preview card */
   .inv-preview {
     display: none; padding: 8px 12px; margin-top: 4px;
     background: rgba(46,95,163,0.06); border: 1px solid rgba(46,95,163,0.2);
@@ -267,6 +262,14 @@
   .inv-preview.err  { border-color: rgba(224,85,85,0.3); color: var(--fail-t); background: rgba(122,42,42,0.06); }
   .inv-preview.ok   { border-color: rgba(42,122,74,0.3); color: var(--success-t); background: rgba(42,122,74,0.06); }
   .inv-preview.warn { border-color: rgba(122,90,8,0.3); color: var(--warn-t); background: rgba(122,90,8,0.06); }
+
+  /* ── FUTURES NOTIONAL DISPLAY ── */
+  .notional-computed {
+    background: rgba(46,95,163,0.08) !important;
+    border-color: rgba(46,95,163,0.35) !important;
+    color: #7eb8f7 !important;
+    font-weight: 500;
+  }
 </style>
 </head>
 <body>
@@ -429,12 +432,12 @@
         <div class="form-group"><label>Country</label><input id="ai-country" placeholder="e.g. US"></div>
         <div class="form-group"><label>Sector</label><input id="ai-sector" placeholder="e.g. Technology"></div>
         <div class="form-group"><label>Analyst</label><input id="ai-analyst" placeholder="e.g. TED"></div>
-        <div class="form-group"><label>Pricing Factor</label><input id="ai-pf" value="1" type="number"><div class="field-hint">Bonds: <span>0.01</span> · Equities: <span>1</span></div></div>
+        <div class="form-group"><label>Pricing Factor</label><input id="ai-pf" value="1" type="number"><div class="field-hint">Bonds: <span>0.01</span> · Futures: <span>1</span> · Equities: <span>1</span></div></div>
         <div class="form-group" id="fg-is-currency" style="display:none"><label>Is Currency</label><select id="ai-is-currency"><option value="true">Yes</option><option value="false">No</option></select></div>
         <div class="form-group" id="fg-underlying" style="display:none"><label>Underlying</label><input id="ai-underlying" placeholder="e.g. AAPL"></div>
         <div class="form-group" id="fg-putcall" style="display:none"><label>Put / Call</label><select id="ai-putcall"><option value="CALL">Call</option><option value="PUT">Put</option></select></div>
         <div class="form-group" id="fg-strike" style="display:none"><label>Strike</label><input id="ai-strike" type="number" placeholder="0.00"></div>
-        <div class="form-group" id="fg-contract-size" style="display:none"><label>Contract Size</label><input id="ai-contract-size" type="number" placeholder="100"></div>
+        <div class="form-group" id="fg-contract-size" style="display:none"><label>Contract Size</label><input id="ai-contract-size" type="number" placeholder="e.g. 50 for ES, 1000 for CL"><div class="field-hint">Instrument multiplier — <span>not pricing_factor</span></div></div>
       </div>
       <div class="btn-row"><button class="btn btn-primary" onclick="addInvestment()">Add Investment</button><div class="spinner" id="sp-ai"></div><div class="status" id="st-ai"></div></div>
       <div class="result-box" id="rb-ai"></div>
@@ -475,8 +478,14 @@
         <div class="form-group"><label>Location</label><input id="ev-location" placeholder="e.g. Goldman"></div>
       </div>
       <hr class="section-divider">
-      <div id="mf-qty-price" class="method-fields"><div class="form-group"><label>Quantity</label><input id="ev-qty" type="number" value="0"></div><div class="form-group"><label>Price</label><input id="ev-price" type="number" value="0"></div><div class="form-group"><label>Total Amount (Local)</label><input id="ev-local" type="number" value="0"></div><div class="form-group"><label>Total Amount (Base)</label><input id="ev-book" type="number" value="0"></div></div>
+
+      <!-- Standard qty/price fields (equity, option) -->
+      <div id="mf-qty-price" class="method-fields"><div class="form-group"><label>Quantity</label><input id="ev-qty" type="number" value="0" onblur="computeAmounts()"></div><div class="form-group"><label>Price</label><input id="ev-price" type="number" value="0" onblur="computeAmounts()"></div><div class="form-group"><label>Total Amount (Local)</label><input id="ev-local" type="number" value="0"></div><div class="form-group"><label>Total Amount (Base)</label><input id="ev-book" type="number" value="0"><div class="field-hint" id="ev-book-fx-hint"></div></div></div>
+
+      <!-- Currency deposit/withdraw -->
       <div id="mf-deposit" class="method-fields"><div class="form-group"><label>Amount (Local)</label><input id="ev-dep-local" type="number" value="0"></div><div class="form-group"><label>Amount (Base)</label><input id="ev-dep-book" type="number" value="0"></div></div>
+
+      <!-- Bond extra fields -->
       <div id="mf-bond" class="method-fields"><div class="form-group"><label>Accrued Interest (Local)</label><input id="ev-accrued-local" type="number" value="0"></div><div class="form-group"><label>Accrued Interest (Base)</label><input id="ev-accrued-book" type="number" value="0"></div><div class="form-group"><label>Original Face</label><input id="ev-oface" type="number" value="0"><div class="field-hint">ABS only — leave 0 for standard bonds</div></div><div class="form-group"><label>Notional</label><input id="ev-notional" type="number" value="0"></div>
         <div class="form-group full" style="margin-top:8px">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -485,9 +494,57 @@
           </div>
         </div>
       </div>
+
+      <!-- Dividend -->
       <div id="mf-dividend" class="method-fields"><div class="form-group"><label>Per Share Amount</label><input id="ev-per-share" type="number" value="0"></div></div>
+
+      <!-- Split -->
       <div id="mf-split" class="method-fields"><div class="form-group"><label>New Shares</label><input id="ev-new-shares" type="number" value="0"></div><div class="form-group"><label>Old Shares</label><input id="ev-old-shares" type="number" value="0"></div></div>
+
+      <!-- ── FUTURES ── NEW BLOCK ───────────────────────────────── -->
+      <div id="mf-future" class="method-fields">
+        <div class="form-group">
+          <label>Contract Quantity</label>
+          <input id="ev-fut-qty" type="number" value="0" onblur="computeAmounts()">
+          <div class="field-hint">Number of contracts</div>
+        </div>
+        <div class="form-group">
+          <label>Price</label>
+          <input id="ev-fut-price" type="number" value="0" onblur="computeAmounts()">
+          <div class="field-hint">Quoted price per contract unit</div>
+        </div>
+        <div class="form-group">
+          <label>Contract Size</label>
+          <input id="ev-fut-contract-size" type="number" value="0" readonly tabindex="-1"
+                 style="opacity:0.6;cursor:default;border-style:dashed">
+          <div class="field-hint">From IM — <span>instrument multiplier</span></div>
+        </div>
+        <div class="form-group">
+          <label>Pricing Factor</label>
+          <input id="ev-fut-pf" type="number" value="1" readonly tabindex="-1"
+                 style="opacity:0.6;cursor:default;border-style:dashed">
+          <div class="field-hint">From IM</div>
+        </div>
+        <div class="form-group">
+          <label>Notional</label>
+          <input id="ev-fut-notional" type="number" value="0" readonly tabindex="-1" class="notional-computed">
+          <div class="field-hint"><span>qty × price × contract_size × pf</span></div>
+        </div>
+        <div class="form-group">
+          <label>Total Amount (Local)</label>
+          <input id="ev-fut-local" type="number" value="0">
+          <div class="field-hint">Commissions / fees — <span>future dev</span></div>
+        </div>
+        <div class="form-group">
+          <label>Total Amount (Base)</label>
+          <input id="ev-fut-book" type="number" value="0">
+          <div class="field-hint">Commissions / fees — <span>future dev</span></div>
+        </div>
+      </div>
+
+      <!-- Spot FX -->
       <div id="mf-spot" class="method-fields"><div class="form-group"><label>Buy Currency</label><input id="ev-buy-ccy" placeholder="e.g. EUR"></div><div class="form-group"><label>Sell Currency</label><input id="ev-sell-ccy" placeholder="e.g. USD"></div><div class="form-group"><label>Buy Amount</label><input id="ev-buy-amt" type="number" value="0"></div><div class="form-group"><label>Sell Amount</label><input id="ev-sell-amt" type="number" value="0"></div></div>
+
       <div class="btn-row" style="margin-top:20px">
         <button class="btn btn-primary" onclick="addEvent()">Add Event</button>
         <button class="btn btn-secondary" onclick="clearEvent()">Clear</button>
@@ -534,13 +591,10 @@
         <div class="form-group"><label>Tran ID *</label><input id="rv-tranid" type="number" placeholder="e.g. 3"><div class="field-hint">Find in View Events</div></div>
         <div class="form-group full"><label>Reason</label><input id="rv-reason" placeholder="e.g. Incorrect investment — rebooked as tranid 7"></div>
       </div>
-
-      <!-- Event preview -->
       <div id="rv-preview" style="display:none" class="event-preview">
         <div class="event-preview-head">Event to be reversed</div>
         <div class="event-preview-fields" id="rv-preview-fields"></div>
       </div>
-
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="previewEvent('rv')">Preview Event</button>
         <button class="btn btn-danger" onclick="reverseEvent()">Reverse Event</button>
@@ -566,16 +620,12 @@
         <div class="form-group"><label>Tran ID to Correct *</label><input id="mv-tranid" type="number" placeholder="e.g. 3"><div class="field-hint">Find in View Events</div></div>
         <div class="form-group full"><label>Correction Reason *</label><input id="mv-reason" placeholder="e.g. Wrong quantity entered — correcting from 100 to 1000"></div>
       </div>
-
-      <!-- Original event preview -->
       <div id="mv-preview" style="display:none" class="event-preview">
         <div class="event-preview-head">Original event — fields below override this</div>
         <div class="event-preview-fields" id="mv-preview-fields"></div>
       </div>
-
       <hr class="section-divider">
       <div style="font-family:var(--mono);font-size:0.65em;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px;">Corrected Values — leave blank to keep original</div>
-
       <div class="form-grid">
         <div class="form-group"><label>Investment</label><input id="mv-investment" placeholder="leave blank = unchanged"></div>
         <div class="form-group"><label>Quantity</label><input id="mv-quantity" type="number" placeholder="leave blank = unchanged"></div>
@@ -587,7 +637,6 @@
         <div class="form-group"><label>Payment Currency</label><input id="mv-currency" placeholder="leave blank = unchanged"></div>
         <div class="form-group"><label>Location</label><input id="mv-location" placeholder="leave blank = unchanged"></div>
       </div>
-
       <div class="btn-row">
         <button class="btn btn-secondary" onclick="previewEvent('mv')">Preview Original</button>
         <button class="btn btn-warn" onclick="modifyEvent()">Apply Correction</button>
@@ -636,39 +685,12 @@
     </div>
     <div class="widget-body">
       <div class="form-grid">
-        <div class="form-group">
-          <label>Portfolio *</label>
-          <input id="jv-portfolio" placeholder="e.g. Portfolio3">
-        </div>
-        <div class="form-group">
-          <label>Calendar</label>
-          <select id="jv-calendar">
-            <option value="Monthly">Monthly</option>
-            <option value="Daily">Daily</option>
-            <option value="Quarterly">Quarterly</option>
-            <option value="Yearly">Yearly</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Period From (optional)</label>
-          <input id="jv-period-from" placeholder="e.g. 2026-01">
-          <div class="field-hint">Leave blank for all periods</div>
-        </div>
-        <div class="form-group">
-          <label>Period To (optional)</label>
-          <input id="jv-period-to" placeholder="e.g. 2026-03">
-          <div class="field-hint">Leave blank for all periods</div>
-        </div>
-        <div class="form-group">
-          <label>Investment (optional)</label>
-          <input id="jv-investment" placeholder="e.g. BND000">
-          <div class="field-hint">Filter by investment</div>
-        </div>
-        <div class="form-group">
-          <label>Tran ID (optional)</label>
-          <input id="jv-tranid" type="number" placeholder="leave blank for all">
-          <div class="field-hint">Find in View Events</div>
-        </div>
+        <div class="form-group"><label>Portfolio *</label><input id="jv-portfolio" placeholder="e.g. Portfolio3"></div>
+        <div class="form-group"><label>Calendar</label><select id="jv-calendar"><option value="Monthly">Monthly</option><option value="Daily">Daily</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select></div>
+        <div class="form-group"><label>Period From (optional)</label><input id="jv-period-from" placeholder="e.g. 2026-01"><div class="field-hint">Leave blank for all periods</div></div>
+        <div class="form-group"><label>Period To (optional)</label><input id="jv-period-to" placeholder="e.g. 2026-03"><div class="field-hint">Leave blank for all periods</div></div>
+        <div class="form-group"><label>Investment (optional)</label><input id="jv-investment" placeholder="e.g. BND000"><div class="field-hint">Filter by investment</div></div>
+        <div class="form-group"><label>Tran ID (optional)</label><input id="jv-tranid" type="number" placeholder="leave blank for all"><div class="field-hint">Find in View Events</div></div>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="viewJEs()">Load JEs</button>
@@ -676,10 +698,7 @@
         <div class="status info" id="st-jv"></div>
       </div>
       <div style="overflow-x:auto;margin-top:16px">
-        <table id="je-table" style="display:none">
-          <thead id="je-thead"></thead>
-          <tbody id="je-tbody"></tbody>
-        </table>
+        <table id="je-table" style="display:none"><thead id="je-thead"></thead><tbody id="je-tbody"></tbody></table>
       </div>
       <div class="result-box" id="rb-jv"></div>
     </div>
@@ -791,7 +810,6 @@ document.addEventListener('DOMContentLoaded', function() {
       const val = this.value;
       const kd = document.getElementById('ev-kdbegin');
       if (kd && !kd.value) kd.value = val;
-      // Settle date: T+2 for equity trades, T+0 otherwise
       const settle = document.getElementById('ev-settledate');
       if (settle && !settle.value) {
         const method = document.getElementById('ev-method').value;
@@ -807,9 +825,8 @@ document.addEventListener('DOMContentLoaded', function() {
   onMethodChange(); loadPortfolios();
 });
 
-// ── US HOLIDAYS (embedded — matches kernel) ───────────────────
+// ── US HOLIDAYS ───────────────────────────────────────────────
 const US_HOLIDAYS = new Set([
-  // 2019-2027
   '2019-01-01','2019-01-21','2019-02-18','2019-05-27','2019-07-04','2019-09-02','2019-10-14','2019-11-11','2019-11-28','2019-12-25',
   '2020-01-01','2020-01-20','2020-02-17','2020-05-25','2020-07-03','2020-09-07','2020-10-12','2020-11-11','2020-11-26','2020-12-25',
   '2021-01-01','2021-01-18','2021-02-15','2021-05-31','2021-07-05','2021-09-06','2021-10-11','2021-11-11','2021-11-25','2021-12-24',
@@ -823,7 +840,7 @@ const US_HOLIDAYS = new Set([
 
 function isBusinessDay(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
-  const dow = d.getDay(); // 0=Sun 6=Sat
+  const dow = d.getDay();
   return dow !== 0 && dow !== 6 && !US_HOLIDAYS.has(dateStr);
 }
 
@@ -838,8 +855,8 @@ function addBusinessDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
-// ── INVESTMENT MASTER CACHE (per portfolio) ────────────────────
-const _invCache = {};  // portfolio → { investment → record }
+// ── INVESTMENT MASTER CACHE ────────────────────────────────────
+const _invCache = {};
 
 async function _loadInvestments(portfolio) {
   if (_invCache[portfolio]) return _invCache[portfolio];
@@ -852,20 +869,16 @@ async function _loadInvestments(portfolio) {
     });
     _invCache[portfolio] = map;
     return map;
-  } catch(e) {
-    return {};
-  }
+  } catch(e) { return {}; }
 }
 
-// Method → required investment type
 const METHOD_TYPE_MAP = {
-  deposit_currency:  'CURRENCY', withdraw_currency: 'CURRENCY', spot_fx: 'CURRENCY',
-  buy_equity:        'EQUITY',   sell_equity:       'EQUITY',   short_equity: 'EQUITY',
-  cover_equity:      'EQUITY',   dividend_equity:   'EQUITY',   split_equity: 'EQUITY',
-  buy_bond:          'BOND',     sell_bond:         'BOND',     short_bond:   'BOND',     cover_bond:   'BOND',     bond_coupon:  'BOND',
-  short_bond:        'BOND',     cover_bond:        'BOND',
-  buy_future:        'FUTURE',   sell_future:       'FUTURE',   short_future: 'FUTURE',   cover_future: 'FUTURE',
-  buy_option:        'OPTION',   sell_option:       'OPTION',   short_option: 'OPTION',   cover_option: 'OPTION',
+  deposit_currency: 'CURRENCY', withdraw_currency: 'CURRENCY', spot_fx: 'CURRENCY',
+  buy_equity: 'EQUITY', sell_equity: 'EQUITY', short_equity: 'EQUITY',
+  cover_equity: 'EQUITY', dividend_equity: 'EQUITY', split_equity: 'EQUITY',
+  buy_bond: 'BOND', sell_bond: 'BOND', short_bond: 'BOND', cover_bond: 'BOND', bond_coupon: 'BOND',
+  buy_future: 'FUTURE', sell_future: 'FUTURE', short_future: 'FUTURE', cover_future: 'FUTURE',
+  buy_option: 'OPTION', sell_option: 'OPTION', short_option: 'OPTION', cover_option: 'OPTION',
 };
 
 async function onInvestmentBlur() {
@@ -880,9 +893,8 @@ async function onInvestmentBlur() {
   const rec    = invMap[investment];
 
   if (!rec) {
-    // Not in portfolio IM — check global master
-    preview.className   = 'inv-preview warn show';
-    preview.innerHTML   = `<span style="color:var(--warn-t)">⚠ ${investment} not in ${portfolio} IM — checking global master...</span>`;
+    preview.className = 'inv-preview warn show';
+    preview.innerHTML = `<span style="color:var(--warn-t)">⚠ ${investment} not in ${portfolio} IM — checking global master...</span>`;
     try {
       const gres  = await fetch(`${BASE}/api/v1/ops/global/investment/${investment}`);
       const gdata = await gres.json();
@@ -893,7 +905,6 @@ async function onInvestmentBlur() {
         const pf   = gr.pricing_factor || 1;
         const name = gr.full_name || investment;
         const hasBond = gdata.bond_info !== null;
-
         preview.className = 'inv-preview warn show';
         preview.innerHTML =
           `<div style="color:var(--warn-t);margin-bottom:6px">⚠ ${investment} found in global master — not yet in ${portfolio} IM</div>` +
@@ -914,9 +925,7 @@ async function onInvestmentBlur() {
   }
 
   // Auto-populate payment currency
-  if (rec.currency) {
-    document.getElementById('ev-currency').value = rec.currency;
-  }
+  if (rec.currency) document.getElementById('ev-currency').value = rec.currency;
 
   // Validate type matches method
   const requiredType = METHOD_TYPE_MAP[method];
@@ -929,81 +938,79 @@ async function onInvestmentBlur() {
   }
 
   preview.className   = 'inv-preview ok show';
-  preview.textContent = `${actualType} · ${rec.currency} · pf=${rec.pricing_factor}${rec.full_name ? ' · ' + rec.full_name : ''}`;
+  preview.textContent = `${actualType} · ${rec.currency} · pf=${rec.pricing_factor}${rec.contract_size && parseFloat(rec.contract_size) ? ' · cs=' + rec.contract_size : ''}${rec.full_name ? ' · ' + rec.full_name : ''}`;
+
+  // ── FUTURES — populate read-only IM fields and trigger notional compute ──
+  if (actualType === 'FUTURE') {
+    const csEl = document.getElementById('ev-fut-contract-size');
+    const pfEl = document.getElementById('ev-fut-pf');
+    if (csEl) csEl.value = rec.contract_size || 0;
+    if (pfEl) pfEl.value = rec.pricing_factor || 1;
+    computeFutureNotional();
+  }
 }
 
 // ── ADD TO PORTFOLIO IM FROM GLOBAL MASTER ─────────────────────
 async function addToPortfolioIM(investment, portfolio) {
   const preview = document.getElementById('ev-inv-preview');
   try {
-    // Get full record from global master
     const gres  = await fetch(`${BASE}/api/v1/ops/global/investment/${investment}`);
     const gdata = await gres.json();
     if (!gdata.found) { preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Global master lookup failed</div>'; return; }
-
     const gr = gdata.investment;
     const body = {
-      investment:      gr.investment,
-      full_name:       gr.full_name || gr.investment,
-      investment_type: gr.investment_type || 'EQUITY',
-      currency:        gr.currency || 'USD',
-      is_currency:     (gr.is_currency === '1' || gr.is_currency === 'true'),
-      country:         gr.country || null,
-      asset_class:     gr.asset_class || gr.investment_type || 'EQUITY',
-      sector:          gr.sector || null,
-      analyst:         gr.analyst || null,
-      pricing_factor:  parseFloat(gr.pricing_factor) || 1,
-      contract_size:   parseFloat(gr.contract_size) || 0,
+      investment: gr.investment, full_name: gr.full_name || gr.investment,
+      investment_type: gr.investment_type || 'EQUITY', currency: gr.currency || 'USD',
+      is_currency: (gr.is_currency === '1' || gr.is_currency === 'true'),
+      country: gr.country || null, asset_class: gr.asset_class || gr.investment_type || 'EQUITY',
+      sector: gr.sector || null, analyst: gr.analyst || null,
+      pricing_factor: parseFloat(gr.pricing_factor) || 1,
+      contract_size: parseFloat(gr.contract_size) || 0,
     };
-
     const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investment`, {
       method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
     });
     const data = await res.json();
-
     if (res.ok) {
-      // Invalidate cache and re-run blur
       delete _invCache[portfolio];
       preview.innerHTML = `<span style="color:var(--success-t)">✓ ${investment} added to ${portfolio} IM</span>`;
       setTimeout(() => onInvestmentBlur(), 300);
     } else {
       preview.innerHTML += `<div style="color:var(--fail-t);margin-top:4px">Error: ${data.detail}</div>`;
     }
-  } catch(e) {
-    preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Connection error</div>';
-  }
+  } catch(e) { preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Connection error</div>'; }
 }
 
-// ── ADD BOND INFO TO PORTFOLIO FROM GLOBAL MASTER ──────────────
 async function addBondInfoToPortfolio(investment, portfolio) {
   const preview = document.getElementById('ev-inv-preview');
   try {
     const gres  = await fetch(`${BASE}/api/v1/ops/global/investment/${investment}`);
     const gdata = await gres.json();
     if (!gdata.found || !gdata.bond_info) {
-      preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Bond info not found in global master</div>';
-      return;
+      preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Bond info not found in global master</div>'; return;
     }
-
-    // Write bond info to portfolio RefData/bond_info.csv
     const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/bond_info`, {
-      method: 'POST', headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(gdata.bond_info)
+      method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(gdata.bond_info)
     });
     const data = await res.json();
-
-    if (res.ok) {
-      preview.innerHTML += `<div style="color:var(--success-t);margin-top:4px">✓ Bond info added to ${portfolio}</div>`;
-    } else {
-      preview.innerHTML += `<div style="color:var(--fail-t);margin-top:4px">Error: ${data.detail}</div>`;
-    }
-  } catch(e) {
-    preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Connection error</div>';
-  }
+    if (res.ok) { preview.innerHTML += `<div style="color:var(--success-t);margin-top:4px">✓ Bond info added to ${portfolio}</div>`; }
+    else { preview.innerHTML += `<div style="color:var(--fail-t);margin-top:4px">Error: ${data.detail}</div>`; }
+  } catch(e) { preview.innerHTML += '<div style="color:var(--fail-t);margin-top:4px">Connection error</div>'; }
 }
 
 // ── METHOD FIELD SETS ──────────────────────────────────────
-const METHOD_FIELDS = { deposit_currency: ['mf-deposit'], withdraw_currency: ['mf-deposit'], spot_fx: ['mf-spot'], buy_equity: ['mf-qty-price'], sell_equity: ['mf-qty-price'], short_equity: ['mf-qty-price'], cover_equity: ['mf-qty-price'], dividend_equity: ['mf-dividend'], split_equity: ['mf-split'], buy_bond: ['mf-qty-price', 'mf-bond'], sell_bond: ['mf-qty-price', 'mf-bond'], short_bond: ['mf-qty-price', 'mf-bond'], cover_bond: ['mf-qty-price', 'mf-bond'], bond_coupon: ['mf-dividend'], buy_future: ['mf-qty-price'], sell_future: ['mf-qty-price'], short_future: ['mf-qty-price'], cover_future: ['mf-qty-price'], buy_option: ['mf-qty-price'], sell_option: ['mf-qty-price'], short_option: ['mf-qty-price'], cover_option: ['mf-qty-price'] };
+const METHOD_FIELDS = {
+  deposit_currency: ['mf-deposit'], withdraw_currency: ['mf-deposit'], spot_fx: ['mf-spot'],
+  buy_equity: ['mf-qty-price'], sell_equity: ['mf-qty-price'], short_equity: ['mf-qty-price'], cover_equity: ['mf-qty-price'],
+  dividend_equity: ['mf-dividend'], split_equity: ['mf-split'],
+  buy_bond: ['mf-qty-price', 'mf-bond'], sell_bond: ['mf-qty-price', 'mf-bond'],
+  short_bond: ['mf-qty-price', 'mf-bond'], cover_bond: ['mf-qty-price', 'mf-bond'],
+  bond_coupon: ['mf-dividend'],
+  // ── FUTURES → dedicated mf-future block ──
+  buy_future: ['mf-future'], sell_future: ['mf-future'], short_future: ['mf-future'], cover_future: ['mf-future'],
+  buy_option: ['mf-qty-price'], sell_option: ['mf-qty-price'], short_option: ['mf-qty-price'], cover_option: ['mf-qty-price'],
+};
+
 function onMethodChange() {
   const method = document.getElementById('ev-method').value;
   document.querySelectorAll('.method-fields').forEach(el => el.classList.remove('show'));
@@ -1012,29 +1019,28 @@ function onMethodChange() {
     const ccy = document.getElementById('ev-currency').value;
     document.getElementById('ev-investment').value = ccy;
   }
-  // Re-trigger settle date calc if trade date already set
   const tradeEl = document.getElementById('ev-tradedate');
   const settle  = document.getElementById('ev-settledate');
   if (tradeEl && tradeEl.value && settle) {
     const equityTrades = ['buy_equity','sell_equity','short_equity','cover_equity'];
-    if (equityTrades.includes(method)) {
-      settle.value = addBusinessDays(tradeEl.value, 2);
-    }
+    if (equityTrades.includes(method)) settle.value = addBusinessDays(tradeEl.value, 2);
   }
-  // Re-run investment validation if investment already entered
   const inv = document.getElementById('ev-investment');
   if (inv && inv.value) onInvestmentBlur();
 }
+
 function onInvestmentTypeChange() {
   const type = document.getElementById('ai-type').value;
   document.getElementById('fg-is-currency').style.display   = type === 'CURRENCY' ? '' : 'none';
   document.getElementById('fg-underlying').style.display    = type === 'OPTION'   ? '' : 'none';
   document.getElementById('fg-putcall').style.display       = type === 'OPTION'   ? '' : 'none';
   document.getElementById('fg-strike').style.display        = type === 'OPTION'   ? '' : 'none';
-  document.getElementById('fg-contract-size').style.display = type === 'FUTURE'   ? '' : 'none';
+  document.getElementById('fg-contract-size').style.display = (type === 'FUTURE' || type === 'OPTION') ? '' : 'none';
   if (type === 'CURRENCY') { document.getElementById('ai-is-currency').value = 'true'; document.getElementById('ai-pf').value = '1'; }
   if (type === 'BOND')     { document.getElementById('ai-pf').value = '0.01'; }
+  if (type === 'FUTURE')   { document.getElementById('ai-pf').value = '1'; }
 }
+
 function onPresetChange() { document.getElementById('fg-custom-calendars').style.display = document.getElementById('cp-preset').value === 'Custom' ? '' : 'none'; }
 function getSelectedCalendars() {
   const preset = document.getElementById('cp-preset').value; if (preset !== 'Custom') return null;
@@ -1110,7 +1116,7 @@ async function addInvestment() {
   sp.classList.add('show'); st.textContent = 'Adding...'; st.className = 'status info';
   try {
     const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investment`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }); const data = await res.json();
-    if (res.ok) { st.textContent = `✓ Added ${investment}`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `Investment '${investment}' added to ${portfolio}.\nType: ${type}`; document.getElementById('ai-investment').value = ''; document.getElementById('ai-name').value = ''; }
+    if (res.ok) { st.textContent = `✓ Added ${investment}`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `Investment '${investment}' added to ${portfolio}.\nType: ${type}${type === 'FUTURE' ? '\nContract size: ' + (body.contract_size || 0) + ' · Pricing factor: ' + body.pricing_factor : ''}`; document.getElementById('ai-investment').value = ''; document.getElementById('ai-name').value = ''; }
     else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
@@ -1124,10 +1130,24 @@ async function viewInvestments() {
   try {
     const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/investments`); const data = await res.json();
     const tbl = document.getElementById('inv-table'); const head = document.getElementById('inv-thead'); const body = document.getElementById('inv-tbody');
-    if (data.investments && data.investments.length > 0) { const cols = ['investment','full_name','investment_type','currency','country','sector','pricing_factor']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.investments.map(inv => `<tr>${cols.map(c => `<td>${inv[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} investments`; }
+    if (data.investments && data.investments.length > 0) { const cols = ['investment','full_name','investment_type','currency','country','sector','pricing_factor','contract_size']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.investments.map(inv => `<tr>${cols.map(c => `<td>${inv[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} investments`; }
     else { tbl.style.display = 'none'; st.textContent = 'No investments found'; }
   } catch(e) { st.textContent = 'Error'; }
   sp.classList.remove('show');
+}
+
+// ── FUTURE NOTIONAL COMPUTATION ────────────────────────────
+// notional = contract_quantity × price × contract_size × pricing_factor
+// contract_size and pricing_factor are read-only — populated from IM on investment blur
+function computeFutureNotional() {
+  const qty      = parseFloat(document.getElementById('ev-fut-qty')?.value)           || 0;
+  const prc      = parseFloat(document.getElementById('ev-fut-price')?.value)          || 0;
+  const cs       = parseFloat(document.getElementById('ev-fut-contract-size')?.value)  || 0;
+  const pf       = parseFloat(document.getElementById('ev-fut-pf')?.value)            || 1;
+  const notional = qty * prc * cs * pf;
+  const nEl = document.getElementById('ev-fut-notional');
+  if (nEl) nEl.value = parseFloat(notional.toFixed(2));
+  // Total Amount (local/base) left at 0 — commissions/fees entered manually (future dev)
 }
 
 // ── ADD EVENT ──────────────────────────────────────────────
@@ -1137,7 +1157,6 @@ async function addEvent() {
   const tradedateRaw = document.getElementById('ev-tradedate').value; const settledateRaw = document.getElementById('ev-settledate').value;
   if (!portfolio || !investment || !tradedateRaw || !settledateRaw) { st.textContent = 'Portfolio, investment, and dates required'; st.className = 'status err'; return; }
 
-  // Investment type validation — block submit if type mismatch
   const _requiredType = METHOD_TYPE_MAP[method];
   if (_requiredType) {
     const _invMap = await _loadInvestments(portfolio);
@@ -1149,12 +1168,52 @@ async function addEvent() {
       st.className = 'status err'; return;
     }
   }
-  const tradedate = toEventDate(tradedateRaw); const settledate = toEventDate(settledateRaw); const kdbeginRaw = document.getElementById('ev-kdbegin').value; const kdbegin = kdbeginRaw ? toEventDate(kdbeginRaw) : tradedate;
-  const body = { portfolio, method, investment, tradedate, settledate, kdbegin, kdend: "12/31/2099:00:00:00", payment_currency: document.getElementById('ev-currency').value.trim() || 'USD', location: document.getElementById('ev-location').value.trim(), quantity: parseFloat(document.getElementById('ev-qty')?.value) || 0, price: parseFloat(document.getElementById('ev-price')?.value) || 0, total_amount: parseFloat(document.getElementById('ev-local')?.value) || parseFloat(document.getElementById('ev-dep-local')?.value) || 0, total_amount_base: parseFloat(document.getElementById('ev-book')?.value) || parseFloat(document.getElementById('ev-dep-book')?.value) || 0, accrued_local: parseFloat(document.getElementById('ev-accrued-local')?.value) || 0, accrued_book: parseFloat(document.getElementById('ev-accrued-book')?.value) || 0, notional: parseFloat(document.getElementById('ev-notional')?.value) || 0, original_face: parseFloat(document.getElementById('ev-oface')?.value) || 0, per_share: parseFloat(document.getElementById('ev-per-share')?.value) || 0, new_shares: parseFloat(document.getElementById('ev-new-shares')?.value) || 0, old_shares: parseFloat(document.getElementById('ev-old-shares')?.value) || 0, buy_currency: document.getElementById('ev-buy-ccy')?.value.trim() || null, sell_currency: document.getElementById('ev-sell-ccy')?.value.trim() || null, buy_amt: parseFloat(document.getElementById('ev-buy-amt')?.value) || 0, sell_amt: parseFloat(document.getElementById('ev-sell-amt')?.value) || 0 };
+
+  const tradedate = toEventDate(tradedateRaw); const settledate = toEventDate(settledateRaw);
+  const kdbeginRaw = document.getElementById('ev-kdbegin').value; const kdbegin = kdbeginRaw ? toEventDate(kdbeginRaw) : tradedate;
+
+  const body = {
+    portfolio, method, investment, tradedate, settledate, kdbegin,
+    kdend: "12/31/2099:00:00:00",
+    payment_currency: document.getElementById('ev-currency').value.trim() || 'USD',
+    location: document.getElementById('ev-location').value.trim(),
+    quantity:          parseFloat(document.getElementById('ev-qty')?.value)          || 0,
+    price:             parseFloat(document.getElementById('ev-price')?.value)         || 0,
+    total_amount:      parseFloat(document.getElementById('ev-local')?.value)         || parseFloat(document.getElementById('ev-dep-local')?.value) || 0,
+    total_amount_base: parseFloat(document.getElementById('ev-book')?.value)          || parseFloat(document.getElementById('ev-dep-book')?.value)  || 0,
+    accrued_local:     parseFloat(document.getElementById('ev-accrued-local')?.value) || 0,
+    accrued_book:      parseFloat(document.getElementById('ev-accrued-book')?.value)  || 0,
+    notional:          parseFloat(document.getElementById('ev-notional')?.value)      || 0,
+    original_face:     parseFloat(document.getElementById('ev-oface')?.value)         || 0,
+    per_share:         parseFloat(document.getElementById('ev-per-share')?.value)     || 0,
+    new_shares:        parseFloat(document.getElementById('ev-new-shares')?.value)    || 0,
+    old_shares:        parseFloat(document.getElementById('ev-old-shares')?.value)    || 0,
+    buy_currency:      document.getElementById('ev-buy-ccy')?.value.trim()            || null,
+    sell_currency:     document.getElementById('ev-sell-ccy')?.value.trim()           || null,
+    buy_amt:           parseFloat(document.getElementById('ev-buy-amt')?.value)       || 0,
+    sell_amt:          parseFloat(document.getElementById('ev-sell-amt')?.value)      || 0,
+  };
+
+  // ── FUTURES — override qty/price/notional from futures fields ──
+  // total_amount/base read from ev-fut-local/book (user enters commissions/fees — future dev)
+  const _isFuture = ['buy_future','sell_future','short_future','cover_future'].includes(method);
+  if (_isFuture) {
+    body.quantity          = parseFloat(document.getElementById('ev-fut-qty')?.value)      || 0;
+    body.price             = parseFloat(document.getElementById('ev-fut-price')?.value)     || 0;
+    body.notional          = parseFloat(document.getElementById('ev-fut-notional')?.value)  || 0;
+    body.total_amount      = parseFloat(document.getElementById('ev-fut-local')?.value)     || 0;
+    body.total_amount_base = parseFloat(document.getElementById('ev-fut-book')?.value)      || 0;
+  }
+
   sp.classList.add('show'); st.textContent = 'Adding event...'; st.className = 'status info';
   try {
     const res = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) }); const data = await res.json();
-    if (res.ok) { st.textContent = `✓ Added (tranid=${data.tranid})`; st.className = 'status ok'; rb.className = 'result-box show pass'; rb.textContent = `${method} · ${investment} · ${tradedate}\ntranid: ${data.tranid} · closing_method: ${data.closing_method} · file: ${data.file}`; }
+    if (res.ok) {
+      const notionalStr = _isFuture ? ` · notional=${body.notional.toLocaleString('en-US',{minimumFractionDigits:2})}` : '';
+      st.textContent = `✓ Added (tranid=${data.tranid})`; st.className = 'status ok';
+      rb.className = 'result-box show pass';
+      rb.textContent = `${method} · ${investment} · ${tradedate}\ntranid: ${data.tranid} · closing_method: ${data.closing_method} · file: ${data.file}${notionalStr}`;
+    }
     else { st.textContent = `Error: ${data.detail}`; st.className = 'status err'; rb.className = 'result-box show fail'; rb.textContent = data.detail; }
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
@@ -1162,7 +1221,11 @@ async function addEvent() {
 
 function clearEvent() {
   document.getElementById('ev-investment').value = ''; document.getElementById('ev-tradedate').value = ''; document.getElementById('ev-settledate').value = ''; document.getElementById('ev-kdbegin').value = ''; document.getElementById('ev-location').value = '';
-  ['ev-qty','ev-price','ev-local','ev-book','ev-dep-local','ev-dep-book','ev-accrued-local','ev-accrued-book','ev-notional','ev-oface','ev-per-share','ev-new-shares','ev-old-shares','ev-buy-amt','ev-sell-amt'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '0'; });
+  ['ev-qty','ev-price','ev-local','ev-book','ev-dep-local','ev-dep-book','ev-accrued-local','ev-accrued-book','ev-notional','ev-oface','ev-per-share','ev-new-shares','ev-old-shares','ev-buy-amt','ev-sell-amt','ev-fut-qty','ev-fut-price','ev-fut-notional','ev-fut-local','ev-fut-book'].forEach(id => { const el = document.getElementById(id); if (el) el.value = '0'; });
+  // Reset futures IM-sourced fields
+  const csEl = document.getElementById('ev-fut-contract-size'); if (csEl) csEl.value = '0';
+  const pfEl = document.getElementById('ev-fut-pf'); if (pfEl) pfEl.value = '1';
+  document.getElementById('ev-inv-preview').className = 'inv-preview';
   document.getElementById('rb-ev').classList.remove('show'); document.getElementById('st-ev').textContent = '';
 }
 
@@ -1178,13 +1241,13 @@ async function viewEvents() {
   try {
     const res = await fetch(url); const data = await res.json();
     const tbl = document.getElementById('events-table'); const head = document.getElementById('events-thead'); const body = document.getElementById('events-tbody');
-    if (data.events && data.events.length > 0) { const cols = ['tranid','method','investment','tradedate','settledate','quantity','total_amount','payment_currency','location','closing_method']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.events.map(e => `<tr>${cols.map(c => `<td>${e[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} events`; }
+    if (data.events && data.events.length > 0) { const cols = ['tranid','method','investment','tradedate','settledate','quantity','price','notional','total_amount','payment_currency','location','closing_method']; head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`; body.innerHTML = data.events.map(e => `<tr>${cols.map(c => `<td>${e[c] || ''}</td>`).join('')}</tr>`).join(''); tbl.style.display = ''; st.textContent = `${data.count} events`; }
     else { tbl.style.display = 'none'; st.textContent = 'No events found'; }
   } catch(e) { st.textContent = 'Error loading events'; }
   sp.classList.remove('show');
 }
 
-// ── PREVIEW EVENT (shared by Reverse and Modify) ───────────
+// ── PREVIEW EVENT ──────────────────────────────────────────
 async function previewEvent(prefix) {
   const portfolio = document.getElementById(`${prefix}-portfolio`).value.trim();
   const tranid    = document.getElementById(`${prefix}-tranid`).value.trim();
@@ -1196,11 +1259,9 @@ async function previewEvent(prefix) {
     const ev = data.event;
     const previewEl  = document.getElementById(`${prefix}-preview`);
     const fieldsEl   = document.getElementById(`${prefix}-preview-fields`);
-    const showFields = ['tranid','method','investment','tradedate','settledate','quantity','price','total_amount','total_amount_base','payment_currency','location','kdbegin','kdend'];
+    const showFields = ['tranid','method','investment','tradedate','settledate','quantity','price','notional','total_amount','total_amount_base','payment_currency','location','kdbegin','kdend'];
     fieldsEl.innerHTML = showFields.map(f => `<div class="event-preview-field"><span>${f}:</span> ${ev[f] || '—'}</div>`).join('');
     previewEl.style.display = 'block';
-
-    // Pre-populate modify fields from original
     if (prefix === 'mv') {
       if (ev.investment) document.getElementById('mv-investment').placeholder = ev.investment;
       if (ev.quantity)   document.getElementById('mv-quantity').placeholder   = ev.quantity;
@@ -1239,8 +1300,6 @@ async function modifyEvent() {
   const sp = document.getElementById('sp-mv'); const st = document.getElementById('st-mv'); const rb = document.getElementById('rb-mv');
   if (!portfolio || !tranid) { st.textContent = 'Portfolio and Tran ID required'; st.className = 'status err'; return; }
   if (!reason) { st.textContent = 'Correction reason required'; st.className = 'status err'; return; }
-
-  // Build payload — only include fields that were filled in
   const body = { tranid, reason, actor: 'ops' };
   const inv = document.getElementById('mv-investment').value.trim(); if (inv) body.investment = inv.toUpperCase();
   const qty = document.getElementById('mv-quantity').value;          if (qty !== '') body.quantity = parseFloat(qty);
@@ -1251,7 +1310,6 @@ async function modifyEvent() {
   const sd  = document.getElementById('mv-settledate').value;        if (sd)  body.settledate = toEventDate(sd);
   const ccy = document.getElementById('mv-currency').value.trim();   if (ccy) body.payment_currency = ccy;
   const loc = document.getElementById('mv-location').value.trim();   if (loc) body.location = loc;
-
   sp.classList.add('show'); st.textContent = 'Applying correction...'; st.className = 'status info';
   try {
     const res  = await fetch(`${BASE}/api/v1/ops/portfolio/${portfolio}/event/modify`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body) });
@@ -1297,12 +1355,12 @@ async function viewCorrections() {
           <div class="correction-body">
             <div>
               <div class="correction-col-head">Original (sealed)</div>
-              ${['tranid','method','investment','tradedate','quantity','total_amount','payment_currency'].map(f => `<div class="correction-field"><span>${f}:</span>${orig[f] || '—'}</div>`).join('')}
+              ${['tranid','method','investment','tradedate','quantity','price','notional','total_amount','payment_currency'].map(f => `<div class="correction-field"><span>${f}:</span>${orig[f] || '—'}</div>`).join('')}
             </div>
             ${isModify ? `
             <div>
               <div class="correction-col-head">Correction (active)</div>
-              ${['tranid','method','investment','tradedate','quantity','total_amount','payment_currency'].map(f => {
+              ${['tranid','method','investment','tradedate','quantity','price','notional','total_amount','payment_currency'].map(f => {
                 const changed = corr[f] && orig[f] && corr[f] !== orig[f];
                 return `<div class="correction-field ${changed ? 'changed' : ''}"><span>${f}:</span>${corr[f] || '—'}${changed ? ' ←' : ''}</div>`;
               }).join('')}
@@ -1323,71 +1381,36 @@ async function viewJEs() {
   const investment = document.getElementById('jv-investment').value.trim().toUpperCase();
   const periodFrom = document.getElementById('jv-period-from').value.trim();
   const periodTo   = document.getElementById('jv-period-to').value.trim();
-  const sp = document.getElementById('sp-jv');
-  const st = document.getElementById('st-jv');
-  const rb = document.getElementById('rb-jv');
-
+  const sp = document.getElementById('sp-jv'); const st = document.getElementById('st-jv'); const rb = document.getElementById('rb-jv');
   if (!portfolio) { st.textContent = 'Portfolio required'; return; }
-
   sp.classList.add('show'); st.textContent = 'Loading JEs...'; rb.classList.remove('show');
-
   try {
     let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=50000`;
     if (tranid) url += `&tranid=${tranid}`;
-
-    const res  = await fetch(url);
-    const data = await res.json();
-
-    if (!res.ok) {
-      st.textContent = `Error: ${data.detail}`;
-      rb.className = 'result-box show fail'; rb.textContent = data.detail;
-      sp.classList.remove('show'); return;
-    }
-
-    const tbl  = document.getElementById('je-table');
-    const head = document.getElementById('je-thead');
-    const body = document.getElementById('je-tbody');
-
+    const res  = await fetch(url); const data = await res.json();
+    if (!res.ok) { st.textContent = `Error: ${data.detail}`; rb.className = 'result-box show fail'; rb.textContent = data.detail; sp.classList.remove('show'); return; }
+    const tbl = document.getElementById('je-table'); const head = document.getElementById('je-thead'); const body = document.getElementById('je-tbody');
     let entries = data.entries || [];
-
-    // ── CLIENT-SIDE FILTERS ─────────────────────────────────────
-    // Period filter — ibor_date is YYYY-MM-DD, period is YYYY-MM
-    if (periodFrom) {
-      entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) >= periodFrom);
-    }
-    if (periodTo) {
-      entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) <= periodTo);
-    }
-    // Investment filter
-    if (investment) {
-      entries = entries.filter(je => (je.investment || '').toUpperCase() === investment);
-    }
-
+    if (periodFrom) entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) >= periodFrom);
+    if (periodTo)   entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) <= periodTo);
+    if (investment) entries = entries.filter(je => (je.investment || '').toUpperCase() === investment);
     if (entries.length > 0) {
-      const cols = ['tranid','entry_type','transaction','investment','lotid','ibor_date','tradedate','ls','financial_account','quantity','local','book','location'];
+      const cols = ['tranid','entry_type','transaction','investment','lotid','ibor_date','tradedate','ls','financial_account','quantity','local','book','notional','location'];
       head.innerHTML = `<tr>${cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('')}</tr>`;
       body.innerHTML = entries.map(je => `<tr>${cols.map(c => {
         let val = je[c] != null ? je[c] : '';
-        if (c === 'local' || c === 'book') {
-          const n = parseFloat(val);
-          val = isNaN(n) ? val : n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
-        }
+        if (c === 'local' || c === 'book' || c === 'notional') { const n = parseFloat(val); val = isNaN(n) ? val : n.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2}); }
         return `<td>${val}</td>`;
       }).join('')}</tr>`).join('');
       tbl.style.display = '';
-
-      // Build filter description
       const filters = [];
       if (tranid)     filters.push(`tranid=${tranid}`);
       if (investment) filters.push(`investment=${investment}`);
       if (periodFrom || periodTo) filters.push(`period ${periodFrom||'start'}–${periodTo||'now'}`);
       st.textContent = `${entries.length} JE line(s)${filters.length ? ' · ' + filters.join(' · ') : ''}`;
     } else {
-      tbl.style.display = 'none';
-      st.textContent = 'No JEs found';
-      rb.className = 'result-box show info';
-      rb.textContent = `No journal entries found in ${portfolio}/${calendar}.\n\nPossible reasons:\n  · Not yet processed\n  · Try Force Bootstrap + Reprocess\n  · Wrong calendar selected\n  · Filter too narrow`;
-      rb.style.display = 'block';
+      tbl.style.display = 'none'; st.textContent = 'No JEs found';
+      rb.className = 'result-box show info'; rb.textContent = `No journal entries found in ${portfolio}/${calendar}.\n\nPossible reasons:\n  · Not yet processed\n  · Try Force Bootstrap + Reprocess\n  · Wrong calendar selected\n  · Filter too narrow`; rb.style.display = 'block';
     }
   } catch(e) { st.textContent = 'Connection error'; }
   sp.classList.remove('show');
@@ -1400,41 +1423,22 @@ async function calcBondAccrual() {
   const settle     = document.getElementById('ev-settledate').value;
   const qty        = parseFloat(document.getElementById('ev-qty')?.value) || 0;
   const info       = document.getElementById('bond-accrual-info');
-
-  if (!portfolio || !investment || !settle) {
-    if (info) info.textContent = 'Portfolio, investment and settle date required';
-    return;
-  }
+  if (!portfolio || !investment || !settle) { if (info) info.textContent = 'Portfolio, investment and settle date required'; return; }
   if (info) info.textContent = 'Calculating...';
-
   try {
     const res  = await fetch(BASE + '/api/v1/ops/bond/accrual?portfolio=' + portfolio + '&investment=' + investment + '&settle_date=' + settle);
     const data = await res.json();
-
-    if (!res.ok) {
-      if (info) info.textContent = 'Error: ' + data.detail;
-      return;
-    }
-
-    // accrued = accrued_per_100 x quantity / 100
-    // quantity IS the face value for standard bonds
+    if (!res.ok) { if (info) info.textContent = 'Error: ' + data.detail; return; }
     const accrued = data.accrued_per_100 * qty / 100;
-
     const accrLocal = document.getElementById('ev-accrued-local');
     const accrBook  = document.getElementById('ev-accrued-book');
     if (accrLocal) accrLocal.value = accrued.toFixed(2);
     if (accrBook)  accrBook.value  = accrued.toFixed(2);
-
-    if (info) info.textContent =
-      data.days_of_accrual + 'd · last coupon ' + data.last_coupon_date + ' · ' +
-      'daily=' + data.daily_per_100.toFixed(4) + '/100 · accrued=' +
-      accrued.toLocaleString('en-US',{minimumFractionDigits:2});
-
-  } catch(e) {
-    if (info) info.textContent = 'Connection error';
-  }
+    if (info) info.textContent = data.days_of_accrual + 'd · last coupon ' + data.last_coupon_date + ' · daily=' + data.daily_per_100.toFixed(4) + '/100 · accrued=' + accrued.toLocaleString('en-US',{minimumFractionDigits:2});
+  } catch(e) { if (info) info.textContent = 'Connection error'; }
 }
 
+// ── PROCESS ────────────────────────────────────────────────
 async function process() {
   const portfolio = document.getElementById('pr-portfolio').value.trim(); const calendar = document.getElementById('pr-calendar').value.trim(); const period = document.getElementById('pr-period').value.trim(); const bootstrap = document.getElementById('pr-bootstrap').value;
   const sp = document.getElementById('sp-pr'); const st = document.getElementById('st-pr'); const rb = document.getElementById('rb-pr');
@@ -1452,6 +1456,62 @@ async function process() {
   } catch(e) { st.textContent = 'Connection error'; st.className = 'status err'; }
   sp.classList.remove('show');
 }
+
+// ── LIVE COMPUTATION ───────────────────────────────────────
+async function computeAmounts() {
+  const portfolio  = document.getElementById('ev-portfolio').value.trim();
+  const method     = document.getElementById('ev-method').value;
+  const investment = document.getElementById('ev-investment').value.trim().toUpperCase();
+  const tradedate  = document.getElementById('ev-tradedate').value;
+  const payccy     = document.getElementById('ev-currency').value.trim() || 'USD';
+  if (!portfolio || !investment || !method || !tradedate) return;
+
+  const isFuture = ['buy_future','sell_future','short_future','cover_future'].includes(method);
+  const qty   = parseFloat(document.getElementById(isFuture ? 'ev-fut-qty'   : 'ev-qty')?.value)   || 0;
+  const price = parseFloat(document.getElementById(isFuture ? 'ev-fut-price' : 'ev-price')?.value) || 0;
+  if (qty === 0 || price === 0) return;
+
+  // Step 1 — get pricing_factor and contract_size from IM cache
+  const invMap = await _loadInvestments(portfolio);
+  const rec    = invMap[investment] || {};
+  const pf     = parseFloat(rec.pricing_factor || 1);
+  const cs     = parseFloat(rec.contract_size  || 0);
+
+  // Step 2 — compute local amount
+  let localAmt = 0;
+  if (isFuture) {
+    localAmt = qty * price * cs * pf;
+  } else {
+    localAmt = qty * price * pf;
+  }
+
+  // Step 3 — get FX rate and compute base amount
+  let fxRate = 1.0;
+  try {
+    const fxRes  = await fetch(`${BASE}/api/v1/ops/fx/rate?currency=${encodeURIComponent(payccy)}&trade_date=${encodeURIComponent(tradedate)}`);
+    const fxData = await fxRes.json();
+    fxRate = fxData.rate || 1.0;
+  } catch(e) { fxRate = 1.0; }
+
+  const baseAmt = localAmt * fxRate;
+
+  // Step 4 — populate fields
+  if (isFuture) {
+    document.getElementById('ev-fut-notional').value = localAmt.toFixed(2);
+    document.getElementById('ev-fut-local').value    = localAmt.toFixed(2);
+    document.getElementById('ev-fut-book').value     = baseAmt.toFixed(2);
+  } else {
+    document.getElementById('ev-local').value = localAmt.toFixed(2);
+    document.getElementById('ev-book').value  = baseAmt.toFixed(2);
+  }
+
+  // Show FX rate used
+  if (fxRate !== 1.0) {
+    const hint = document.getElementById('ev-book-fx-hint');
+    if (hint) hint.innerHTML = `FX: <span>${fxRate}</span>`;
+  }
+}
+
 </script>
 </body>
 </html>

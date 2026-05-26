@@ -125,8 +125,6 @@ class ModifyRequest(BaseModel):
 
 # ============================================================
 # EVENT SCHEMA — single source of truth
-# Must match events file exactly. Never add columns here
-# without explicit domain agreement.
 # ============================================================
 
 EVENT_COLUMNS = [
@@ -219,7 +217,6 @@ def create_portfolio(config: PortfolioConfig):
             portfolio=portfolio_id, calendars=calendars, inception_date=config.inception_date
         )
 
-        # Create empty event files — correct schema, no rogue columns
         for fname in [f"{portfolio_id}.csv", f"{portfolio_id}_marks.csv"]:
             with open(portfolio_dir / "Events" / fname, "w", newline="") as f:
                 csv.DictWriter(f, fieldnames=EVENT_COLUMNS).writeheader()
@@ -427,7 +424,79 @@ def add_event(portfolio_id: str, event: EventRecord):
         if not portfolio_dir.exists():
             raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
 
-        config       = get_portfolio_config(portfolio_id)
+        # ── LINE 1 VALIDATION ──────────────────────────────────
+        from validation_engine    import validate_event as _validate_event
+        from validation_functions import csv_date_to_iso
+        from v_config             import REFDATA_PATH
+
+        config    = get_portfolio_config(portfolio_id)
+        im_record = _get_im_record(portfolio_id, event.investment)
+
+        report = _validate_event(
+            method  = event.method,
+            payload = {
+                "portfolio":         portfolio_id,
+                "method":            event.method,
+                "investment":        event.investment,
+                "tradedate":         csv_date_to_iso(event.tradedate),
+                "settledate":        csv_date_to_iso(event.settledate),
+                "quantity":          event.quantity,
+                "price":             event.price,
+                "notional":          event.notional,
+                "total_amount":      event.total_amount,
+                "total_amount_base": event.total_amount_base,
+                "accrued_local":     event.accrued_local,
+                "accrued_book":      event.accrued_book,
+                "per_share":         event.per_share,
+                "new_shares":        event.new_shares,
+                "old_shares":        event.old_shares,
+                "buy_currency":      event.buy_currency,
+                "sell_currency":     event.sell_currency,
+                "buy_amt":           event.buy_amt,
+                "sell_amt":          event.sell_amt,
+                "payment_currency":  event.payment_currency,
+                "pricing_factor":    float(im_record.get("pricing_factor", 1) or 1),
+                "contract_size":     float(im_record.get("contract_size",  0) or 0),
+            },
+            context = {
+                "im_record":       im_record,
+                "investment_type": im_record.get("investment_type", ""),
+                "base_currency":   config.get("base_currency", "USD"),
+                "refdata_path":    str(REFDATA_PATH),
+            },
+            line = 1
+        )
+
+        if report.has_errors:
+            raise HTTPException(status_code=400, detail=report.first_error)
+
+        if report.has_warnings:
+            print(f">>> LINE1 WARNINGS | {portfolio_id} | {event.method} | {report.summary}")
+
+        # ── APPLY COMPUTED VALUES ──────────────────────────────
+        is_future = event.method in {
+            "buy_future", "sell_future", "short_future", "cover_future"
+        }
+        final_total_amount      = event.total_amount
+        final_total_amount_base = event.total_amount_base
+        final_notional          = event.notional
+
+        if report.computed:
+            if not is_future:
+                if report.computed.get("total_amount"):
+                    final_total_amount = report.computed["total_amount"]
+                if report.computed.get("total_amount_base"):
+                    final_total_amount_base = report.computed["total_amount_base"]
+            else:
+                if report.computed.get("notional"):
+                    final_notional          = report.computed["notional"]
+                    final_total_amount      = report.computed["notional"]
+                    final_total_amount_base = report.computed["notional"]
+
+        print(f">>> LINE1 OK | {portfolio_id} | {event.method} | {event.investment} "
+              f"| local={final_total_amount} | base={final_total_amount_base}")
+        # ──────────────────────────────────────────────────────
+
         trade_date   = _csv_date_to_ymd(event.tradedate)
         closing_meth = get_method_as_of(config.get("closing_method_history", []), trade_date) or "FIFO"
         is_mark      = event.method == "mark_prices"
@@ -452,10 +521,10 @@ def add_event(portfolio_id: str, event: EventRecord):
             "strategy":            event.strategy,
             "quantity":            event.quantity,
             "price":               event.price,
-            "notional":            event.notional,
+            "notional":            final_notional,
             "original_face":       event.original_face,
-            "total_amount":        event.total_amount,
-            "total_amount_base":   event.total_amount_base,
+            "total_amount":        final_total_amount,
+            "total_amount_base":   final_total_amount_base,
             "tranid":              tranid,
             "transaction":         transaction,
             "accrued_local":       event.accrued_local,
@@ -492,10 +561,18 @@ def add_event(portfolio_id: str, event: EventRecord):
         print(f">>> EVENT ADDED | {portfolio_id} | {event.method} | "
               f"{event.investment} | tranid={tranid}")
 
-        return {"status": "added", "portfolio_id": portfolio_id,
-                "method": event.method, "investment": event.investment,
-                "tranid": tranid, "closing_method": closing_meth,
-                "file": "marks" if is_mark else "events"}
+        return {
+            "status":            "added",
+            "portfolio_id":      portfolio_id,
+            "method":            event.method,
+            "investment":        event.investment,
+            "tranid":            tranid,
+            "closing_method":    closing_meth,
+            "file":              "marks" if is_mark else "events",
+            "total_amount":      final_total_amount,
+            "total_amount_base": final_total_amount_base,
+            "notional":          final_notional,
+        }
 
     except HTTPException:
         raise
@@ -525,6 +602,131 @@ def list_events(portfolio_id: str, investment: Optional[str] = Query(None),
                 if len(events) >= limit:
                     break
         return {"events": events, "count": len(events)}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# VALIDATE ENDPOINT — live computation, no writes
+# ============================================================
+
+@ops_router.post("/validate")
+def validate_event_endpoint(portfolio_id: str = Query(...), body: dict = None):
+    """Called by UI on field exit. Returns computed values and findings without writing."""
+    try:
+        from validation_engine    import validate_event as _validate_event
+        from validation_functions import csv_date_to_iso
+        from v_config             import REFDATA_PATH
+
+        if body is None:
+            body = {}
+
+        method     = body.get("method", "")
+        investment = body.get("investment", "")
+        im_record  = _get_im_record(portfolio_id, investment) if investment else {}
+
+        try:
+            config   = get_portfolio_config(portfolio_id)
+            base_ccy = config.get("base_currency", "USD")
+        except Exception:
+            base_ccy = "USD"
+
+        tradedate  = body.get("tradedate",  "")
+        settledate = body.get("settledate", "")
+        if tradedate  and "/" in tradedate:
+            tradedate  = csv_date_to_iso(tradedate)
+        if settledate and "/" in settledate:
+            settledate = csv_date_to_iso(settledate)
+
+        payload = {
+            "portfolio":         portfolio_id,
+            "method":            method,
+            "investment":        investment,
+            "tradedate":         tradedate,
+            "settledate":        settledate,
+            "quantity":          float(body.get("quantity",          0) or 0),
+            "price":             float(body.get("price",             0) or 0),
+            "notional":          float(body.get("notional",          0) or 0),
+            "total_amount":      float(body.get("total_amount",      0) or 0),
+            "total_amount_base": float(body.get("total_amount_base", 0) or 0),
+            "accrued_local":     float(body.get("accrued_local",     0) or 0),
+            "accrued_book":      float(body.get("accrued_book",      0) or 0),
+            "per_share":         float(body.get("per_share",         0) or 0),
+            "new_shares":        float(body.get("new_shares",        0) or 0),
+            "old_shares":        float(body.get("old_shares",        0) or 0),
+            "buy_currency":      body.get("buy_currency")  or None,
+            "sell_currency":     body.get("sell_currency") or None,
+            "buy_amt":           float(body.get("buy_amt",           0) or 0),
+            "sell_amt":          float(body.get("sell_amt",          0) or 0),
+            "payment_currency":  body.get("payment_currency", "USD"),
+            "pricing_factor":    float(im_record.get("pricing_factor", 1) or 1),
+            "contract_size":     float(im_record.get("contract_size",  0) or 0),
+        }
+
+        report = _validate_event(
+            method  = method,
+            payload = payload,
+            context = {
+                "im_record":       im_record,
+                "investment_type": im_record.get("investment_type", ""),
+                "base_currency":   base_ccy,
+                "refdata_path":    str(REFDATA_PATH),
+            },
+            line = 1
+        )
+
+        return {
+            "ok":       report.ok,
+            "errors":   [{"field": f.field, "message": f.message} for f in report.errors],
+            "warnings": [{"field": f.field, "message": f.message} for f in report.warnings],
+            "computed": report.computed,
+            "fx_rate":  payload.get("fx_rate"),
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# FX RATE LOOKUP
+# ============================================================
+
+@ops_router.get("/fx/rate")
+def get_fx_rate(currency: str = Query(...), trade_date: str = Query(...)):
+    """
+    Return FX rate for a currency on a given date.
+    fx_master.csv stores dates as M/DD/YYYY (no leading zero).
+    trade_date arrives as YYYY-MM-DD from the form.
+    Rates are quoted in USD terms — direct lookup, no cross-rate math.
+    """
+    try:
+        from v_config import REFDATA_PATH
+
+        if currency == "USD":
+            return {"rate": 1.0, "source": "passthrough"}
+
+        fx_path = Path(REFDATA_PATH) / "fx_master.csv"
+        if not fx_path.exists():
+            return {"rate": 1.0, "source": "file_not_found"}
+
+        td_norm = trade_date[:10]
+
+        with open(fx_path, newline="") as f:
+            for row in csv.DictReader(f):
+                raw_date = str(row.get("date", "")).strip()
+                try:
+                    file_date = datetime.strptime(raw_date, "%m/%d/%Y").strftime("%Y-%m-%d")
+                except Exception:
+                    file_date = raw_date[:10]
+
+                if (file_date == td_norm and
+                        str(row.get("currency", "")).strip().upper() == currency.upper()):
+                    return {"rate": float(row.get("price", 1) or 1), "source": "fx_master"}
+
+        return {"rate": 1.0, "source": "not_found"}
+
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
@@ -711,27 +913,24 @@ def get_event(portfolio_id: str, tranid: int):
 
 
 # ============================================================
-# VIEW CORRECTIONS — reads audit file
+# VIEW CORRECTIONS
 # ============================================================
 
 @ops_router.get("/portfolio/{portfolio_id}/corrections")
 def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
                      limit: int = Query(100, ge=1, le=10000)):
-    """Read correction audit trail from audit file."""
     try:
-        audit_path = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
+        audit_path  = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
 
         if not audit_path.exists():
             return {"corrections": [], "count": 0}
 
-        # Load all events for cross-reference
         all_rows = {}
         if events_file.exists():
             with open(events_file, newline="") as f:
                 for row in csv.DictReader(f):
-                    tid = row.get("tranid", "")
-                    all_rows[tid] = dict(row)
+                    all_rows[row.get("tranid", "")] = dict(row)
 
         corrections = []
         with open(audit_path, newline="") as f:
@@ -739,9 +938,8 @@ def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
                 original_tranid = str(row.get("original_tranid", ""))
                 new_tranid      = str(row.get("new_tranid", ""))
                 action          = row.get("action", "")
-
-                original   = all_rows.get(original_tranid, {})
-                correction = all_rows.get(new_tranid, {}) if new_tranid else None
+                original        = all_rows.get(original_tranid, {})
+                correction      = all_rows.get(new_tranid, {}) if new_tranid else None
 
                 if investment and original.get("investment") != investment:
                     continue
@@ -771,25 +969,18 @@ def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
 
 @ops_router.get("/bond/accrual")
 def get_bond_accrual(
-    portfolio:   str   = Query(..., description="Portfolio ID"),
-    investment:  str   = Query(..., description="Bond ticker e.g. BND000"),
-    settle_date: str   = Query(..., description="Settlement date YYYY-MM-DD"),
+    portfolio:   str = Query(...),
+    investment:  str = Query(...),
+    settle_date: str = Query(...),
 ):
-    """
-    Calculate accrued interest for a bond transaction based on settlement date.
-    Looks up bond reference data from global bond_info.csv.
-    Coupon rate stored as real percentage (5 = 5%).
-    """
     try:
         from bond_calc import calculate_accrued_interest as _calc_accrual
 
-        # Look in portfolio RefData first, fall back to global
         bond_info_path = Path(FUNDS_PATH) / portfolio / "RefData" / "bond_info.csv"
         if not bond_info_path.exists():
             bond_info_path = Path(REFDATA_PATH) / "bond_info.csv"
         if not bond_info_path.exists():
-            raise HTTPException(status_code=404,
-                detail=f"Bond info not found for portfolio {portfolio}")
+            raise HTTPException(status_code=404, detail=f"Bond info not found for portfolio {portfolio}")
 
         bond = None
         with open(bond_info_path, newline="") as f:
@@ -799,8 +990,7 @@ def get_bond_accrual(
                     break
 
         if bond is None:
-            raise HTTPException(status_code=404,
-                detail=f"Bond '{investment}' not found in bond info")
+            raise HTTPException(status_code=404, detail=f"Bond '{investment}' not found in bond info")
 
         coupon_rate       = float(bond.get("coupon_rate", 0))
         payment_frequency = bond.get("payment_frequency", "SEMI_ANNUAL")
@@ -808,7 +998,6 @@ def get_bond_accrual(
         fv                = float(bond.get("face_value", 100))
         semi_split        = bond.get("semi_split", "A")
 
-        # Parse settle_date from YYYY-MM-DD
         try:
             sd = datetime.strptime(settle_date, "%Y-%m-%d")
             settle_str = sd.strftime("%m/%d/%Y")
@@ -860,10 +1049,6 @@ def get_bond_accrual(
 
 @ops_router.post("/portfolio/{portfolio_id}/bond_info")
 def add_bond_info(portfolio_id: str, bond_info: dict):
-    """
-    Add or update bond info record in portfolio RefData/bond_info.csv.
-    Called by OPS UI when user clicks 'Add Bond Info' from global master.
-    """
     try:
         portfolio_dir  = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -875,8 +1060,7 @@ def add_bond_info(portfolio_id: str, bond_info: dict):
         if not investment:
             raise HTTPException(status_code=400, detail="investment field required")
 
-        # Load existing — check for duplicate
-        existing = []
+        existing   = []
         fieldnames = None
         if bond_info_path.exists():
             with open(bond_info_path, newline="") as f:
@@ -914,15 +1098,9 @@ def add_bond_info(portfolio_id: str, bond_info: dict):
 
 @ops_router.get("/global/investment/{investment}")
 def get_global_investment(investment: str):
-    """
-    Look up an investment in the global master.
-    Returns the record if found — used by OPS UI to offer
-    one-click add to portfolio IM and bond info.
-    """
     try:
         global_im   = Path(REFDATA_PATH) / "investment_master.csv"
         bond_info   = Path(REFDATA_PATH) / "bond_info.csv"
-
         im_record   = None
         bond_record = None
 
@@ -942,11 +1120,7 @@ def get_global_investment(investment: str):
                             break
 
         if im_record:
-            return {
-                "found":       True,
-                "investment":  im_record,
-                "bond_info":   bond_record,
-            }
+            return {"found": True, "investment": im_record, "bond_info": bond_record}
         else:
             return {"found": False, "investment": None, "bond_info": None}
 
@@ -1038,9 +1212,20 @@ def _je_to_dict(je) -> dict:
 # HELPERS
 # ============================================================
 
+def _get_im_record(portfolio_id: str, investment: str) -> dict:
+    """Load a single IM record for validation context."""
+    im_path = Path(FUNDS_PATH) / portfolio_id / "RefData" / "investment_master.csv"
+    if not im_path.exists():
+        return {}
+    with open(im_path, newline="") as f:
+        for row in csv.DictReader(f):
+            if row.get("investment", "").upper() == investment.upper():
+                return dict(row)
+    return {}
+
+
 def _write_audit(portfolio_id: str, action: str, original_tranid: int,
                  new_tranid, actor: str, reason: str) -> None:
-    """Write correction record to audit file. Never touches events file."""
     audit_path = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
     fieldnames = ["timestamp", "action", "original_tranid", "new_tranid", "actor", "reason"]
     write_hdr  = not audit_path.exists() or os.path.getsize(audit_path) == 0

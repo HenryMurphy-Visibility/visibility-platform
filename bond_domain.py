@@ -171,7 +171,7 @@ def buy_bond(portfolio, investment, location, quantity, local, book, space, tran
 
     if accrued_local is not None and accrued_local != 0:
         financial_account = "PurchasedInterest"  # use tranid for payable receivable to close
-        je = Journals(portfolio, investment, tranid, 0, "l", location, financial_account, accrued_local,
+        je = Journals(portfolio, investment, tranid, tradedate, "l", location, financial_account, accrued_local,
                       accrued_local, accrued_book, None, None, tranid,
                       transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
@@ -192,7 +192,7 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
 
     # ── SOLD INTEREST — accrued interest sold to buyer ──────────
     if accrued_local is not None and accrued_local != 0:
-        je = Journals(portfolio, investment, tranid, 0, "s", location, "SoldInterest",
+        je = Journals(portfolio, investment, tranid,tradedate, "s", location, "SoldInterest",
                       -accrued_local, -accrued_local, -accrued_book,
                       None, None, tranid, transaction,
                       tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
@@ -265,7 +265,7 @@ def short_bond(portfolio, investment, location, quantity, local, book, space, tr
     ibor_date = tradedate
 
     # ── SHORT COST — opens short position ────────────────────
-    je = Journals(portfolio, investment, tranid, 0, ls, location, "Cost",
+    je = Journals(portfolio, investment, tranid, tradedate, ls, location, "Cost",
                   -quantity, -local, -book,
                   None, None, tranid, transaction,
                   tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
@@ -273,7 +273,7 @@ def short_bond(portfolio, investment, location, quantity, local, book, space, tr
 
     # ── SOLD INTEREST — accrued interest on short side ───────
     if accrued_local is not None and accrued_local != 0:
-        je = Journals(portfolio, investment, tranid, None, ls, location, "SoldInterest",
+        je = Journals(portfolio, investment, tranid, tranid, ls, location, "SoldInterest",
                       -accrued_local, -accrued_local, -accrued_book,
                       None, None, tranid, transaction,
                       tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
@@ -296,7 +296,7 @@ def cover_bond(portfolio, investment, location, quantity, local, book, closing_m
 
     # ── PURCHASED INTEREST — accrued interest on cover side ──
     if accrued_local is not None and accrued_local != 0:
-        je = Journals(portfolio, investment, tranid,0, "l", location, "PurchasedInterest",
+        je = Journals(portfolio, investment, tranid, tradedate, "l", location, "PurchasedInterest",
                       accrued_local, accrued_local, accrued_book,
                       None, None, tranid, transaction,
                       tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")

@@ -159,8 +159,8 @@ def lot_iterator_by_location(investment, space):
     result = [(location, quantity) for location, quantity in lots_by_location.items()]
     return result
 
-def buy_future(portfolio, investment, location, quantity, local, book, journal_entries, space, tranid, transaction,
-               tradedate, settledate, kdbegin, kdend, payment_currency, tdate_fx, notional, price):
+def buy_future(portfolio, investment, location, quantity, local, book, space, tranid, transaction,
+               tradedate, settledate, kdbegin, kdend, payment_currency, tdate_fx, notional):
     # Create a new je Open IBM
 
     ls = "l"
