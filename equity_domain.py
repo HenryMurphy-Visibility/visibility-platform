@@ -20,7 +20,7 @@ import datetime
 
 
 def close_equity_lots(investment: str, location: str, quantity: float, local: float, book: float, closing_method: str,
-                      tax_date: datetime.datetime, journal_entries, space, ls: str, tranid) -> List[
+                      tax_date: datetime.datetime, space, ls: str, tranid) -> List[
     Tuple[str, str, int, float, float, float, float]]:
     bs_entries = space.asset_liability_repository.get_position_entries(investment)
 

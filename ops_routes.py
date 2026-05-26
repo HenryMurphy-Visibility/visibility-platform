@@ -918,7 +918,7 @@ def get_event(portfolio_id: str, tranid: int):
 
 @ops_router.get("/portfolio/{portfolio_id}/corrections")
 def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
-                     limit: int = Query(100, ge=1, le=10000)):
+                     limit: int = Query(100, ge=1, le=1000)):
     try:
         audit_path  = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}_audit.csv"
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
@@ -1134,19 +1134,39 @@ def get_global_investment(investment: str):
 # ============================================================
 
 @ops_router.get("/portfolio/{portfolio_id}/je")
-def get_journal_entries(portfolio_id: str, calendar: str = Query("Monthly"),
-                        tranid: Optional[int] = Query(None), limit: int = Query(1000, ge=1, le=50000)):
+def get_journal_entries(portfolio_id: str,
+                        calendar: str = Query("Monthly"),
+                        tranid: Optional[int] = Query(None),
+                        period_from: Optional[str] = Query(None),
+                        period_to: Optional[str] = Query(None),
+                        entry_type: Optional[str] = Query(None),
+                        exclude_valuation: bool = Query(True),
+                        limit: int = Query(10000)):
     import pickle
     try:
         journals_dir = Path(FUNDS_PATH) / portfolio_id / "Calendars" / calendar / "Journals"
         if not journals_dir.exists():
             raise HTTPException(status_code=404,
-                detail=f"Journals folder not found for {portfolio_id}/{calendar}.")
+                                detail=f"Journals folder not found for {portfolio_id}/{calendar}.")
 
         pkl_files = sorted(journals_dir.glob("*.pkl"))
         if not pkl_files:
             raise HTTPException(status_code=404,
-                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals")
+                                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals")
+
+        if period_from or period_to:
+            filtered = []
+            for f in pkl_files:
+                period_key = f.name[:7]
+                if period_from and period_key < period_from:
+                    continue
+                if period_to and period_key > period_to:
+                    continue
+                filtered.append(f)
+            pkl_files = filtered
+
+        if entry_type:
+            pkl_files = [f for f in pkl_files if entry_type.lower() in f.name.lower()]
 
         matching = []
         for pkl_file in pkl_files:
@@ -1155,8 +1175,11 @@ def get_journal_entries(portfolio_id: str, calendar: str = Query("Monthly"),
                     data = pickle.load(f)
                 journal_entries = data.get("journals", []) if isinstance(data, dict) else data
                 for je in journal_entries:
-                    if tranid is None or getattr(je, "tranid", None) == tranid:
-                        matching.append(_je_to_dict(je))
+                    if tranid is not None and getattr(je, "tranid", None) != tranid:
+                        continue
+                    if exclude_valuation and getattr(je, "transaction", "") == "Valuation":
+                        continue
+                    matching.append(_je_to_dict(je))
                     if len(matching) >= limit:
                         break
             except Exception as e:
@@ -1175,7 +1198,6 @@ def get_journal_entries(portfolio_id: str, calendar: str = Query("Monthly"),
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 def _je_to_dict(je) -> dict:
     try:

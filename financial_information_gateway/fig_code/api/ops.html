@@ -678,32 +678,33 @@
   <div class="widget widget-stub" id="w-add-calendar"><div class="widget-head"><div class="widget-title">Add Calendar</div><div class="widget-desc">Add a new calendar type to an existing portfolio</div></div><div class="widget-body"><div class="stub-icon">🗓️</div><div class="stub-title">Add Calendar</div><div class="stub-desc">Add Daily, Quarterly, or Yearly calendars after portfolio creation.</div><div class="stub-sprint">Upcoming Sprint</div></div></div>
 
   <!-- ── JE VIEWER ─────────────────────────────────────────── -->
-  <div class="widget" id="w-je-viewer">
-    <div class="widget-head">
-      <div class="widget-title">JE Viewer</div>
-      <div class="widget-desc">Raw journal entries by Tran ID — direct from Journals PKL</div>
-    </div>
-    <div class="widget-body">
-      <div class="form-grid">
-        <div class="form-group"><label>Portfolio *</label><input id="jv-portfolio" placeholder="e.g. Portfolio3"></div>
-        <div class="form-group"><label>Calendar</label><select id="jv-calendar"><option value="Monthly">Monthly</option><option value="Daily">Daily</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select></div>
-        <div class="form-group"><label>Period From (optional)</label><input id="jv-period-from" placeholder="e.g. 2026-01"><div class="field-hint">Leave blank for all periods</div></div>
-        <div class="form-group"><label>Period To (optional)</label><input id="jv-period-to" placeholder="e.g. 2026-03"><div class="field-hint">Leave blank for all periods</div></div>
-        <div class="form-group"><label>Investment (optional)</label><input id="jv-investment" placeholder="e.g. BND000"><div class="field-hint">Filter by investment</div></div>
-        <div class="form-group"><label>Tran ID (optional)</label><input id="jv-tranid" type="number" placeholder="leave blank for all"><div class="field-hint">Find in View Events</div></div>
-      </div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="viewJEs()">Load JEs</button>
-        <div class="spinner" id="sp-jv"></div>
-        <div class="status info" id="st-jv"></div>
-      </div>
-      <div style="overflow-x:auto;margin-top:16px">
-        <table id="je-table" style="display:none"><thead id="je-thead"></thead><tbody id="je-tbody"></tbody></table>
-      </div>
-      <div class="result-box" id="rb-jv"></div>
-    </div>
+  <!-- ── JE VIEWER ─────────────────────────────────────────── -->
+<div class="widget" id="w-je-viewer">
+  <div class="widget-head">
+    <div class="widget-title">JE Viewer</div>
+    <div class="widget-desc">Raw journal entries by Tran ID — direct from Journals PKL</div>
   </div>
-
+  <div class="widget-body">
+    <div class="form-grid">
+      <div class="form-group"><label>Portfolio *</label><input id="jv-portfolio" placeholder="e.g. Portfolio3"></div>
+      <div class="form-group"><label>Calendar</label><select id="jv-calendar"><option value="Monthly">Monthly</option><option value="Daily">Daily</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select></div>
+      <div class="form-group"><label>Period From (optional)</label><input id="jv-period-from" placeholder="e.g. 2026-01"><div class="field-hint">Leave blank for all periods</div></div>
+      <div class="form-group"><label>Period To (optional)</label><input id="jv-period-to" placeholder="e.g. 2026-03"><div class="field-hint">Leave blank for all periods</div></div>
+      <div class="form-group"><label>Entry Type</label><select id="jv-entry-type"><option value="">Both</option><option value="regular">Regular</option><option value="adjusting">Adjusting</option></select></div>
+      <div class="form-group"><label>Investment (optional)</label><input id="jv-investment" placeholder="e.g. BND000"><div class="field-hint">Filter by investment</div></div>
+      <div class="form-group"><label>Tran ID (optional)</label><input id="jv-tranid" type="number" placeholder="leave blank for all"><div class="field-hint">Find in View Events</div></div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="viewJEs()">Load JEs</button>
+      <div class="spinner" id="sp-jv"></div>
+      <div class="status info" id="st-jv"></div>
+    </div>
+    <div style="overflow-x:auto;margin-top:16px">
+      <table id="je-table" style="display:none"><thead id="je-thead"></thead><tbody id="je-tbody"></tbody></table>
+    </div>
+    <div class="result-box" id="rb-jv"></div>
+  </div>
+</div>
   <!-- ── PROCESS ────────────────────────────────────────────── -->
   <div class="widget" id="w-process">
     <div class="widget-head">
@@ -1373,7 +1374,6 @@ async function viewCorrections() {
   sp.classList.remove('show');
 }
 
-// ── JE VIEWER ──────────────────────────────────────────────
 async function viewJEs() {
   const portfolio  = document.getElementById('jv-portfolio').value.trim();
   const calendar   = document.getElementById('jv-calendar').value;
@@ -1381,18 +1381,20 @@ async function viewJEs() {
   const investment = document.getElementById('jv-investment').value.trim().toUpperCase();
   const periodFrom = document.getElementById('jv-period-from').value.trim();
   const periodTo   = document.getElementById('jv-period-to').value.trim();
+  const entryType  = document.getElementById('jv-entry-type').value;
   const sp = document.getElementById('sp-jv'); const st = document.getElementById('st-jv'); const rb = document.getElementById('rb-jv');
   if (!portfolio) { st.textContent = 'Portfolio required'; return; }
   sp.classList.add('show'); st.textContent = 'Loading JEs...'; rb.classList.remove('show');
   try {
     let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=50000`;
-    if (tranid) url += `&tranid=${tranid}`;
+    if (tranid)     url += `&tranid=${tranid}`;
+    if (periodFrom) url += `&period_from=${encodeURIComponent(periodFrom)}`;
+    if (periodTo)   url += `&period_to=${encodeURIComponent(periodTo)}`;
+    if (entryType)  url += `&entry_type=${encodeURIComponent(entryType)}`;
     const res  = await fetch(url); const data = await res.json();
     if (!res.ok) { st.textContent = `Error: ${data.detail}`; rb.className = 'result-box show fail'; rb.textContent = data.detail; sp.classList.remove('show'); return; }
     const tbl = document.getElementById('je-table'); const head = document.getElementById('je-thead'); const body = document.getElementById('je-tbody');
     let entries = data.entries || [];
-    if (periodFrom) entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) >= periodFrom);
-    if (periodTo)   entries = entries.filter(je => (je.ibor_date || '').slice(0, 7) <= periodTo);
     if (investment) entries = entries.filter(je => (je.investment || '').toUpperCase() === investment);
     if (entries.length > 0) {
       const cols = ['tranid','entry_type','transaction','investment','lotid','ibor_date','tradedate','ls','financial_account','quantity','local','book','notional','location'];
@@ -1404,9 +1406,10 @@ async function viewJEs() {
       }).join('')}</tr>`).join('');
       tbl.style.display = '';
       const filters = [];
-      if (tranid)     filters.push(`tranid=${tranid}`);
-      if (investment) filters.push(`investment=${investment}`);
+      if (tranid)              filters.push(`tranid=${tranid}`);
+      if (investment)          filters.push(`investment=${investment}`);
       if (periodFrom || periodTo) filters.push(`period ${periodFrom||'start'}–${periodTo||'now'}`);
+      if (entryType)           filters.push(entryType);
       st.textContent = `${entries.length} JE line(s)${filters.length ? ' · ' + filters.join(' · ') : ''}`;
     } else {
       tbl.style.display = 'none'; st.textContent = 'No JEs found';
@@ -1415,7 +1418,6 @@ async function viewJEs() {
   } catch(e) { st.textContent = 'Connection error'; }
   sp.classList.remove('show');
 }
-
 // ── BOND ACCRUAL CALC ──────────────────────────────────────
 async function calcBondAccrual() {
   const portfolio  = document.getElementById('ev-portfolio').value.trim();
