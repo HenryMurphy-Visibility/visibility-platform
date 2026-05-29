@@ -1,23 +1,27 @@
 # -*- coding: utf-8 -*-
 """
 proof_engine.py — Visibility VAI Proof Engine
-Four honest pillars. No re-running the accounting.
-
-Usage (from chest root):
-  python proof_engine.py Portfolio3 Monthly
-  python proof_engine.py Portfolio3 Monthly 2026-01
-  python proof_engine.py Portfolio3 Monthly --tranid 3
-  python proof_engine.py Portfolio3 Monthly --investment MITIB
-  python proof_engine.py Portfolio3 Monthly --pillar availability
-  python proof_engine.py Portfolio3 Monthly --pillar balance
-  python proof_engine.py Portfolio3 Monthly --pillar settle_fx
-  python proof_engine.py Portfolio3 Monthly --pillar marks
+══════════════════════════════════════════════════════════════════════════════
+Six pillars. Consistent return structure. Summary and verbose modes.
 
 Pillars:
-  1. availability  — prices and FX rates exist for all required dates
-  2. balance       — debits = credits every period (double-entry integrity)
-  3. settle_fx     — trade/settle FX G/L uses correct rate
-  4. marks         — period end MV = qty × price × pf × fx_rate
+  1. availability      prices and FX rates exist for all required dates
+  2. balance           debits = credits every period (double-entry integrity)
+  3. settle_fx         trade/settle FX G/L uses correct rate
+  4. marks             period end MV = qty × price × pf × fx_rate
+  5. chart_of_accounts every financial_account posted exists in COA
+  6. data              event file integrity (kdbegin, holidays, qty, price, dupes)
+
+Usage:
+  python proof_engine.py Portfolio1 Monthly
+  python proof_engine.py Portfolio1 Monthly 2024-06
+  python proof_engine.py Portfolio1 Monthly --period-from 2024-01 --period-to 2024-06
+  python proof_engine.py Portfolio1 Monthly --pillar marks --verbose
+  python proof_engine.py Portfolio1 Monthly --pillar data
+  python proof_engine.py Portfolio1 Monthly --investment AAPL --verbose
+
+CPH integration (optional):
+  from proof_engine import run_proof_pre_cph, run_proof_post_cph
 
 Henry J. Murphy — Chest Financial Systems
 VAI — Visibility Artificial Intelligence
@@ -26,17 +30,32 @@ VAI — Visibility Artificial Intelligence
 import pickle
 import csv
 import sys
+import os
 import argparse
 from pathlib import Path
 from datetime import datetime, timedelta, date as date_type
 from collections import defaultdict
+from dataclasses import dataclass, field
+from typing import Optional
 
-import os
-from v_config import REFDATA_PATH
+from v_config import REFDATA_PATH, FUNDS_PATH
 
-COA_PATH = os.path.join(REFDATA_PATH, "chart_of_accounts.csv")
+# ── TOLERANCES ────────────────────────────────────────────────────────────────
+AMOUNT_TOLERANCE = 0.01
+PCT_TOLERANCE    = 0.0001
+QTY_TOLERANCE    = 0.000001
 
-# US Market Holidays 2019-2027
+# ── CONSOLE COLORS ────────────────────────────────────────────────────────────
+GREEN  = "\033[92m"
+YELLOW = "\033[93m"
+RED    = "\033[91m"
+CYAN   = "\033[96m"
+BLUE   = "\033[94m"
+RESET  = "\033[0m"
+BOLD   = "\033[1m"
+DIM    = "\033[2m"
+
+# ── NYSE HOLIDAYS 2019-2027 ───────────────────────────────────────────────────
 US_HOLIDAYS = {
     date_type(2019,1,1),date_type(2019,1,21),date_type(2019,2,18),date_type(2019,4,19),
     date_type(2019,5,27),date_type(2019,7,4),date_type(2019,9,2),date_type(2019,11,28),date_type(2019,12,25),
@@ -58,172 +77,131 @@ US_HOLIDAYS = {
     date_type(2027,5,31),date_type(2027,6,18),date_type(2027,7,5),date_type(2027,9,6),date_type(2027,11,25),date_type(2027,12,24),
 }
 
+ADJUSTMENT_METHODS = {"adjustment", "adjust"}
+
+UNREALIZED_ACCOUNTS = {
+    "MarketVal", "MarketValue",
+    "UnrealizedGainLoss", "UnrealizedGL",
+    "UnrealPriceGL", "UnrealFXGL",
+    "UnrealPriceGLOffset", "UnrealFXGLOffset",
+    "PriceGainLoss", "FXGainLoss",
+    "AccruedIncome", "AmortDiscount", "AmortPremium",
+}
+
+SETTLE_FX_METHODS = {
+    "buy_equity", "sell_equity", "short_equity", "cover_equity",
+    "buy_bond", "sell_bond",
+}
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PROOF RESULT — consistent structure across all pillars
+# ══════════════════════════════════════════════════════════════════════════════
+
+@dataclass
+class ProofItem:
+    """Single check result within a pillar."""
+    status:   str    # PASS | WARN | FAIL | SKIP
+    severity: str    # CRITICAL | HIGH | WARNING | INFO
+    message:  str
+    period:   str = ""
+    investment: str = ""
+
+
+class ProofResult:
+    """
+    Consistent return structure for all pillars.
+    Summary: counts only.
+    Verbose: full item list.
+    """
+    def __init__(self, pillar: str):
+        self.pillar  = pillar
+        self.items:  list[ProofItem] = []
+
+    # ── Convenience adders ────────────────────────────────────────────────────
+    def ok(self,   msg, period="", investment="", severity="INFO"):
+        self.items.append(ProofItem("PASS", severity, msg, period, investment))
+
+    def warn(self, msg, period="", investment="", severity="WARNING"):
+        self.items.append(ProofItem("WARN", severity, msg, period, investment))
+
+    def fail(self, msg, period="", investment="", severity="HIGH"):
+        self.items.append(ProofItem("FAIL", severity, msg, period, investment))
+
+    def critical(self, msg, period="", investment=""):
+        self.items.append(ProofItem("FAIL", "CRITICAL", msg, period, investment))
+
+    def skip(self, msg, period="", investment=""):
+        self.items.append(ProofItem("SKIP", "INFO", msg, period, investment))
+
+    # ── Aggregates ────────────────────────────────────────────────────────────
+    @property
+    def passes(self):   return [i for i in self.items if i.status == "PASS"]
+    @property
+    def warnings(self): return [i for i in self.items if i.status == "WARN"]
+    @property
+    def failures(self): return [i for i in self.items if i.status == "FAIL"]
+    @property
+    def skipped(self):  return [i for i in self.items if i.status == "SKIP"]
+    @property
+    def criticals(self): return [i for i in self.items if i.severity == "CRITICAL"]
+    @property
+    def all_clear(self): return len(self.failures) == 0
+    @property
+    def has_critical(self): return len(self.criticals) > 0
+    @property
+    def total(self): return len(self.items)
+
+    def summary(self) -> dict:
+        """Clean summary dict for API/UI consumption."""
+        return {
+            "pillar":       self.pillar,
+            "all_clear":    self.all_clear,
+            "has_critical": self.has_critical,
+            "passes":       len(self.passes),
+            "warnings":     len(self.warnings),
+            "failures":     len(self.failures),
+            "skipped":      len(self.skipped),
+        }
+
+    def to_dict(self, verbose: bool = False) -> dict:
+        """Full dict for API/UI consumption."""
+        d = self.summary()
+        if verbose:
+            d["items"] = [
+                {
+                    "status":     i.status,
+                    "severity":   i.severity,
+                    "message":    i.message,
+                    "period":     i.period,
+                    "investment": i.investment,
+                }
+                for i in self.items
+                if i.status != "PASS" or verbose
+            ]
+        else:
+            # Non-verbose: only failures and warnings
+            d["failure_list"] = [i.message for i in self.failures]
+            d["warning_list"] = [i.message for i in self.warnings]
+        return d
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
 def _is_business_day(d: str) -> bool:
-    """Return True if date is a US market business day."""
     try:
         dt = datetime.strptime(d, "%Y-%m-%d").date()
         return dt.weekday() < 5 and dt not in US_HOLIDAYS
     except Exception:
-        return True  # assume business day if can't parse
+        return True
 
-# ── TOLERANCE ─────────────────────────────────────────────────
-AMOUNT_TOLERANCE = 0.01      # absolute for small amounts
-PCT_TOLERANCE    = 0.0001    # 0.01% for large amounts
-QTY_TOLERANCE    = 0.000001  # near-zero quantity threshold
+def _is_holiday_or_weekend(d: date_type) -> bool:
+    return d.weekday() >= 5 or d in US_HOLIDAYS
 
-# ── CONSOLE COLORS ─────────────────────────────────────────────
-GREEN  = "\033[92m"
-YELLOW = "\033[93m"
-RED    = "\033[91m"
-CYAN   = "\033[96m"
-BLUE   = "\033[94m"
-RESET  = "\033[0m"
-BOLD   = "\033[1m"
-DIM    = "\033[2m"
-
-def _ok(msg):   return f"{GREEN}✓ PASS{RESET}  {msg}"
-def _warn(msg): return f"{YELLOW}⚠ WARN{RESET}  {msg}"
-def _fail(msg): return f"{RED}✗ FAIL{RESET}  {msg}"
-def _info(msg): return f"{CYAN}  INFO{RESET}  {msg}"
-def _skip(msg): return f"{DIM}  SKIP  {msg}{RESET}"
-
-
-# ============================================================
-# PROOF RESULT COLLECTOR
-# ============================================================
-
-class ProofResult:
-    def __init__(self, pillar: str):
-        self.pillar   = pillar
-        self.passes   = []
-        self.warnings = []
-        self.failures = []
-        self.skipped  = []
-
-    def ok(self,   msg): self.passes.append(msg)
-    def warn(self, msg): self.warnings.append(msg)
-    def fail(self, msg): self.failures.append(msg)
-    def skip(self, msg): self.skipped.append(msg)
-
-    @property
-    def all_clear(self): return len(self.failures) == 0
-    @property
-    def total(self): return len(self.passes) + len(self.warnings) + len(self.failures)
-
-
-# ============================================================
-# DATA LOADERS
-# ============================================================
-
-def load_events(portfolio: str, funds_path: str) -> list:
-    path = Path(funds_path) / portfolio / "Events" / f"{portfolio}.csv"
-    if not path.exists():
-        return []
-    with open(path, newline="") as f:
-        return list(csv.DictReader(f))
-
-
-def load_investment_master(portfolio: str, funds_path: str) -> dict:
-    path = Path(funds_path) / portfolio / "RefData" / "investment_master.csv"
-    if not path.exists():
-        return {}
-    result = {}
-    with open(path, newline="") as f:
-        for row in csv.DictReader(f):
-            inv = row.get("investment", "").strip()
-            if inv:
-                result[inv] = row
-    return result
-
-
-def load_price_index(refdata_path: str) -> dict:
-    """Returns {(ticker, YYYY-MM-DD): price}"""
-    path = Path(refdata_path) / "price_master.csv"
-    if not path.exists():
-        return {}
-    index = {}
-    with open(path, newline="") as f:
-        for row in csv.DictReader(f):
-            ticker = (row.get("ticker") or row.get("investment") or "").strip()
-            date   = _norm_date(row.get("date") or row.get("price_date") or "")
-            price  = _safe_float(row.get("price") or row.get("close") or "")
-            if ticker and date and price is not None:
-                index[(ticker, date)] = price
-    return index
-
-
-def load_fx_index(refdata_path: str) -> dict:
-    """Returns {(currency, YYYY-MM-DD): rate} where rate = USD per 1 unit of currency"""
-    path = Path(refdata_path) / "fx_master.csv"
-    if not path.exists():
-        return {}
-    index = {}
-    with open(path, newline="") as f:
-        for row in csv.DictReader(f):
-            ccy  = (row.get("currency") or row.get("ticker") or "").strip()
-            date = _norm_date(row.get("date") or row.get("fx_date") or "")
-            rate = _safe_float(row.get("rate") or row.get("price") or row.get("close") or "")
-            if ccy and date and rate is not None:
-                index[(ccy, date)] = rate
-    return index
-
-
-def load_jes_from_journals(portfolio: str, calendar: str,
-                           funds_path: str, period: str = None) -> dict:
-    """
-    Returns dict: {period_name: [je_objects]}
-    PKL structure: dict with keys portfolio, calendar, period_name, journals
-    journals = list of JE objects with to_dict() method
-    """
-    journals_dir = Path(funds_path) / portfolio / "Calendars" / calendar / "Journals"
-    if not journals_dir.exists():
-        return {}
-
-    result = {}
-    for pkl_file in sorted(journals_dir.glob("*.pkl")):
-        try:
-            with open(pkl_file, "rb") as f:
-                data = pickle.load(f)
-
-            if not isinstance(data, dict):
-                continue
-
-            period_name = data.get("period_name", pkl_file.stem)
-            jes         = data.get("journals", [])
-
-            if period and period_name != period:
-                continue
-
-            result[period_name] = jes
-
-        except Exception as e:
-            print(f"  WARNING: Could not read {pkl_file.name}: {e}")
-
-    return result
-
-
-def load_calendar_records(portfolio: str, calendar: str,
-                          funds_path: str) -> list:
-    """Load calendar period records from the calendar txt file."""
-    import json
-    cal_path = Path(funds_path) / portfolio / "Calendars" / calendar / f"{calendar}.txt"
-    if not cal_path.exists():
-        return []
-    records = []
-    with open(cal_path, "r") as f:
-        for line in f:
-            line = line.strip()
-            if line.startswith("{"):
-                try:
-                    records.append(json.loads(line))
-                except Exception:
-                    pass
-    return records
-
-
-# ============================================================
-# HELPERS
-# ============================================================
+def _is_adjustment(method: str) -> bool:
+    return str(method).lower().strip() in ADJUSTMENT_METHODS
 
 def _norm_date(val: str) -> str:
     if not val:
@@ -240,8 +218,13 @@ def _norm_date(val: str) -> str:
         return val[:10]
     return val
 
+def _parse_event_date(date_str: str) -> Optional[date_type]:
+    try:
+        return datetime.strptime(_norm_date(str(date_str)), "%Y-%m-%d").date()
+    except:
+        return None
 
-def _safe_float(val) -> float:
+def _safe_float(val) -> Optional[float]:
     if val is None or str(val).strip() == "":
         return None
     try:
@@ -249,13 +232,10 @@ def _safe_float(val) -> float:
     except (ValueError, TypeError):
         return None
 
-
 def _je_val(je, field: str):
-    """Get field from JE object or dict."""
     if isinstance(je, dict):
         return je.get(field)
     return getattr(je, field, None)
-
 
 def _je_date(je, field: str) -> str:
     val = _je_val(je, field)
@@ -265,25 +245,13 @@ def _je_date(je, field: str) -> str:
         return val.strftime("%Y-%m-%d")
     return _norm_date(str(val))
 
-
 def _find_rate(index: dict, key_prefix: str, date: str,
                tolerance_days: int = 5) -> tuple:
-    """
-    Find (key_prefix, date) in index within tolerance_days.
-    On non-business days (weekends/holidays) prefer looking backward —
-    prior business day convention matches the accounting engine.
-    Returns (value, days_gap) or (None, None)
-    """
     if (key_prefix, date) in index:
         return index[(key_prefix, date)], 0
     try:
         dt = datetime.strptime(date, "%Y-%m-%d")
-        # On non-business days prefer backward (prior business day)
-        # On business days search both directions equally
-        if not _is_business_day(date):
-            search_order = [-1]  # prior business day only — no forward search
-        else:
-            search_order = [-1, 1]
+        search_order = [-1] if not _is_business_day(date) else [-1, 1]
         for days in range(1, tolerance_days + 1):
             for sign in search_order:
                 d = (dt + timedelta(days=days * sign)).strftime("%Y-%m-%d")
@@ -293,13 +261,9 @@ def _find_rate(index: dict, key_prefix: str, date: str,
         pass
     return None, None
 
-
 def _active_events(events: list) -> list:
-    return [
-        e for e in events
-        if e.get("kdend", "12/31/2099:00:00:00") == "12/31/2099:00:00:00"
-    ]
-
+    return [e for e in events
+            if e.get("kdend", "12/31/2099:00:00:00") == "12/31/2099:00:00:00"]
 
 def _is_tolerance_ok(a: float, b: float) -> bool:
     diff = abs(a - b)
@@ -308,35 +272,142 @@ def _is_tolerance_ok(a: float, b: float) -> bool:
     base = max(abs(a), abs(b), 1.0)
     return (diff / base) <= PCT_TOLERANCE
 
+def _filter_periods(jes_by_period: dict,
+                    period: str = None,
+                    period_from: str = None,
+                    period_to: str = None) -> dict:
+    """Filter jes_by_period to requested range."""
+    if period:
+        return {k: v for k, v in jes_by_period.items() if k == period}
+    if period_from or period_to:
+        result = {}
+        for k, v in jes_by_period.items():
+            if period_from and k < period_from:
+                continue
+            if period_to and k > period_to:
+                continue
+            result[k] = v
+        return result
+    return jes_by_period
 
-# ============================================================
+
+# ══════════════════════════════════════════════════════════════════════════════
+# DATA LOADERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def load_events(portfolio: str, funds_path: str) -> list:
+    path = Path(funds_path) / portfolio / "Events" / f"{portfolio}.csv"
+    if not path.exists():
+        return []
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        return list(csv.DictReader(f))
+
+def load_investment_master(portfolio: str, funds_path: str) -> dict:
+    path = Path(funds_path) / portfolio / "RefData" / "investment_master.csv"
+    if not path.exists():
+        # Try global refdata
+        path = Path(REFDATA_PATH) / "investment_master.csv"
+    if not path.exists():
+        return {}
+    result = {}
+    with open(path, newline="", encoding="cp1252") as f:
+        for row in csv.DictReader(f):
+            inv = row.get("investment", "").strip()
+            if inv:
+                result[inv] = row
+    return result
+
+def load_price_index(refdata_path: str) -> dict:
+    """Returns {(ticker, YYYY-MM-DD): price}"""
+    path = Path(refdata_path) / "price_master.csv"
+    if not path.exists():
+        return {}
+    index = {}
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            ticker = (row.get("symbol") or row.get("ticker") or
+                      row.get("investment") or "").strip()
+            date   = _norm_date(row.get("date") or row.get("price_date") or "")
+            price  = _safe_float(row.get("price") or row.get("close") or "")
+            if ticker and date and price is not None:
+                index[(ticker, date)] = price
+    return index
+
+def load_fx_index(refdata_path: str) -> dict:
+    path = Path(refdata_path) / "fx_master.csv"
+    if not path.exists():
+        return {}
+    index = {}
+    with open(path, newline="", encoding="utf-8-sig") as f:
+        for row in csv.DictReader(f):
+            ccy  = (row.get("currency") or row.get("ticker") or "").strip()
+            date = _norm_date(row.get("date") or row.get("fx_date") or "")
+            rate = _safe_float(row.get("rate") or row.get("price") or
+                               row.get("close") or "")
+            if ccy and date and rate is not None:
+                index[(ccy, date)] = rate
+    return index
+
+def load_jes_from_journals(portfolio: str, calendar: str,
+                           funds_path: str,
+                           period: str = None) -> dict:
+    journals_dir = (Path(funds_path) / portfolio / "Calendars" /
+                    calendar / "Journals")
+    if not journals_dir.exists():
+        return {}
+    result = {}
+    for pkl_file in sorted(journals_dir.glob("*.pkl")):
+        try:
+            with open(pkl_file, "rb") as f:
+                data = pickle.load(f)
+            if not isinstance(data, dict):
+                continue
+            period_name = data.get("period_name", pkl_file.stem)
+            jes         = data.get("journals", [])
+            if period and period_name != period:
+                continue
+            result[period_name] = jes
+        except Exception as e:
+            print(f"  WARNING: Could not read {pkl_file.name}: {e}")
+    return result
+
+def load_calendar_records(portfolio: str, calendar: str,
+                          funds_path: str) -> list:
+    import json
+    cal_path = (Path(funds_path) / portfolio / "Calendars" /
+                calendar / f"{calendar}.txt")
+    if not cal_path.exists():
+        return []
+    records = []
+    with open(cal_path, "r") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("{"):
+                try:
+                    records.append(json.loads(line))
+                except Exception:
+                    pass
+    return records
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PILLAR 1 — DATA AVAILABILITY
-# Prices and FX rates exist for all required dates
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
 
-def pillar_availability(events: list, im: dict, calendar_records: list,
-                        price_index: dict, fx_index: dict) -> ProofResult:
-    """
-    Check that prices and FX rates exist for:
-    - All period-end dates for all active equity/bond holdings
-    - All settlement dates for foreign currency transactions
-    """
+def pillar_availability(events, im, calendar_records,
+                        price_index, fx_index) -> ProofResult:
     result = ProofResult("availability")
-
     active = _active_events(events)
 
-    # Collect all investments and their currencies from active events
-    holdings = {}  # investment → currency
+    holdings = {}
     for e in active:
         inv = e.get("investment", "")
         ccy = e.get("payment_currency", "USD")
         if inv and inv not in holdings:
-            # Get currency from IM if available
             if inv in im:
                 ccy = im[inv].get("currency", ccy) or ccy
             holdings[inv] = ccy
 
-    # Check prices at period end dates
     period_end_dates = []
     for rec in calendar_records:
         cutoff = _norm_date(rec.get("current_period_cutoff", ""))
@@ -345,10 +416,8 @@ def pillar_availability(events: list, im: dict, calendar_records: list,
 
     checked_prices = set()
     for inv, ccy in holdings.items():
-        if inv in im:
-            inv_type = im[inv].get("investment_type", "").upper()
-            if inv_type == "CURRENCY":
-                continue  # currencies don't need price marks
+        if inv in im and im[inv].get("investment_type", "").upper() == "CURRENCY":
+            continue
         for period_end in period_end_dates:
             key = (inv, period_end)
             if key in checked_prices:
@@ -356,149 +425,87 @@ def pillar_availability(events: list, im: dict, calendar_records: list,
             checked_prices.add(key)
             price, gap = _find_rate(price_index, inv, period_end)
             if price is None:
-                result.fail(f"Price missing: {inv} on {period_end} — "
-                           f"no price within 5 days in master")
-            elif gap and gap > 0:
-                # Only warn if period_end is a business day — weekend/holiday gaps are expected
-                if _is_business_day(period_end):
-                    result.warn(f"Price gap: {inv} on {period_end} — "
-                               f"nearest price is {gap} day(s) away (business day)")
-                else:
-                    result.ok(f"Price exists: {inv} on {period_end} "
-                             f"(non-business day, {gap}d gap expected)")
+                result.fail(f"Price missing: {inv} on {period_end}",
+                           period=period_end, investment=inv)
+            elif gap and gap > 0 and _is_business_day(period_end):
+                result.warn(f"Price gap: {inv} on {period_end} — {gap}d",
+                           period=period_end, investment=inv)
             else:
-                result.ok(f"Price exists: {inv} on {period_end}")
+                result.ok(f"Price exists: {inv} on {period_end}",
+                         period=period_end, investment=inv)
 
-    # Check FX rates at settlement dates for foreign currency events
     checked_fx = set()
     foreign_methods = {
         "buy_equity", "sell_equity", "short_equity", "cover_equity",
-        "buy_bond", "sell_bond", "buy_future", "sell_future",
-        "deposit_currency", "withdraw_currency", "spot_fx"
+        "buy_bond", "sell_bond", "deposit_currency", "withdraw_currency", "spot_fx"
     }
     for e in active:
-        method   = e.get("method", "")
-        ccy      = e.get("payment_currency", "USD")
-        settle   = _norm_date(e.get("settledate", ""))
-        tranid   = e.get("tranid", "?")
-        inv      = e.get("investment", "")
-
-        if ccy == "USD" or method not in foreign_methods:
+        method = e.get("method", "")
+        ccy    = e.get("payment_currency", "USD")
+        settle = _norm_date(e.get("settledate", ""))
+        tranid = e.get("tranid", "?")
+        inv    = e.get("investment", "")
+        if ccy == "USD" or method not in foreign_methods or not settle:
             continue
-        if not settle:
-            continue
-
         key = (ccy, settle)
         if key in checked_fx:
             continue
         checked_fx.add(key)
-
         rate, gap = _find_rate(fx_index, ccy, settle)
         if rate is None:
-            result.fail(f"FX missing: {ccy}/USD on settle={settle} "
-                       f"(tranid={tranid} · {inv}) — no rate within 5 days")
+            result.fail(f"FX missing: {ccy}/USD on {settle} (tranid={tranid} {inv})",
+                       period=settle, investment=inv)
         elif gap and gap > 0:
-            result.warn(f"FX gap: {ccy}/USD on settle={settle} "
-                       f"(tranid={tranid} · {inv}) — nearest rate {gap} day(s) away")
+            result.warn(f"FX gap: {ccy}/USD on {settle} — {gap}d",
+                       period=settle, investment=inv)
         else:
-            result.ok(f"FX exists: {ccy}/USD on settle={settle}")
+            result.ok(f"FX exists: {ccy}/USD on {settle}",
+                     period=settle, investment=inv)
 
     if result.total == 0:
         result.skip("No holdings or period dates to check")
-
     return result
 
 
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
 # PILLAR 2 — JOURNAL BALANCE
-# Debits = Credits every period
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
 
-# Financial accounts that represent unrealized market value
-# These legitimately don't need to net to zero within a period
-UNREALIZED_ACCOUNTS = {
-    # Market value — one-sided, used for performance only
-    "MarketVal", "MarketValue",
-    # Unrealized GL accounts — daily deltas, not balance sheet
-    "UnrealizedGainLoss", "UnrealizedGL",
-    "UnrealPriceGL", "UnrealFXGL",
-    "UnrealPriceGLOffset", "UnrealFXGLOffset",
-    "PriceGainLoss", "FXGainLoss",
-    "AccruedIncome", "AmortDiscount", "AmortPremium",
-}
-
-def pillar_balance(jes_by_period: dict) -> ProofResult:
-    """
-    For every period, sum all JE local and book amounts.
-    Debits (positive) should equal credits (negative) — net = 0.
-    Exclude unrealized/market value accounts which don't balance intra-period.
-    """
+def pillar_balance(jes_by_period) -> ProofResult:
     result = ProofResult("balance")
-
     for period_name, jes in sorted(jes_by_period.items()):
-        local_sum = 0.0
-        book_sum  = 0.0
-        je_count  = 0
-
+        local_sum = book_sum = je_count = 0.0
         for je in jes:
             fa = str(_je_val(je, "financial_account") or "")
-            # Skip unrealized accounts
             if any(u.lower() in fa.lower() for u in UNREALIZED_ACCOUNTS):
                 continue
-
-            local = _safe_float(_je_val(je, "local")) or 0.0
-            book  = _safe_float(_je_val(je, "book"))  or 0.0
-            local_sum += local
-            book_sum  += book
+            local_sum += _safe_float(_je_val(je, "local")) or 0.0
+            book_sum  += _safe_float(_je_val(je, "book"))  or 0.0
             je_count  += 1
-
         if je_count == 0:
-            result.skip(f"{period_name} — no JEs to balance check")
+            result.skip(f"{period_name} — no JEs", period=period_name)
             continue
-
-        local_ok = abs(local_sum) <= AMOUNT_TOLERANCE
-        book_ok  = abs(book_sum)  <= AMOUNT_TOLERANCE
-
-        if local_ok and book_ok:
-            result.ok(f"{period_name} — {je_count} JEs balance "
-                     f"(local={local_sum:.4f} book={book_sum:.4f})")
+        if abs(local_sum) <= AMOUNT_TOLERANCE and abs(book_sum) <= AMOUNT_TOLERANCE:
+            result.ok(f"{period_name} — {int(je_count)} JEs balance",
+                     period=period_name)
         else:
-            if not local_ok:
-                result.fail(f"{period_name} — LOCAL does not balance: "
-                           f"net={local_sum:.4f} ({je_count} JEs)")
-            if not book_ok:
-                result.fail(f"{period_name} — BOOK does not balance: "
-                           f"net={book_sum:.4f} ({je_count} JEs)")
-
+            if abs(local_sum) > AMOUNT_TOLERANCE:
+                result.fail(f"{period_name} — LOCAL out of balance: {local_sum:.4f}",
+                           period=period_name)
+            if abs(book_sum) > AMOUNT_TOLERANCE:
+                result.fail(f"{period_name} — BOOK out of balance: {book_sum:.4f}",
+                           period=period_name)
     if result.total == 0:
-        result.skip("No periods processed yet")
-
+        result.skip("No periods processed")
     return result
 
 
-# ============================================================
-# PILLAR 3 — TRADE/SETTLE FX VERIFICATION
-# G/L between trade and settle = local × (settle_rate - trade_rate)
-# Only applies to foreign currency equity/bond transactions
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 3 — TRADE/SETTLE FX
+# ══════════════════════════════════════════════════════════════════════════════
 
-SETTLE_FX_METHODS = {
-    "buy_equity", "sell_equity", "short_equity", "cover_equity",
-    "buy_bond", "sell_bond",
-}
-
-def pillar_settle_fx(events: list, jes_by_period: dict,
-                     fx_index: dict) -> ProofResult:
-    """
-    For foreign currency equity/bond trades:
-    The G/L JE between trade date and settle date should equal:
-        local_amount × (settle_fx_rate - trade_fx_rate)
-
-    This verifies the CORRECT rate was used — not just that a rate exists.
-    """
+def pillar_settle_fx(events, jes_by_period, fx_index) -> ProofResult:
     result = ProofResult("settle_fx")
-
-    # Build JE index by tranid across all periods
     jes_by_tranid = defaultdict(list)
     for jes in jes_by_period.values():
         for je in jes:
@@ -507,241 +514,178 @@ def pillar_settle_fx(events: list, jes_by_period: dict,
                 jes_by_tranid[int(tid)].append(je)
 
     active = _active_events(events)
-
     for event in active:
-        method  = event.get("method", "")
-        ccy     = event.get("payment_currency", "USD")
-        tranid  = int(_safe_float(event.get("tranid")) or 0)
-        inv     = event.get("investment", "")
-        local   = _safe_float(event.get("total_amount"))
-        trade_d = _norm_date(event.get("tradedate", ""))
+        method   = event.get("method", "")
+        ccy      = event.get("payment_currency", "USD")
+        tranid   = int(_safe_float(event.get("tranid")) or 0)
+        inv      = event.get("investment", "")
+        local    = _safe_float(event.get("total_amount"))
+        trade_d  = _norm_date(event.get("tradedate", ""))
         settle_d = _norm_date(event.get("settledate", ""))
 
-        if method not in SETTLE_FX_METHODS:
+        if method not in SETTLE_FX_METHODS or ccy == "USD":
             continue
-        if ccy == "USD":
-            continue  # No FX G/L for USD trades
         if trade_d == settle_d:
-            result.skip(f"tranid={tranid} · {inv} — trade=settle, no FX G/L expected")
+            result.skip(f"tranid={tranid} {inv} — same day settle",
+                       investment=inv)
             continue
         if local is None:
-            result.warn(f"tranid={tranid} · {inv} — local amount missing in event")
+            result.warn(f"tranid={tranid} {inv} — missing local amount",
+                       investment=inv)
             continue
 
-        # Trade date book comes directly from the event — no FX lookup needed.
-        # The event carries whatever rate was applied at entry time.
-        # This may or may not match the FX master on trade date — that's by design.
         trade_book = _safe_float(event.get("total_amount_base"))
         if trade_book is None:
-            result.warn(f"tranid={tranid} · {inv} · {ccy} — "
-                       f"total_amount_base missing in event")
+            result.warn(f"tranid={tranid} {inv} — missing total_amount_base",
+                       investment=inv)
             continue
 
-        # Settle date FX rate from master — settlement always uses master rate
         settle_rate, settle_gap = _find_rate(fx_index, ccy, settle_d)
         if settle_rate is None:
-            result.warn(f"tranid={tranid} · {inv} · {ccy} — "
-                       f"no settle date FX rate on {settle_d}")
+            result.warn(f"tranid={tranid} {inv} — no FX rate {ccy} on {settle_d}",
+                       investment=inv)
             continue
 
-        # Expected G/L = settle_book - trade_book
-        # settle_book  = local × settle_rate
-        settle_book = abs(local) * settle_rate
-        expected_gl = settle_book - abs(trade_book)
-        gap_note    = f" settle rate {settle_gap}d gap" if settle_gap else ""
+        settle_book  = abs(local) * settle_rate
+        expected_gl  = settle_book - abs(trade_book)
+        actual_gl    = None
 
-        # Find the FXGainTradeSettle JE on settle date
-        actual_gl = None
         for je in jes_by_tranid.get(tranid, []):
             fa          = str(_je_val(je, "financial_account") or "")
             transaction = str(_je_val(je, "transaction") or "")
             ibor        = _je_date(je, "ibor_date")
-
-            if (fa == "FXGainTradeSettle"
-                    and transaction == "Settlement"
-                    and ibor == settle_d):
+            if fa == "FXGainTradeSettle" and transaction == "Settlement" and ibor == settle_d:
                 actual_gl = _safe_float(_je_val(je, "book"))
                 break
 
         if actual_gl is None:
-            result.warn(f"tranid={tranid} · {inv} · {ccy} — "
-                       f"no FXGainTradeSettle JE found on settle={settle_d}")
+            result.warn(f"tranid={tranid} {inv} — no FXGainTradeSettle JE on {settle_d}",
+                       investment=inv)
             continue
 
         if _is_tolerance_ok(expected_gl, actual_gl):
-            result.ok(f"tranid={tranid} · {inv} · {ccy} — "
-                     f"FX G/L correct: expected={expected_gl:.4f} actual={actual_gl:.4f}"
-                     + (f" [{gap_note.strip()}]" if gap_note else ""))
+            result.ok(f"tranid={tranid} {inv} {ccy} — FX G/L correct "
+                     f"expected={expected_gl:.4f} actual={actual_gl:.4f}",
+                     investment=inv)
         else:
-            result.fail(f"tranid={tranid} · {inv} · {ccy} — "
-                       f"FX G/L mismatch: expected={expected_gl:.4f} actual={actual_gl:.4f} "
-                       f"diff={abs(expected_gl - actual_gl):.4f}"
-                       + (f" [{gap_note.strip()}]" if gap_note else ""))
+            result.fail(f"tranid={tranid} {inv} {ccy} — FX G/L mismatch "
+                       f"expected={expected_gl:.4f} actual={actual_gl:.4f} "
+                       f"diff={abs(expected_gl-actual_gl):.4f}",
+                       investment=inv)
 
     if result.total == 0:
-        result.skip("No foreign currency equity/bond trades to check")
-
+        result.skip("No foreign currency trades to check")
     return result
 
-# ============================================================
+
+# ══════════════════════════════════════════════════════════════════════════════
 # PILLAR 4 — MARK VERIFICATION
-# Period end MV = qty × price × pricing_factor × fx_rate
-# Change in unrealized chains correctly period over period
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
 
-def pillar_marks(events: list, im: dict, calendar_records: list,
-                 jes_by_period: dict, price_index: dict,
-                 fx_index: dict) -> ProofResult:
-    """
-    For every holding at every period end:
-    1. Compute MV from raw inputs: qty × price × pf × fx_rate
-    2. Compare against MV in JEs
-    3. Verify change in unrealized chains period over period
-    """
-    from datetime import date as _date
-
+def pillar_marks(events, im, calendar_records, jes_by_period,
+                 price_index, fx_index) -> ProofResult:
     result = ProofResult("marks")
-
     if not calendar_records:
-        result.skip("No calendar records found")
+        result.skip("No calendar records")
         return result
 
-    prev_mv = {}  # investment → MV at end of previous period
+    prev_mv = {}
 
     for rec in sorted(calendar_records, key=lambda r: r.get("period_name", "")):
         period_name = rec.get("period_name", "")
-        period_end = _norm_date(rec.get("current_period_cutoff", ""))
+        period_end  = _norm_date(rec.get("current_period_cutoff", ""))
 
-        # ── OPEN PERIOD SKIP ──────────────────────────────────────
-        # If period end is in the future — month not closed yet
-        # Not a proof failure — data simply doesn't exist yet
         try:
             pe_date = datetime.strptime(period_end, "%Y-%m-%d").date()
-            if pe_date > _date.today():
-                result.skip(f"{period_name} — open period (end {period_end} > today)")
+            if pe_date > date_type.today():
+                result.skip(f"{period_name} — open period", period=period_name)
                 continue
         except Exception:
             pass
 
         if period_name not in jes_by_period:
-            result.skip(f"{period_name} — no JEs processed")
+            result.skip(f"{period_name} — no JEs", period=period_name)
             continue
 
-        jes = jes_by_period[period_name]
-
-        # Accumulate per-investment from JEs across ALL periods up to this one
-        qty_by_inv = defaultdict(float)
-        cost_by_inv = defaultdict(float)
+        qty_by_inv          = defaultdict(float)
+        cost_by_inv         = defaultdict(float)
         unreal_price_by_inv = defaultdict(float)
-        unreal_fx_by_inv = defaultdict(float)
+        unreal_fx_by_inv    = defaultdict(float)
 
         for pn, pjes in jes_by_period.items():
             if pn > period_name:
                 continue
             for je in pjes:
-                fa = str(_je_val(je, "financial_account") or "")
-                ls = str(_je_val(je, "ls") or "")
-                inv = str(_je_val(je, "investment") or "")
-                qty = _safe_float(_je_val(je, "quantity")) or 0.0
+                fa   = str(_je_val(je, "financial_account") or "")
+                ls   = str(_je_val(je, "ls") or "")
+                inv  = str(_je_val(je, "investment") or "")
+                qty  = _safe_float(_je_val(je, "quantity")) or 0.0
                 book = _safe_float(_je_val(je, "book")) or 0.0
-
                 if fa == "Cost" and ls in ("l", "s"):
-                    qty_by_inv[inv] += qty
+                    qty_by_inv[inv]  += qty
                     cost_by_inv[inv] += book
-                elif fa == "UnrealizedPriceGL" or fa == "UnrealPriceGL":
+                elif fa in ("UnrealizedPriceGL", "UnrealPriceGL"):
                     unreal_price_by_inv[inv] += book
-                elif fa == "UnrealizedFXGL" or fa == "UnrealFXGL":
+                elif fa in ("UnrealizedFXGL", "UnrealFXGL"):
                     unreal_fx_by_inv[inv] += book
 
         for inv, qty in qty_by_inv.items():
-            if not inv or inv in ("USD", ""):
+            if not inv or inv in ("USD", "") or abs(qty) < QTY_TOLERANCE:
                 continue
-            if abs(qty) < QTY_TOLERANCE:
-                continue
-
             if inv in im and im[inv].get("investment_type", "").upper() == "CURRENCY":
                 continue
 
-            pf = 1.0
+            pf  = _safe_float(im.get(inv, {}).get("pricing_factor")) or 1.0
             ccy = "USD"
             if inv in im:
-                pf = _safe_float(im[inv].get("pricing_factor")) or 1.0
                 raw_ccy = (im[inv].get("currency") or "").strip()
-                if not raw_ccy or raw_ccy == "0" or len(raw_ccy) > 3:
-                    raw_ccy = (im[inv].get("asset_class") or "USD").strip()
-                ccy = raw_ccy if (raw_ccy and len(raw_ccy) <= 3) else "USD"
+                ccy = raw_ccy if (raw_ccy and len(raw_ccy) <= 3 and raw_ccy != "0") else "USD"
 
             price, price_gap = _find_rate(price_index, inv, period_end)
             if price is None:
-                result.warn(f"{period_name} · {inv} — no price on {period_end} for MV check")
+                result.warn(f"{period_name} {inv} — no price for MV check",
+                           period=period_name, investment=inv)
                 continue
 
-            fx_rate = 1.0
-            fx_gap = 0
-            if ccy != "USD":
-                fx_rate, fx_gap = _find_rate(fx_index, ccy, period_end)
-                if fx_rate is None:
-                    result.warn(f"{period_name} · {inv} — no FX rate {ccy}/USD on {period_end}")
-                    continue
+            fx_rate, fx_gap = (1.0, 0) if ccy == "USD" else _find_rate(fx_index, ccy, period_end)
+            if fx_rate is None:
+                result.warn(f"{period_name} {inv} — no FX {ccy} for MV check",
+                           period=period_name, investment=inv)
+                continue
 
-            # ── THE PROOF EQUATION ───────────────────────────────
-            mv_local = qty * price * pf
-            mv_base = mv_local * fx_rate
+            mv_local    = qty * price * pf
+            mv_base     = mv_local * fx_rate
+            cost_base   = cost_by_inv.get(inv, 0.0)
+            unreal_px   = unreal_price_by_inv.get(inv, 0.0)
+            unreal_fx   = unreal_fx_by_inv.get(inv, 0.0)
+            acct_mv     = cost_base + unreal_px + unreal_fx
 
-            cost_base = cost_by_inv.get(inv, 0.0)
-            unreal_price_gl = unreal_price_by_inv.get(inv, 0.0)
-            unreal_fx_gl = unreal_fx_by_inv.get(inv, 0.0)
-            acct_mv_base = cost_base + unreal_price_gl + unreal_fx_gl
-
-            gap_note = ""
-            if price_gap: gap_note += f" price {price_gap}d gap"
-            if fx_gap:    gap_note += f" fx {fx_gap}d gap"
-
-            proof_ok = _is_tolerance_ok(mv_base, acct_mv_base)
-
-            if proof_ok:
+            if _is_tolerance_ok(mv_base, acct_mv):
                 result.ok(
-                    f"{period_name} · {inv} — MVBase PROVED\n"
-                    f"         VAI Calc   : qty={qty:,.0f} × px={price:.4f} × pf={pf} × fx={fx_rate:.6f} = {mv_base:,.2f} USD\n"
-                    f"         Accounting : cost={cost_base:,.2f} + unrealPx={unreal_price_gl:,.2f} + unrealFX={unreal_fx_gl:,.2f} = {acct_mv_base:,.2f} USD\n"
-                    f"         MVLocal    : {mv_local:,.2f} {ccy}"
-                    + (f"  [{gap_note.strip()}]" if gap_note else "")
+                    f"{period_name} · {inv} — MVBase PROVED "
+                    f"VAI={mv_base:,.2f} Acct={acct_mv:,.2f}",
+                    period=period_name, investment=inv
                 )
             else:
                 result.fail(
                     f"{period_name} · {inv} — MVBase MISMATCH\n"
                     f"         VAI Calc   : qty={qty:,.0f} × px={price:.4f} × pf={pf} × fx={fx_rate:.6f} = {mv_base:,.2f} USD\n"
-                    f"         Accounting : cost={cost_base:,.2f} + unrealPx={unreal_price_gl:,.2f} + unrealFX={unreal_fx_gl:,.2f} = {acct_mv_base:,.2f} USD\n"
-                    f"         Diff       : {abs(mv_base - acct_mv_base):,.4f} USD"
-                    + (f"  [{gap_note.strip()}]" if gap_note else "")
+                    f"         Accounting : cost={cost_base:,.2f} + unrealPx={unreal_px:,.2f} + unrealFX={unreal_fx:,.2f} = {acct_mv:,.2f} USD\n"
+                    f"         Diff       : {abs(mv_base-acct_mv):,.4f} USD",
+                    period=period_name, investment=inv
                 )
-
-            # ── DELTA UNREALIZED CHECK ────────────────────────────
-            if inv in prev_mv:
-                delta_acct = acct_mv_base - prev_mv[inv]
-                result.ok(
-                    f"{period_name} · {inv} — Δ unrealized (base) = "
-                    f"{delta_acct:+,.2f} USD "
-                    f"({prev_mv[inv]:,.2f} → {acct_mv_base:,.2f})"
-                )
-
-            prev_mv[inv] = acct_mv_base
+            prev_mv[inv] = acct_mv
 
     return result
 
-# ============================================================
-# PILLAR 5 — CHART OF ACCOUNTS VALIDATION
-# Every financial_account posted must exist in chart_of_accounts.csv
-# ============================================================
 
-def pillar_chart_of_accounts(jes_by_period: dict) -> ProofResult:
-    import csv
-    from v_config import REFDATA_PATH
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 5 — CHART OF ACCOUNTS
+# ══════════════════════════════════════════════════════════════════════════════
 
+def pillar_chart_of_accounts(jes_by_period) -> ProofResult:
     result = ProofResult("chart_of_accounts")
-
     coa_path = os.path.join(REFDATA_PATH, "chart_of_accounts.csv")
-
     if not os.path.exists(coa_path):
         result.skip("chart_of_accounts.csv not found")
         return result
@@ -754,183 +698,503 @@ def pillar_chart_of_accounts(jes_by_period: dict) -> ProofResult:
                 valid_accounts.add(name)
 
     if not valid_accounts:
-        result.skip("No System_Name entries found in chart_of_accounts.csv")
+        result.skip("No System_Name entries in COA")
         return result
 
     unknown = {}
     for period_name, jes in jes_by_period.items():
         for je in jes:
             fa = str(_je_val(je, "financial_account") or "").strip()
-            if not fa:
-                continue
-            if fa not in valid_accounts:
+            if fa and fa not in valid_accounts:
                 if fa not in unknown:
                     unknown[fa] = set()
                 unknown[fa].add(period_name)
 
     if unknown:
         for fa, periods in sorted(unknown.items()):
-            result.fail(
-                f"Unknown account '{fa}' — not in COA "
-                f"(periods: {', '.join(sorted(periods))})"
-            )
+            result.fail(f"Unknown account '{fa}' (periods: {', '.join(sorted(periods))})")
     else:
-        total_jes = sum(len(jes) for jes in jes_by_period.values())
-        result.ok(
-            f"All accounts valid — {total_jes} JEs checked "
-            f"against {len(valid_accounts)} COA entries"
-        )
+        total = sum(len(v) for v in jes_by_period.values())
+        result.ok(f"All accounts valid — {total} JEs vs {len(valid_accounts)} COA entries")
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 6 — DATA INTEGRITY
+# ══════════════════════════════════════════════════════════════════════════════
+
+def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
+    """
+    D-001  kdbegin must equal tradedate for non-adjustment events
+    D-002  kdbegin must never be before tradedate
+    D-003  tradedate must not fall on NYSE holiday or weekend
+    D-004  settledate must not be before tradedate
+    D-005  no duplicate journal entries
+    D-006  MarketVal non-zero for active cost positions
+    D-007  quantity not zero for buy/sell events
+    D-008  price not zero/negative for buy/sell events
+    D-009  total_amount = qty x price within tolerance
+    """
+    result = ProofResult("data")
+
+    # ── D-001 kdbegin = tradedate ─────────────────────────────────────────────
+    d001 = 0
+    for i, e in enumerate(events):
+        if _is_adjustment(e.get('method', '')):
+            continue
+        td = _parse_event_date(e.get('tradedate', ''))
+        kb = _parse_event_date(e.get('kdbegin', ''))
+        if td and kb and kb != td:
+            d001 += 1
+            if d001 <= 5:
+                result.critical(
+                    f"D-001 kdbegin≠tradedate: {e.get('investment','?')} "
+                    f"trade={td} kdbegin={kb}",
+                    investment=e.get('investment', '')
+                )
+    if d001 == 0:
+        result.ok("D-001 kdbegin = tradedate — all clear")
+    elif d001 > 5:
+        result.critical(f"D-001 kdbegin≠tradedate — {d001} total violations (showing first 5)")
+
+    # ── D-002 kdbegin not before tradedate ────────────────────────────────────
+    d002 = 0
+    for e in events:
+        td = _parse_event_date(e.get('tradedate', ''))
+        kb = _parse_event_date(e.get('kdbegin', ''))
+        if td and kb and kb < td:
+            d002 += 1
+            if d002 <= 5:
+                result.critical(
+                    f"D-002 kdbegin<tradedate: {e.get('investment','?')} "
+                    f"kdbegin={kb} trade={td}",
+                    investment=e.get('investment', '')
+                )
+    if d002 == 0:
+        result.ok("D-002 kdbegin never before tradedate — all clear")
+    elif d002 > 5:
+        result.critical(f"D-002 kdbegin<tradedate — {d002} total (showing first 5)")
+
+    # ── D-003 no holiday tradedates ───────────────────────────────────────────
+    d003 = 0
+    for e in events:
+        method = str(e.get('method', '')).lower()
+        if 'split' in method or 'dividend' in method:
+            continue
+        td = _parse_event_date(e.get('tradedate', ''))
+        if td and _is_holiday_or_weekend(td):
+            d003 += 1
+            if d003 <= 5:
+                result.fail(
+                    f"D-003 holiday tradedate: {e.get('investment','?')} {td}",
+                    investment=e.get('investment', ''),
+                    severity="HIGH"
+                )
+    if d003 == 0:
+        result.ok("D-003 no holiday/weekend tradedates — all clear")
+    elif d003 > 5:
+        result.fail(f"D-003 holiday tradedates — {d003} total (showing first 5)",
+                   severity="HIGH")
+
+    # ── D-004 settle not before trade ─────────────────────────────────────────
+    d004 = 0
+    for e in events:
+        td = _parse_event_date(e.get('tradedate', ''))
+        sd = _parse_event_date(e.get('settledate', ''))
+        if td and sd and sd < td:
+            d004 += 1
+            if d004 <= 5:
+                result.critical(
+                    f"D-004 settle<trade: {e.get('investment','?')} "
+                    f"settle={sd} trade={td}",
+                    investment=e.get('investment', '')
+                )
+    if d004 == 0:
+        result.ok("D-004 settledate never before tradedate — all clear")
+    elif d004 > 5:
+        result.critical(f"D-004 settle<trade — {d004} total (showing first 5)")
+
+    # ── D-007 qty not zero ────────────────────────────────────────────────────
+    d007 = 0
+    for e in events:
+        method = str(e.get('method', '')).lower()
+        if 'buy' not in method and 'sell' not in method:
+            continue
+        try:
+            qty = float(str(e.get('quantity', 0)).strip() or 0)
+            if qty == 0:
+                d007 += 1
+                if d007 <= 5:
+                    result.critical(
+                        f"D-007 zero qty: {e.get('investment','?')} "
+                        f"method={method} tranid={e.get('tranid','')}",
+                        investment=e.get('investment', '')
+                    )
+        except:
+            pass
+    if d007 == 0:
+        result.ok("D-007 no zero quantities — all clear")
+    elif d007 > 5:
+        result.critical(f"D-007 zero quantities — {d007} total (showing first 5)")
+
+    # ── D-008 price not zero ──────────────────────────────────────────────────
+    d008 = 0
+    for e in events:
+        method = str(e.get('method', '')).lower()
+        if 'buy' not in method and 'sell' not in method:
+            continue
+        try:
+            price = float(str(e.get('price', 0)).strip() or 0)
+            if price <= 0:
+                d008 += 1
+                if d008 <= 5:
+                    result.critical(
+                        f"D-008 zero/neg price: {e.get('investment','?')} "
+                        f"price={price} tranid={e.get('tranid','')}",
+                        investment=e.get('investment', '')
+                    )
+        except:
+            pass
+    if d008 == 0:
+        result.ok("D-008 no zero/negative prices — all clear")
+    elif d008 > 5:
+        result.critical(f"D-008 zero/neg prices — {d008} total (showing first 5)")
+
+    # ── D-009 total_amount = qty x price ─────────────────────────────────────
+    d009 = 0
+    for e in events:
+        method = str(e.get('method', '')).lower()
+        if 'buy' not in method and 'sell' not in method:
+            continue
+        try:
+            qty      = float(str(e.get('quantity', 0)).strip() or 0)
+            price    = float(str(e.get('price', 0)).strip() or 0)
+            total    = float(str(e.get('total_amount', 0)).strip() or 0)
+            expected = abs(qty * price)
+            actual   = abs(total)
+            if expected > 0 and abs(expected - actual) / expected > 0.02:
+                d009 += 1
+                if d009 <= 5:
+                    result.fail(
+                        f"D-009 amount mismatch: {e.get('investment','?')} "
+                        f"qty×px={expected:.2f} total={actual:.2f}",
+                        investment=e.get('investment', ''),
+                        severity="HIGH"
+                    )
+        except:
+            pass
+    if d009 == 0:
+        result.ok("D-009 total_amount agrees with qty×price — all clear")
+    elif d009 > 5:
+        result.fail(f"D-009 amount mismatches — {d009} total (showing first 5)",
+                   severity="HIGH")
+
+    # # ── D-010 contract_size and pricing_factor never zero in IM ──────────────────
+    # if im:
+    #     d010 = 0
+    #     for inv, attrs in im.items():
+    #         cs = _safe_float(attrs.get('contract_size'))
+    #         pf = _safe_float(attrs.get('pricing_factor'))
+    #         if cs is not None and cs == 0:
+    #             d010 += 1
+    #             if d010 <= 5:
+    #                 result.critical(
+    #                     f"D-010 contract_size=0 in IM: {inv}",
+    #                     investment=inv
+    #                 )
+    #         if pf is not None and pf == 0:
+    #             d010 += 1
+    #             if d010 <= 5:
+    #                 result.critical(
+    #                     f"D-010 pricing_factor=0 in IM: {inv}",
+    #                     investment=inv
+    #                 )
+    #     if d010 == 0:
+    #         result.ok("D-010 contract_size and pricing_factor never zero — all clear")
+    #     elif d010 > 5:
+    #         result.critical(f"D-010 zero multiplicative factors — {d010} total (showing first 5)")
+    # else:
+    #     result.skip("D-010 — no investment master provided")
+
+    # ── D-005 duplicate JEs (if journals provided) ────────────────────────────
+    if jes_by_period:
+        all_jes = [je for jes in jes_by_period.values() for je in jes]
+        seen = {}
+        dupes = 0
+        for je in all_jes:
+            key = (
+                str(_je_val(je, "investment") or ""),
+                str(_je_date(je, "ibor_date")),
+                str(_je_val(je, "financial_account") or ""),
+                str(_je_val(je, "quantity") or ""),
+                str(_je_val(je, "local") or ""),
+            )
+            if key in seen:
+                dupes += 1
+                if dupes <= 5:
+                    result.fail(
+                        f"D-005 duplicate JE: {key[0]} {key[1]} {key[2]} "
+                        f"qty={key[3]} local={key[4]}",
+                        severity="HIGH"
+                    )
+            else:
+                seen[key] = True
+        if dupes == 0:
+            result.ok(f"D-005 no duplicate JEs — {len(all_jes)} JEs checked")
+        elif dupes > 5:
+            result.fail(f"D-005 duplicate JEs — {dupes} total (showing first 5)",
+                       severity="HIGH")
+
+        # ── D-006 MarketVal non-zero for active positions ─────────────────────
+        from collections import defaultdict
+        import pandas as pd
+
+        mv_issues = 0
+        by_inv_date = defaultdict(lambda: {"cost_qty": 0.0, "mv": 0.0})
+        for je in all_jes:
+            fa  = str(_je_val(je, "financial_account") or "")
+            inv = str(_je_val(je, "investment") or "")
+            dt  = str(_je_date(je, "ibor_date"))
+            k   = (inv, dt)
+            if fa == "Cost":
+                qty = _safe_float(_je_val(je, "quantity")) or 0.0
+                by_inv_date[k]["cost_qty"] += qty
+            elif fa == "MarketVal":
+                local = _safe_float(_je_val(je, "local")) or 0.0
+                by_inv_date[k]["mv"] += local
+
+        for (inv, dt), vals in by_inv_date.items():
+            if vals["cost_qty"] != 0 and vals["mv"] == 0:
+                mv_issues += 1
+                if mv_issues <= 5:
+                    result.fail(
+                        f"D-006 MarketVal=0 for active position: "
+                        f"{inv} on {dt} cost_qty={vals['cost_qty']:.0f}",
+                        investment=inv,
+                        severity="HIGH"
+                    )
+        if mv_issues == 0:
+            result.ok("D-006 MarketVal non-zero for all active positions — all clear")
+        elif mv_issues > 5:
+            result.fail(f"D-006 MarketVal=0 issues — {mv_issues} total (showing first 5)",
+                       severity="HIGH")
 
     return result
 
-# ============================================================
-# PRINT HELPERS
-# ============================================================
 
-def _print_pillar_result(result: ProofResult, verbose: bool = False):
+# ══════════════════════════════════════════════════════════════════════════════
+# CPH INTEGRATION HOOKS (optional)
+# ══════════════════════════════════════════════════════════════════════════════
+
+def run_proof_pre_cph(portfolio: str, calendar: str,
+                      funds_path: str = None,
+                      refdata_path: str = None,
+                      block_on_critical: bool = True) -> bool:
+    """
+    Optional pre-CPH data validation.
+    Returns True if safe to proceed, False if critical issues found.
+    Set block_on_critical=False to warn but not block.
+    """
+    fp = funds_path or str(FUNDS_PATH)
+    rp = refdata_path or str(REFDATA_PATH)
+
+    events = load_events(portfolio, fp)
+    result = pillar_data(events)
+
+    critical_count = len(result.criticals)
+    print(f"\n>>> PRE-CPH DATA CHECK | {portfolio} | {calendar}")
+    print(f"    D-checks: {len(result.passes)} pass | "
+          f"{len(result.warnings)} warn | "
+          f"{len(result.failures)} fail | "
+          f"{critical_count} critical")
+
+    if critical_count > 0:
+        print(f"    {'⛔ BLOCKING' if block_on_critical else '⚠ WARNING'}: "
+              f"{critical_count} critical data issues found")
+        for item in result.criticals[:3]:
+            print(f"    → {item.message}")
+        if block_on_critical:
+            return False
+
+    return True
+
+
+def run_proof_post_cph(portfolio: str, calendar: str,
+                       period: str = None,
+                       funds_path: str = None,
+                       refdata_path: str = None) -> ProofResult:
+    """
+    Optional post-CPH validation.
+    Runs marks pillar to verify MV integrity after processing.
+    """
+    fp = funds_path or str(FUNDS_PATH)
+    rp = refdata_path or str(REFDATA_PATH)
+
+    events           = load_events(portfolio, fp)
+    im               = load_investment_master(portfolio, fp)
+    price_index      = load_price_index(rp)
+    fx_index         = load_fx_index(rp)
+    jes_by_period    = load_jes_from_journals(portfolio, calendar, fp, period)
+    calendar_records = load_calendar_records(portfolio, calendar, fp)
+
+    if period:
+        calendar_records = [r for r in calendar_records
+                           if r.get("period_name") == period]
+        jes_by_period = _filter_periods(jes_by_period, period=period)
+
+    result = pillar_marks(events, im, calendar_records,
+                          jes_by_period, price_index, fx_index)
+
+    fail_count = len(result.failures)
+    print(f"\n>>> POST-CPH MARKS CHECK | {portfolio} | {calendar} | {period or 'ALL'}")
+    print(f"    {len(result.passes)} proved | {len(result.warnings)} warn | "
+          f"{fail_count} failed")
+
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PRINT HELPERS
+# ══════════════════════════════════════════════════════════════════════════════
+
+def _print_pillar(result: ProofResult, verbose: bool = False):
     label = result.pillar.upper()
-    print(f"\n{BOLD}{BLUE}── PILLAR: {label}{RESET}")
-    print(f"   Checks: {result.total}  "
-          f"{GREEN}✓{result.passes.__len__()}{RESET}  "
-          f"{YELLOW}⚠{result.warnings.__len__()}{RESET}  "
-          f"{RED}✗{result.failures.__len__()}{RESET}")
+    status = f"{GREEN}ALL CLEAR{RESET}" if result.all_clear else f"{RED}ISSUES FOUND{RESET}"
+    print(f"\n{BOLD}{BLUE}── PILLAR: {label}{RESET}  {status}")
+    print(f"   {GREEN}✓ {len(result.passes)}{RESET}  "
+          f"{YELLOW}⚠ {len(result.warnings)}{RESET}  "
+          f"{RED}✗ {len(result.failures)}{RESET}  "
+          f"{DIM}skip {len(result.skipped)}{RESET}")
 
     if result.failures:
         print(f"\n   {RED}FAILURES:{RESET}")
-        for f in result.failures:
-            print(f"   {_fail(f)}")
+        for item in result.failures:
+            sev = f"[{item.severity}] " if item.severity == "CRITICAL" else ""
+            print(f"   {RED}✗ FAIL{RESET}  {sev}{item.message}")
 
     if result.warnings:
         print(f"\n   {YELLOW}WARNINGS:{RESET}")
-        for w in result.warnings:
-            print(f"   {_warn(w)}")
+        for item in result.warnings:
+            print(f"   {YELLOW}⚠ WARN{RESET}  {item.message}")
 
     if verbose and result.passes:
         print(f"\n   {GREEN}PASSES:{RESET}")
-        for p in result.passes:
-            print(f"   {_ok(p)}")
+        for item in result.passes:
+            print(f"   {GREEN}✓ PASS{RESET}  {item.message}")
 
-    if result.skipped and verbose:
-        for s in result.skipped:
-            print(f"   {_skip(s)}")
+    if verbose and result.skipped:
+        for item in result.skipped:
+            print(f"   {DIM}  SKIP  {item.message}{RESET}")
 
 
-# ============================================================
-# MAIN
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
+# MAIN RUNNER
+# ══════════════════════════════════════════════════════════════════════════════
 
-def run_proof(portfolio: str, calendar: str, period: str = None,
-              tranid_filter: int = None, investment_filter: str = None,
-              pillar_filter: str = None, verbose: bool = False,
-              funds_path: str = "funds", refdata_path: str = "refdata"):
+def run_proof(portfolio: str, calendar: str,
+              period: str = None,
+              period_from: str = None,
+              period_to: str = None,
+              tranid_filter: int = None,
+              investment_filter: str = None,
+              pillar_filter: str = None,
+              verbose: bool = False,
+              funds_path: str = None,
+              refdata_path: str = None) -> list:
+
+    fp = funds_path or str(FUNDS_PATH)
+    rp = refdata_path or str(REFDATA_PATH)
 
     print(f"\n{BOLD}{'═'*65}{RESET}")
     print(f"{BOLD}  VAI PROOF ENGINE — Visibility{RESET}")
     print(f"  Portfolio  : {portfolio}")
     print(f"  Calendar   : {calendar}")
-    print(f"  Period     : {period or 'ALL'}")
-    if tranid_filter:     print(f"  Tran ID    : {tranid_filter}")
+    print(f"  Period     : {period or (f'{period_from} → {period_to}' if period_from else 'ALL')}")
     if investment_filter: print(f"  Investment : {investment_filter}")
     if pillar_filter:     print(f"  Pillar     : {pillar_filter}")
     print(f"{'═'*65}{RESET}\n")
 
-    # ── LOAD DATA ──────────────────────────────────────────────
+    # ── LOAD ──────────────────────────────────────────────────────────────────
     print("Loading data...")
-    events           = load_events(portfolio, funds_path)
-    im               = load_investment_master(portfolio, funds_path)
-    price_index      = load_price_index(refdata_path)
-    fx_index         = load_fx_index(refdata_path)
-    jes_by_period    = load_jes_from_journals(portfolio, calendar, funds_path, period)
-    calendar_records = load_calendar_records(portfolio, calendar, funds_path)
+    events           = load_events(portfolio, fp)
+    im               = load_investment_master(portfolio, fp)
+    price_index      = load_price_index(rp)
+    fx_index         = load_fx_index(rp)
+    jes_by_period    = load_jes_from_journals(portfolio, calendar, fp, period)
+    calendar_records = load_calendar_records(portfolio, calendar, fp)
 
-    # Filter to relevant period records
+    # Filter periods
+    jes_by_period = _filter_periods(jes_by_period, period, period_from, period_to)
     if period:
         calendar_records = [r for r in calendar_records
                            if r.get("period_name") == period]
-
-    print(f"  Events          : {len(events)}")
-    print(f"  IM entries      : {len(im)}")
-    print(f"  Price entries   : {len(price_index)}")
-    print(f"  FX entries      : {len(fx_index)}")
-    print(f"  Periods in JEs  : {len(jes_by_period)}")
-    print(f"  Calendar records: {len(calendar_records)}")
+    elif period_from or period_to:
+        calendar_records = [r for r in calendar_records
+                           if (not period_from or r.get("period_name","") >= period_from)
+                           and (not period_to or r.get("period_name","") <= period_to)]
 
     # Apply filters
     if investment_filter:
         inv_upper = investment_filter.upper()
         events = [e for e in events
-                 if e.get("investment", "").upper() == inv_upper]
+                 if e.get("investment","").upper() == inv_upper]
     if tranid_filter:
         events = [e for e in events
                  if int(_safe_float(e.get("tranid")) or 0) == tranid_filter]
 
-    # ── RUN PILLARS ────────────────────────────────────────────
+    print(f"  Events: {len(events)}  |  "
+          f"Periods: {len(jes_by_period)}  |  "
+          f"Prices: {len(price_index)}  |  "
+          f"FX: {len(fx_index)}")
+
+    # ── RUN PILLARS ───────────────────────────────────────────────────────────
     results = []
     run_all = pillar_filter is None
 
-    if run_all or pillar_filter == "availability":
-        print(f"\n{CYAN}Running Pillar 1 — Data Availability...{RESET}")
-        r = pillar_availability(events, im, calendar_records,
-                                price_index, fx_index)
-        results.append(r)
-        _print_pillar_result(r, verbose)
+    pillar_map = {
+        "availability":      lambda: pillar_availability(events, im, calendar_records, price_index, fx_index),
+        "balance":           lambda: pillar_balance(jes_by_period),
+        "settle_fx":         lambda: pillar_settle_fx(events, jes_by_period, fx_index),
+        "marks":             lambda: pillar_marks(events, im, calendar_records, jes_by_period, price_index, fx_index),
+        "chart_of_accounts": lambda: pillar_chart_of_accounts(jes_by_period),
+        "data":              lambda: pillar_data(events, jes_by_period),
+    }
 
-    if run_all or pillar_filter == "balance":
-        print(f"\n{CYAN}Running Pillar 2 — Journal Balance...{RESET}")
-        r = pillar_balance(jes_by_period)
-        results.append(r)
-        _print_pillar_result(r, verbose)
+    for name, fn in pillar_map.items():
+        if run_all or pillar_filter == name:
+            print(f"\n{CYAN}Running {name}...{RESET}")
+            r = fn()
+            results.append(r)
+            _print_pillar(r, verbose)
 
-    if run_all or pillar_filter == "settle_fx":
-        print(f"\n{CYAN}Running Pillar 3 — Trade/Settle FX...{RESET}")
-        r = pillar_settle_fx(events, jes_by_period, fx_index)
-        results.append(r)
-        _print_pillar_result(r, verbose)
-
-    if run_all or pillar_filter == "marks":
-        print(f"\n{CYAN}Running Pillar 4 — Mark Verification...{RESET}")
-        r = pillar_marks(events, im, calendar_records,
-                         jes_by_period, price_index, fx_index)
-        results.append(r)
-        _print_pillar_result(r, verbose)
-
-    if run_all or pillar_filter == "chart_of_accounts":
-        print(f"\n{CYAN}Running Pillar 5 — Chart of Accounts...{RESET}")
-        r5 = pillar_chart_of_accounts(jes_by_period)
-        _print_pillar_result(r5, verbose)
-        results.append(r5)
-
-    # ── SUMMARY ────────────────────────────────────────────────
-    total_pass = sum(len(r.passes)   for r in results)
-    total_warn = sum(len(r.warnings) for r in results)
-    total_fail = sum(len(r.failures) for r in results)
-    all_clear  = all(r.all_clear for r in results)
+    # ── SUMMARY ───────────────────────────────────────────────────────────────
+    total_pass = sum(len(r.passes)    for r in results)
+    total_warn = sum(len(r.warnings)  for r in results)
+    total_fail = sum(len(r.failures)  for r in results)
+    all_clear  = all(r.all_clear      for r in results)
+    has_crit   = any(r.has_critical   for r in results)
 
     print(f"\n{BOLD}{'═'*65}{RESET}")
     print(f"{BOLD}  PROOF SUMMARY{RESET}")
     print(f"{'═'*65}")
-    print(f"  {GREEN}✓ PASS   {total_pass}{RESET}")
-    print(f"  {YELLOW}⚠ WARN   {total_warn}{RESET}")
-    print(f"  {RED}✗ FAIL   {total_fail}{RESET}")
+    print(f"  {GREEN}✓ PASS    {total_pass}{RESET}")
+    print(f"  {YELLOW}⚠ WARN    {total_warn}{RESET}")
+    print(f"  {RED}✗ FAIL    {total_fail}{RESET}")
+    if has_crit:
+        print(f"  {RED}⛔ CRITICAL issues present{RESET}")
 
     if all_clear and total_pass > 0:
-        print(f"\n{GREEN}{BOLD}  ✓ ALL CLEAR — proof holds{RESET}")
-    elif all_clear and total_pass == 0:
-        print(f"\n{YELLOW}{BOLD}  ⚠ NO CHECKS RAN — verify data is processed{RESET}")
-    else:
+        print(f"\n{GREEN}{BOLD}  ✓ ALL CLEAR{RESET}")
+    elif not all_clear:
         print(f"\n{RED}{BOLD}  ✗ PROOF FAILED — {total_fail} failure(s){RESET}")
-        print(f"\n  {CYAN}→ Use OPS → Reverse/Modify Event to correct{RESET}")
-        print(f"  {CYAN}→ Reprocess after correction{RESET}")
-        print(f"  {CYAN}→ Re-run proof to verify fix{RESET}")
-
     print(f"{'═'*65}\n")
-
 
     return results
 
-# ============================================================
+
+# ══════════════════════════════════════════════════════════════════════════════
 # CLI
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -938,37 +1202,44 @@ if __name__ == "__main__":
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Pillars:
-  availability  prices and FX rates exist for all required dates
-  balance       debits = credits every period (double-entry integrity)
-  settle_fx     trade/settle FX G/L uses correct rate
-  marks         period end MV = qty x price x pf x fx_rate
+  availability      prices and FX rates exist for all required dates
+  balance           debits = credits every period
+  settle_fx         trade/settle FX G/L uses correct rate
+  marks             period end MV = qty x price x pf x fx_rate
+  chart_of_accounts every account posted exists in COA
+  data              event file integrity (kdbegin, holidays, qty, price, dupes)
 
 Examples:
-  python proof_engine.py Portfolio3 Monthly
-  python proof_engine.py Portfolio3 Monthly 2026-01
-  python proof_engine.py Portfolio3 Monthly --pillar balance
-  python proof_engine.py Portfolio3 Monthly --investment MITIB --verbose
+  python proof_engine.py Portfolio1 Monthly
+  python proof_engine.py Portfolio1 Monthly 2024-06
+  python proof_engine.py Portfolio1 Monthly --period-from 2024-01 --period-to 2024-06
+  python proof_engine.py Portfolio1 Monthly --pillar marks --verbose
+  python proof_engine.py Portfolio1 Monthly --pillar data
+  python proof_engine.py Portfolio1 Monthly --investment AAPL --verbose
         """
     )
-    parser.add_argument("portfolio",   help="Portfolio ID e.g. Portfolio3")
-    parser.add_argument("calendar",    help="Calendar e.g. Monthly")
-    parser.add_argument("period",      nargs="?", help="Period e.g. 2026-01 (optional)")
-    parser.add_argument("--tranid",     type=int,  help="Filter to single tranid")
-    parser.add_argument("--investment", type=str,  help="Filter to single investment")
-    parser.add_argument("--pillar",     type=str,
-                        choices=["availability", "balance", "settle_fx", "marks", "chart_of_accounts"],
-                        help="Run single pillar only")
-    parser.add_argument("--verbose",   action="store_true",
-                        help="Show passing checks too")
-    parser.add_argument("--funds",     default="funds",   help="Funds path")
-    parser.add_argument("--refdata",   default="refdata", help="Refdata path")
+    parser.add_argument("portfolio")
+    parser.add_argument("calendar")
+    parser.add_argument("period",        nargs="?")
+    parser.add_argument("--period-from", type=str)
+    parser.add_argument("--period-to",   type=str)
+    parser.add_argument("--tranid",      type=int)
+    parser.add_argument("--investment",  type=str)
+    parser.add_argument("--pillar",      type=str,
+                        choices=["availability","balance","settle_fx",
+                                 "marks","chart_of_accounts","data"])
+    parser.add_argument("--verbose",     action="store_true")
+    parser.add_argument("--funds",       default=None)
+    parser.add_argument("--refdata",     default=None)
 
     args = parser.parse_args()
 
-    run_proof(
+    results = run_proof(
         portfolio         = args.portfolio,
         calendar          = args.calendar,
         period            = args.period,
+        period_from       = args.period_from,
+        period_to         = args.period_to,
         tranid_filter     = args.tranid,
         investment_filter = args.investment,
         pillar_filter     = args.pillar,
@@ -976,3 +1247,7 @@ Examples:
         funds_path        = args.funds,
         refdata_path      = args.refdata,
     )
+
+    has_critical = any(r.has_critical for r in results)
+    has_failures = any(not r.all_clear for r in results)
+    sys.exit(2 if has_critical else 1 if has_failures else 0)

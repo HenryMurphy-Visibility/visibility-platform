@@ -317,11 +317,32 @@
     <div class="nav-item" onclick="show('process', this)">Process</div>
     <div class="nav-item" onclick="show('je-viewer', this)">JE Viewer</div>
 
+    <div class="nav-section">Reconciliation</div>
+    <div class="nav-item" onclick="show('proof-engine', this)">Run Proof</div>
+    <div class="nav-item stub">Marks Management <span class="nav-stub-badge">sprint</span></div>
+
   </div>
   <div class="nav-fig-link">
     <a href="/fig?context=ops" class="nav-fig-btn">FIG — Reports <span class="nav-fig-arrow">↗</span></a>
   </div>
 </nav>
+
+<div class="widget" id="w-proof-engine">
+    <div class="widget-head"><div class="widget-title">VAI Proof Engine</div><div class="widget-desc">Five pillars — availability, balance, settle FX, marks, chart of accounts</div></div>
+    <div class="widget-body">
+      <div class="form-grid">
+        <div class="form-group"><label>Portfolio *</label><input id="pe-portfolio" placeholder="e.g. Portfolio1"></div>
+        <div class="form-group"><label>Calendar</label><select id="pe-calendar"><option value="Monthly">Monthly</option><option value="Daily">Daily</option><option value="Quarterly">Quarterly</option><option value="Yearly">Yearly</option></select></div>
+        <div class="form-group"><label>Period (optional)</label><input id="pe-period" placeholder="e.g. 2025-12"><div class="field-hint">Leave blank for all periods</div></div>
+        <div class="form-group"><label>Investment (optional)</label><input id="pe-investment" placeholder="e.g. VRTX"><div class="field-hint">Filter to single investment</div></div>
+        <div class="form-group"><label>Pillar</label><select id="pe-pillar"><option value="">All Pillars</option><option value="availability">Availability</option><option value="balance">Balance</option><option value="settle_fx">Settle FX</option><option value="marks">Marks</option><option value="chart_of_accounts">Chart of Accounts</option></select></div>
+        <div class="form-group"><label>Verbose</label><select id="pe-verbose"><option value="false">No — failures and warnings only</option><option value="true">Yes — show all checks</option></select></div>
+      </div>
+      <div class="btn-row"><button class="btn btn-primary" onclick="runProof()">Run Proof</button><div class="spinner" id="sp-pe"></div><div class="status" id="st-pe"></div></div>
+      <div id="pe-summary" style="display:none;margin-top:20px;padding:14px 16px;background:var(--bg);border:1px solid var(--border);border-radius:2px;font-family:var(--mono);font-size:0.78em;"><div id="pe-summary-content"></div></div>
+      <div id="pe-pillars" style="margin-top:16px;display:flex;flex-direction:column;gap:12px;"></div>
+    </div>
+  </div>
 
 <main>
 
@@ -729,6 +750,8 @@
   </div>
 
 </main>
+
+
 
 <script>
 const BASE = '';
@@ -1537,6 +1560,27 @@ async function viewCalendar() {
   } catch(e) { st.textContent = 'Connection error'; }
   sp.classList.remove('show');
 }
+
+async function runProof() { const portfolio=document.getElementById('pe-portfolio').value.trim(); const calendar=document.getElementById('pe-calendar').value; const period=document.getElementById('pe-period').value.trim(); const investment=document.getElementById('pe-investment').value.trim().toUpperCase(); const pillar=document.getElementById('pe-pillar').value; const verbose=document.getElementById('pe-verbose').value==='true'; const sp=document.getElementById('sp-pe');const st=document.getElementById('st-pe'); if(!portfolio){st.textContent='Portfolio required';st.className='status err';return;} sp.classList.add('show');st.textContent='Running proof...';st.className='status info'; document.getElementById('pe-summary').style.display='none'; document.getElementById('pe-pillars').innerHTML=''; let url=`${BASE}/api/v1/ops/portfolio/${portfolio}/proof?calendar=${calendar}&verbose=${verbose}`; if(period)url+=`&period=${encodeURIComponent(period)}`; if(investment)url+=`&investment=${encodeURIComponent(investment)}`; if(pillar)url+=`&pillar=${encodeURIComponent(pillar)}`; try{ const res=await fetch(url,{method:'POST'});const data=await res.json(); if(!res.ok){st.textContent=`Error: ${data.detail}`;st.className='status err';sp.classList.remove('show');return;} const allClear=data.all_clear; const summaryEl=document.getElementById('pe-summary');const summaryContent=document.getElementById('pe-summary-content'); summaryEl.style.display='block';summaryEl.style.borderColor=allClear?'var(--success)':'var(--fail)'; summaryContent.innerHTML=`
+${allClear?'✓ ALL CLEAR':'✗ PROOF FAILED'}
+✓ ${data.total_pass} pass
+⚠ ${data.total_warn} warn
+✗ ${data.total_fail} fail
+${data.periods_checked} periods · ${data.events_loaded} events
+`; st.textContent=allClear?'✓ All clear':`✗ ${data.total_fail} failure(s)`;st.className=allClear?'status ok':'status err'; const pillarsEl=document.getElementById('pe-pillars'); const PILLAR_LABELS={availability:'Pillar 1 — Data Availability',balance:'Pillar 2 — Journal Balance',settle_fx:'Pillar 3 — Trade/Settle FX',marks:'Pillar 4 — Mark Verification',chart_of_accounts:'Pillar 5 — Chart of Accounts'}; for(const[key,r]of Object.entries(data.pillars||{})){ const label=PILLAR_LABELS[key]||key; const borderC=r.failures>0?'var(--fail-t)':r.warnings>0?'var(--warn-t)':'var(--success)'; const statusC=r.failures>0?'var(--fail-t)':r.warnings>0?'var(--warn-t)':'var(--success-t)'; const icon=r.failures>0?'✗':r.warnings>0?'⚠':'✓'; let detailHtml=''; if(r.failure_list&&r.failure_list.length>0){r.failure_list.forEach(f=>{detailHtml+=`
+${f}
+`;});} if(r.warning_list&&r.warning_list.length>0){r.warning_list.forEach(w=>{detailHtml+=`
+${w}
+`;});} if(r.pass_list&&r.pass_list.length>0){r.pass_list.forEach(p=>{detailHtml+=`
+${p}
+`;});} pillarsEl.innerHTML+=`
+${icon}
+${label}
+✓ ${r.passes}
+⚠ ${r.warnings}
+✗ ${r.failures}
+${detailHtml}
+`; } }catch(e){st.textContent='Connection error';st.className='status err';} sp.classList.remove('show'); }
 
 </script>
 </body>

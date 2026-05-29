@@ -38,6 +38,8 @@ from financial_information_gateway.fig_code.fig_core import (
     prep_state,
     render,
 )
+
+from financial_information_gateway.fig_code.compute_performance_summary import compute_performance_summary
 from financial_information_gateway.fig_code.compute_performance import (
     compute_performance,
     clear_performance_cache,
@@ -756,7 +758,32 @@ def compute_position_ledger_csv(
 # ============================================================
 # COMPUTE PERFORMANCE
 # ============================================================
-
+@app.get("/api/v1/performance/summary")
+def compute_performance_summary_endpoint(
+    portfolio:    str           = Query(...),
+    calendar:     str           = Query(...),
+    period_start: str           = Query(...),
+    period_end:   str           = Query(...),
+    level:        str           = Query("investment"),
+    investment:   Optional[str] = Query(None),
+    page:         int           = Query(1, ge=1),
+    page_size:    int           = Query(1000, ge=1, le=10000),
+):
+    try:
+        uber_filter = {"investment": investment.upper()} if investment else None
+        prep        = prep_state(portfolio, calendar, period_start, period_end)
+        result      = compute_performance_summary(
+            portfolio=portfolio, calendar=calendar,
+            period_start=period_start, period_end=period_end,
+            level=level,
+            uber_filter=uber_filter, prep=prep,
+        )
+        return render(result, target="api", options={"page": page, "page_size": page_size})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 @app.get("/api/v1/performance")
 def compute_performance_endpoint(
     portfolio:    str           = Query(...,          description="Portfolio identifier e.g. Portfolio1"),

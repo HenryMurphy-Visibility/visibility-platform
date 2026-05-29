@@ -1,6 +1,7 @@
 
 from bookkeeping import Journals
 from itertools import groupby
+
 from utilities import round_to_precision
 
 
@@ -122,6 +123,8 @@ def mark_prices(
 
     attributes = sub.investment_attributes.get("AIF", {})
 
+
+
     MARK_PRICE_ACCOUNTS = {"Cost",
                            "Receivable",
                            "Payable",
@@ -211,8 +214,9 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
 
     px        = safe_float(price, 0.0)
     fx_rate_f = safe_float(fx_rate, 1.0)
-    pf        = safe_float(pricing_factor, 1.0)
-    cs        = safe_float(contract_size, 1.0)
+    cs = safe_float(contract_size, 1.0) or 1.0
+    pf = safe_float(pricing_factor, 1.0) or 1.0
+
 
     # ---- Skip if no quantity ----
     if position_qty == 0.0:

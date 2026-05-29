@@ -282,6 +282,8 @@
 
   <div class="nav-section" style="margin-top:12px">Performance</div>
   <div class="nav-item" onclick="selectEndpoint('performance', this)">Performance</div>
+  <div class="nav-item" onclick="selectEndpoint('performance-summary', this)">Performance Summary</div>
+
 
   <div class="nav-section" style="margin-top:12px">Balance Sheet Constituents</div>
   <div class="nav-item" onclick="selectEndpoint('cost-basis', this)">Cost Basis</div>
@@ -457,6 +459,13 @@ const ENDPOINTS = {
     csvPath: '/api/v1/performance/csv',
     extras: ['level', 'cadence'],
   },
+  'performance-summary': {
+    title: 'Performance Summary',
+    desc: 'MTD · QTD · YTD · 1YR · 3YR · 5YR · Annualized · Beta · Alpha · Sharpe',
+    path: '/api/v1/performance/summary',
+    csvPath: '/api/v1/performance/summary/csv',
+    extras: ['level'],
+},
   'cost-basis': {
     title: 'Cost Basis',
     desc: 'Opening · Activity · Closing for every cost basis account',

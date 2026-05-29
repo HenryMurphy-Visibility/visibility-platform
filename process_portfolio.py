@@ -596,6 +596,14 @@ def run_all_periods(
 
     print(f"\n>>> RUN ALL PERIODS | {portfolio} | {calendar}")
 
+
+    # ── OPTIONAL: PRE-CPH DATA VALIDATION ────────────────────────────────
+    # Uncomment to gate processing on data integrity
+    from proof_engine import run_proof_pre_cph
+    if not run_proof_pre_cph(portfolio, calendar, block_on_critical=True):
+        raise RuntimeError(f"Pre-CPH data check failed — blocking {portfolio}")
+
+
     # ── LOAD CALENDAR ─────────────────────────────────────────────
     cal_path = _calendar_path(portfolio, calendar)
     if not cal_path.exists():
@@ -651,6 +659,18 @@ def run_all_periods(
             f"adjusting={m.get('adjusting_journal_entries', 0)} | "
             f"time={m.get('total_time', 0):.3f}s"
         )
+
+    # # ── CLEAR PERFORMANCE CACHE ───────────────────────────────────
+    # from financial_information_gateway.fig_code.compute_performance import clear_performance_cache
+    # clear_performance_cache()
+    # print(f">>> PERFORMANCE CACHE CLEARED | {portfolio} | {calendar}")
+
+    # ── OPTIONAL: POST-CPH MARKS VALIDATION ──────────────────────────────
+    # Uncomment to validate MV integrity after every build
+    # from proof_engine import run_proof_post_cph
+    # run_proof_post_cph(portfolio, calendar)
+
+        return all_metrics
 
     return all_metrics
 

@@ -39,6 +39,10 @@ from financial_information_gateway.fig_code.compute_realized import compute_real
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.compute_cost_basis import compute_cost_basis
 
+from financial_information_gateway.fig_code.compute_performance_summary import compute_performance_summary
+
+
+
 COMPUTE_REGISTRY = {
     "compute_accounting_ledger": compute_accounting_ledger,
     "compute_appraisal": compute_appraisal,
@@ -51,6 +55,7 @@ COMPUTE_REGISTRY = {
     "compute_unrealized": compute_unrealized,
     "compute_recon": compute_recon,
     "compute_cost_basis": compute_cost_basis,
+    "compute_performance_summary": compute_performance_summary
 
 }
 

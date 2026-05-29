@@ -418,13 +418,11 @@ def list_investments(portfolio_id: str):
 
 @ops_router.post("/portfolio/{portfolio_id}/event")
 def add_event(portfolio_id: str, event: EventRecord):
-    """Add a single event. Schema matches EVENT_COLUMNS exactly — no rogue columns."""
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
             raise HTTPException(status_code=404, detail=f"Portfolio '{portfolio_id}' not found")
 
-        # ── LINE 1 VALIDATION ──────────────────────────────────
         from validation_engine    import validate_event as _validate_event
         from validation_functions import csv_date_to_iso
         from v_config             import REFDATA_PATH
@@ -473,7 +471,6 @@ def add_event(portfolio_id: str, event: EventRecord):
         if report.has_warnings:
             print(f">>> LINE1 WARNINGS | {portfolio_id} | {event.method} | {report.summary}")
 
-        # ── APPLY COMPUTED VALUES ──────────────────────────────
         is_future = event.method in {
             "buy_future", "sell_future", "short_future", "cover_future"
         }
@@ -495,7 +492,6 @@ def add_event(portfolio_id: str, event: EventRecord):
 
         print(f">>> LINE1 OK | {portfolio_id} | {event.method} | {event.investment} "
               f"| local={final_total_amount} | base={final_total_amount_base}")
-        # ──────────────────────────────────────────────────────
 
         trade_date   = _csv_date_to_ymd(event.tradedate)
         closing_meth = get_method_as_of(config.get("closing_method_history", []), trade_date) or "FIFO"
@@ -608,12 +604,11 @@ def list_events(portfolio_id: str, investment: Optional[str] = Query(None),
 
 
 # ============================================================
-# VALIDATE ENDPOINT — live computation, no writes
+# VALIDATE ENDPOINT
 # ============================================================
 
 @ops_router.post("/validate")
 def validate_event_endpoint(portfolio_id: str = Query(...), body: dict = None):
-    """Called by UI on field exit. Returns computed values and findings without writing."""
     try:
         from validation_engine    import validate_event as _validate_event
         from validation_functions import csv_date_to_iso
@@ -689,6 +684,10 @@ def validate_event_endpoint(portfolio_id: str = Query(...), body: dict = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+# ============================================================
+# CALENDAR ENDPOINT
+# ============================================================
+
 @ops_router.get("/portfolio/{portfolio_id}/calendar/{calendar}")
 def view_calendar(portfolio_id: str, calendar: str):
     try:
@@ -724,18 +723,13 @@ def view_calendar(portfolio_id: str, calendar: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 # ============================================================
 # FX RATE LOOKUP
 # ============================================================
 
 @ops_router.get("/fx/rate")
 def get_fx_rate(currency: str = Query(...), trade_date: str = Query(...)):
-    """
-    Return FX rate for a currency on a given date.
-    fx_master.csv stores dates as M/DD/YYYY (no leading zero).
-    trade_date arrives as YYYY-MM-DD from the form.
-    Rates are quoted in USD terms — direct lookup, no cross-rate math.
-    """
     try:
         from v_config import REFDATA_PATH
 
@@ -768,12 +762,124 @@ def get_fx_rate(currency: str = Query(...), trade_date: str = Query(...)):
 
 
 # ============================================================
+# PROOF ENGINE
+# ============================================================
+
+@ops_router.post("/portfolio/{portfolio_id}/proof")
+def run_proof_endpoint(
+    portfolio_id: str,
+    calendar:     str           = Query("Monthly"),
+    period:       Optional[str] = Query(None),
+    investment:   Optional[str] = Query(None),
+    tranid:       Optional[int] = Query(None),
+    pillar:       Optional[str] = Query(None),
+    verbose:      bool          = Query(False),
+):
+    try:
+        from proof_engine import (
+            load_events, load_investment_master, load_price_index,
+            load_fx_index, load_jes_from_journals, load_calendar_records,
+            pillar_availability, pillar_balance, pillar_settle_fx,
+            pillar_marks, pillar_chart_of_accounts, pillar_data,
+            _safe_float,
+        )
+        from v_config import FUNDS_PATH, REFDATA_PATH
+
+        funds_path   = str(FUNDS_PATH)
+        refdata_path = str(REFDATA_PATH)
+
+        events           = load_events(portfolio_id, funds_path)
+        im               = load_investment_master(portfolio_id, funds_path)
+        price_index      = load_price_index(refdata_path)
+        fx_index         = load_fx_index(refdata_path)
+        jes_by_period    = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
+        calendar_records = load_calendar_records(portfolio_id, calendar, funds_path)
+
+        if period:
+            calendar_records = [r for r in calendar_records
+                               if r.get("period_name") == period]
+
+        if investment:
+            inv_upper = investment.upper()
+            events = [e for e in events
+                     if e.get("investment", "").upper() == inv_upper]
+        if tranid:
+            events = [e for e in events
+                     if int(_safe_float(e.get("tranid")) or 0) == tranid]
+
+        run_all = pillar is None
+
+        def _serialize(r):
+            return {
+                "pillar": r.pillar,
+                "passes": len(r.passes),
+                "warnings": len(r.warnings),
+                "failures": len(r.failures),
+                "all_clear": r.all_clear,
+                "has_critical": r.has_critical,
+                "pass_list": [i.message for i in r.passes] if verbose else [],
+                "warning_list": [i.message for i in r.warnings],
+                "failure_list": [i.message for i in r.failures],
+                "skipped": [i.message for i in r.skipped] if verbose else [],
+            }
+
+
+        results = {}
+
+        if run_all or pillar == "availability":
+            results["availability"] = _serialize(
+                pillar_availability(events, im, calendar_records, price_index, fx_index))
+
+        if run_all or pillar == "balance":
+            results["balance"] = _serialize(
+                pillar_balance(jes_by_period))
+
+        if run_all or pillar == "settle_fx":
+            results["settle_fx"] = _serialize(
+                pillar_settle_fx(events, jes_by_period, fx_index))
+
+        if run_all or pillar == "marks":
+            results["marks"] = _serialize(
+                pillar_marks(events, im, calendar_records, jes_by_period, price_index, fx_index))
+
+        if run_all or pillar == "chart_of_accounts":
+            results["chart_of_accounts"] = _serialize(
+                pillar_chart_of_accounts(jes_by_period))
+
+        if run_all or pillar == "data":
+            results["data"] = _serialize(
+                pillar_data(events, jes_by_period))
+
+        total_pass = sum(v["passes"]   for v in results.values())
+        total_warn = sum(v["warnings"] for v in results.values())
+        total_fail = sum(v["failures"] for v in results.values())
+        all_clear  = all(v["all_clear"] for v in results.values())
+
+        return {
+            "portfolio":        portfolio_id,
+            "calendar":         calendar,
+            "period":           period or "ALL",
+            "investment":       investment,
+            "total_pass":       total_pass,
+            "total_warn":       total_warn,
+            "total_fail":       total_fail,
+            "all_clear":        all_clear,
+            "events_loaded":    len(events),
+            "periods_checked":  len(jes_by_period),
+            "pillars":          results,
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
 # REVERSE EVENT
 # ============================================================
 
 @ops_router.post("/portfolio/{portfolio_id}/event/reverse")
 def reverse_event(portfolio_id: str, req: ReverseRequest):
-    """Stamps kdend on event. Writes audit record. No schema changes."""
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -814,8 +920,7 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
         _write_audit(portfolio_id, "REVERSE", req.tranid, None, req.actor, req.reason)
         _clear_event_cache(portfolio_id)
 
-        print(f">>> EVENT REVERSED | {portfolio_id} | tranid={req.tranid} | "
-              f"by={req.actor} | reason={req.reason}")
+        print(f">>> EVENT REVERSED | {portfolio_id} | tranid={req.tranid}")
 
         return {"status": "reversed", "portfolio_id": portfolio_id,
                 "tranid": req.tranid, "kdend": now_stamp,
@@ -834,7 +939,6 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
 
 @ops_router.post("/portfolio/{portfolio_id}/event/modify")
 def modify_event(portfolio_id: str, req: ModifyRequest):
-    """Temporal correction. Reverse original + new corrected record. Writes audit."""
     try:
         if not req.reason or not req.reason.strip():
             raise HTTPException(status_code=400, detail="Correction reason is required")
@@ -894,7 +998,7 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
             if val is not None:
                 corrected[field] = val
 
-        trade_date            = _csv_date_to_ymd(corrected.get("tradedate", ""))
+        trade_date = _csv_date_to_ymd(corrected.get("tradedate", ""))
         corrected["closing_method"] = get_method_as_of(
             config.get("closing_method_history", []), trade_date) or "FIFO"
         corrected["transaction"] = _method_to_transaction(corrected.get("method", ""))
@@ -910,8 +1014,7 @@ def modify_event(portfolio_id: str, req: ModifyRequest):
         _clear_event_cache(portfolio_id)
 
         print(f">>> EVENT MODIFIED | {portfolio_id} | "
-              f"original={req.tranid} → correction={new_tranid} | "
-              f"by={req.actor} | reason={req.reason}")
+              f"original={req.tranid} → correction={new_tranid}")
 
         return {"status": "modified", "portfolio_id": portfolio_id,
                 "original_tranid": req.tranid, "correction_tranid": new_tranid,
@@ -999,7 +1102,7 @@ def list_corrections(portfolio_id: str, investment: Optional[str] = Query(None),
 
 
 # ============================================================
-# BOND ACCRUAL ENDPOINT
+# BOND ACCRUAL
 # ============================================================
 
 @ops_router.get("/bond/accrual")
@@ -1025,7 +1128,7 @@ def get_bond_accrual(
                     break
 
         if bond is None:
-            raise HTTPException(status_code=404, detail=f"Bond '{investment}' not found in bond info")
+            raise HTTPException(status_code=404, detail=f"Bond '{investment}' not found")
 
         coupon_rate       = float(bond.get("coupon_rate", 0))
         payment_frequency = bond.get("payment_frequency", "SEMI_ANNUAL")
@@ -1170,24 +1273,24 @@ def get_global_investment(investment: str):
 
 @ops_router.get("/portfolio/{portfolio_id}/je")
 def get_journal_entries(portfolio_id: str,
-                        calendar: str = Query("Monthly"),
-                        tranid: Optional[int] = Query(None),
-                        period_from: Optional[str] = Query(None),
-                        period_to: Optional[str] = Query(None),
-                        entry_type: Optional[str] = Query(None),
-                        exclude_valuation: bool = Query(True),
-                        limit: int = Query(10000)):
+                        calendar:          str           = Query("Monthly"),
+                        tranid:            Optional[int] = Query(None),
+                        period_from:       Optional[str] = Query(None),
+                        period_to:         Optional[str] = Query(None),
+                        entry_type:        Optional[str] = Query(None),
+                        exclude_valuation: bool          = Query(False),
+                        limit:             int           = Query(10000)):
     import pickle
     try:
         journals_dir = Path(FUNDS_PATH) / portfolio_id / "Calendars" / calendar / "Journals"
         if not journals_dir.exists():
             raise HTTPException(status_code=404,
-                                detail=f"Journals folder not found for {portfolio_id}/{calendar}.")
+                detail=f"Journals folder not found for {portfolio_id}/{calendar}.")
 
         pkl_files = sorted(journals_dir.glob("*.pkl"))
         if not pkl_files:
             raise HTTPException(status_code=404,
-                                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals")
+                detail=f"No journal files found in {portfolio_id}/{calendar}/Journals")
 
         if period_from or period_to:
             filtered = []
@@ -1234,6 +1337,7 @@ def get_journal_entries(portfolio_id: str,
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
 def _je_to_dict(je) -> dict:
     try:
         return je.to_dict()
@@ -1270,7 +1374,6 @@ def _je_to_dict(je) -> dict:
 # ============================================================
 
 def _get_im_record(portfolio_id: str, investment: str) -> dict:
-    """Load a single IM record for validation context."""
     im_path = Path(FUNDS_PATH) / portfolio_id / "RefData" / "investment_master.csv"
     if not im_path.exists():
         return {}

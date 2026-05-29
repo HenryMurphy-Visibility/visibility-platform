@@ -795,21 +795,22 @@ def core_schedule_events(
         space
     )
 
-    schedule_bond_coupons(
-        scheduler,
-        bond_candidates,
-        portfolio,
-        investment,
-        space,
-        tranid,
-        transaction,
-        tradedate,
-        settledate,
-        interpretation_ctx["replay_start"],
-        interpretation_ctx["trade_window_cutoff"],
-        payment_currency,
-        per_share,
-        smf
-    )
+    if bond_candidates:
+        schedule_bond_coupons(
+            scheduler,
+            bond_candidates,
+            portfolio,
+            investment,
+            space,
+            tranid,
+            transaction,
+            tradedate,
+            settledate,
+            interpretation_ctx["replay_start"],
+            interpretation_ctx["trade_window_cutoff"],
+            payment_currency,
+            per_share,
+            smf
+        )
 
     return scheduler

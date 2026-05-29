@@ -88,11 +88,14 @@ def clear_performance_cache():
 
 
 def _get_cached_daily_state(
-    cache_key: tuple,
-    journal_entries: list,
-    periods: list[str],
-    calendar: str,
+        cache_key: tuple,
+        journal_entries: list,
+        periods: list[str],
+        calendar: str,
+        portfolio: str,  # ADD THIS
 ) -> tuple[pd.DataFrame, float, bool]:
+
+
     """
     Return (daily_state, build_ms, cache_hit).
 
@@ -115,6 +118,7 @@ def _get_cached_daily_state(
         periods=periods,
         calendar=calendar,
         level="investment",
+        portfolio=portfolio,  # ADD THIS
     )
 
     build_ms = (time.perf_counter() - t_build) * 1000
@@ -264,67 +268,98 @@ def _merge_aif(df: pd.DataFrame, level: str) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _build_chained_daily_state(
-    journal_entries: list,
-    periods: list[str],
-    calendar: str,
-    level: str,
+        journal_entries: list,
+        periods: list[str],
+        calendar: str,
+        level: str,
+        portfolio: str,  # ADD THIS
 ) -> pd.DataFrame:
+
+
     """
     Core chaining engine. Runs compute_daily_twr at daily grain for each
     period and chains the resulting Index across period boundaries.
 
+    For each period, loads the PRIOR period's journal entries alongside
+    the current period so BMV is correctly seeded on day 1 via shift(1).
+
     Prior_Index tracked independently per level-value so each investment
     carries its own unbroken chain.
-
-    Journal entries are objects — ibor_date accessed via getattr.
     """
+    from financial_information_gateway.extraction.box_extractor import extract_box_components
 
     prior_index: dict[str, dict] = {}
     all_frames: list[pd.DataFrame] = []
 
-    for period_key in periods:
+    for i, period_key in enumerate(periods):
         p_start, p_end = _period_boundaries(period_key, calendar)
 
-        # Filter journal objects to this period's date window
-        period_jes = [
-            je for je in journal_entries
-            if (
-                (ibor := getattr(je, "ibor_date", None)) is not None
-                and p_start <= pd.Timestamp(ibor) <= p_end
+        # ── LOAD JOURNALS ─────────────────────────────────────────
+        # If first period — use current period only
+        # If subsequent — load prior + current so shift(1) seeds BMV
+        if i == 0:
+            extracted = extract_box_components(
+                portfolio=_portfolio_from_journals(journal_entries),
+                calendar=calendar,
+                period_start=period_key,
+                period_end=period_key,
             )
-        ]
+        else:
+            prior_period_key = periods[i - 1]
+            extracted = extract_box_components(
+                portfolio=_portfolio_from_journals(journal_entries),
+                calendar=calendar,
+                period_start=prior_period_key,
+                period_end=period_key,
+            )
+
+        period_jes = extracted["journal_entries"]
 
         if not period_jes:
             print(f">>> No journals for period {period_key} — skipping")
             continue
 
+        # ── COMPUTE DAILY TWR ─────────────────────────────────────
         period_df, _, _ = compute_daily_twr(period_jes, level, period_key)
 
         if period_df is None or period_df.empty:
             print(f">>> Empty TWR result for {period_key} — skipping")
             continue
 
+        # ── FILTER TO CURRENT PERIOD ONLY ────────────────────────
+        # Prior period journals seed BMV via shift(1) but we only
+        # keep current period rows in the output
+        period_df["ibor_date"] = pd.to_datetime(period_df["ibor_date"])
+        period_df = period_df[
+            (period_df["ibor_date"] >= p_start) &
+            (period_df["ibor_date"] <= p_end)
+            ].copy()
+
+        if period_df.empty:
+            print(f">>> Empty after date filter for {period_key} — skipping")
+            continue
+
         period_df = period_df.sort_values([level, "ibor_date"]).copy()
 
-        # CHAIN: Index = Period_Index × Prior_Index, per level-value
+        # ── CHAIN INDEX ───────────────────────────────────────────
         period_df["Index_Local"] = 0.0
-        period_df["Index_Book"]  = 0.0
+        period_df["Index_Book"] = 0.0
 
         for lv in period_df[level].unique():
             lv_key = str(lv)
-            mask   = period_df[level] == lv
-            prior  = prior_index.get(lv_key, {"local": 1.0, "book": 1.0})
+            mask = period_df[level] == lv
+            prior = prior_index.get(lv_key, {"local": 1.0, "book": 1.0})
 
             period_df.loc[mask, "Index_Local"] = (
-                period_df.loc[mask, "Period_Index_Local"] * prior["local"]
+                    period_df.loc[mask, "Period_Index_Local"] * prior["local"]
             )
             period_df.loc[mask, "Index_Book"] = (
-                period_df.loc[mask, "Period_Index_Book"] * prior["book"]
+                    period_df.loc[mask, "Period_Index_Book"] * prior["book"]
             )
 
             prior_index[lv_key] = {
                 "local": float(period_df.loc[mask, "Index_Local"].iloc[-1]),
-                "book":  float(period_df.loc[mask, "Index_Book"].iloc[-1]),
+                "book": float(period_df.loc[mask, "Index_Book"].iloc[-1]),
             }
 
         all_frames.append(period_df)
@@ -342,6 +377,14 @@ def _build_chained_daily_state(
     return final
 
 
+def _portfolio_from_journals(journal_entries: list) -> str:
+    """Extract portfolio name from first journal entry."""
+    if journal_entries:
+        return getattr(journal_entries[0], "portfolio", "Portfolio1")
+    return "Portfolio1"
+
+
+
 # ──────────────────────────────────────────────────────────────────────────────
 # AGGREGATED LEVEL HELPERS
 # ──────────────────────────────────────────────────────────────────────────────
@@ -357,6 +400,45 @@ def _rechain_aggregated_state(df: pd.DataFrame, level: str) -> pd.DataFrame:
         df["CumInc_Book"]  = df.get("CumInc_Local", 0.0)
     return df
 
+
+_INDEX_CACHE: dict = {}
+
+def _load_index_returns(refdata_path: str) -> pd.DataFrame:
+    """Load SPY, AGG, TLT daily returns from prices.csv. Cached at module level."""
+    global _INDEX_CACHE
+    if _INDEX_CACHE:
+        return _INDEX_CACHE.get("returns", pd.DataFrame())
+
+    import os
+    prices_path = os.path.join(refdata_path, "price_master.csv")
+    if not os.path.exists(prices_path):
+        return pd.DataFrame()
+
+    try:
+        df = pd.read_csv(prices_path)
+        indices = ["SPY", "AGG", "TLT"]
+        df = df[df["symbol"].isin(indices)].copy()
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.sort_values(["symbol", "date"])
+
+        # Compute daily return per index
+        df["daily_return"] = df.groupby("symbol")["price"].pct_change()
+
+        # Pivot to wide format: date | SPY | AGG | TLT
+        pivot = df.pivot(index="date", columns="symbol", values="daily_return")
+        pivot = pivot.reset_index().rename(columns={"date": "ibor_date"})
+
+        # Build chain index for each
+        for sym in indices:
+            if sym in pivot.columns:
+                pivot[f"{sym}_index"] = (1 + pivot[sym].fillna(0)).cumprod()
+
+        _INDEX_CACHE["returns"] = pivot
+        return pivot
+
+    except Exception as e:
+        print(f">>> Index returns load failed: {e}")
+        return pd.DataFrame()
 
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN COMPUTE FUNCTION
@@ -478,6 +560,7 @@ def compute_performance(
         journal_entries=entries_for_build,
         periods=periods,
         calendar=calendar,
+        portfolio=portfolio,  # ADD THIS
     )
 
     if daily_state.empty:
@@ -540,6 +623,21 @@ def compute_performance(
         )
 
     t_carve_ms = (time.perf_counter() - t_carve) * 1000
+
+    # ── MERGE INDEX RETURNS ───────────────────────────────────────────
+    try:
+        index_returns = _load_index_returns(REFDATA_PATH)
+        if not index_returns.empty and "ibor_date" in output_df.columns:
+            index_returns["ibor_date"] = pd.to_datetime(
+                index_returns["ibor_date"]
+            ).dt.strftime("%Y-%m-%d")
+            output_df = output_df.merge(
+                index_returns,
+                on="ibor_date",
+                how="left"
+            )
+    except Exception as e:
+        print(f">>> Index merge failed (non-fatal): {e}")
 
     # ── METADATA ──────────────────────────────────────────────────────
     t_total_ms = (time.perf_counter() - t_total) * 1000

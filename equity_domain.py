@@ -194,7 +194,8 @@ def lot_iterator(investment, space):
 
         # Extract relevant lot information (account key, lot quantity, local, and book values)
         # Assuming entry[1][0] is the lot quantity, entry[1][1] is local, and entry[1][2] is book
-        return [(entry[0], entry[1][0], entry[1][1], entry[1][2], entry[1][3]) for entry in matching_lots]
+        return [(entry[0], entry[1][0], entry[1][1], entry[1][2], entry[1][3], entry[1][4]) for entry in matching_lots]
+
     else:
         return []
 
@@ -377,6 +378,8 @@ def dividend_equity(portfolio, investment, space, tranid,
 
     return
 
+
+
 def split_equity(portfolio, investment, space, tranid, transaction, tradedate, settledate,
                  kdbegin, kdend, new_shares, old_shares):
     financial_account = "Cost"
@@ -387,7 +390,7 @@ def split_equity(portfolio, investment, space, tranid, transaction, tradedate, s
 
     # Loop over the lots and post the corresponding journal entries
     for lot_info in lots_returned:
-        account_key, lot_qty = lot_info
+        account_key, lot_qty, *_ = lot_info
         # Calculate the new lot quantity after the split
         split_qty = lot_qty * new_shares / old_shares - lot_qty
 
