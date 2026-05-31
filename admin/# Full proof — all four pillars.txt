@@ -1,0 +1,18 @@
+# Full proof — all four pillars
+python proof_engine.py Portfolio1 Monthly
+
+# Single period
+python proof_engine.py Portfolio3 Monthly 2026-01
+
+# Single pillar
+python proof_engine.py Portfolio3 Monthly --pillar balance
+python proof_engine.py Portfolio3 Monthly --pillar availability
+python proof_engine.py Portfolio3 Monthly --pillar marks
+
+# Single trade, verbose
+python proof_engine.py Portfolio3 Monthly --tranid 3 --verbose
+
+# Single investment
+python proof_engine.py Portfolio3 Monthly --investment MITIB --verbose
+
+python auth_manager.py create C:/Users/hjmne/PycharmProjects/chest username password user

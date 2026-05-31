@@ -147,71 +147,134 @@ def performance_carve_aggregate(
 
     return agg
 
-
 def aggregate_by_aif(df, aif_field):
+    """
+    Aggregate investment-level daily state up to a grouping level
+    (sector, analyst, country, portfolio, etc.) then recompute TWR
+    using the SAME formula logic as compute_daily_twr.
+
+    CRITICAL — two distinct TWR formulas:
+
+      Every level EXCEPT 'portfolio':
+        denominator = Previous_EMV + Open_CF + (Currency if same_sign)
+        numerator   = EMV - Previous_EMV - Open_CF - Close_CF - Currency + Income
+
+      'portfolio' ONLY:
+        denominator = Previous_EMV
+        numerator   = EMV - Previous_EMV - Open_CF - Close_CF - Currency
+        (no income in numerator, no flows in denominator —
+         only external capital affects total portfolio)
+
+    The three flow types (Open_CF, Close_CF, Currency_Flows) are kept
+    SEPARATE so a performance analyst can validate every TWR by hand.
+    """
     import numpy as np
     import pandas as pd
 
     if df is None or df.empty:
         return pd.DataFrame()
 
-    # -----------------------------------------
-    # VALIDATION
-    # -----------------------------------------
     if aif_field not in df.columns:
         raise ValueError(f"AIF field '{aif_field}' not found in DataFrame")
 
-    # -----------------------------------------
-    # GROUP (CORE AGGREGATION)
-    # -----------------------------------------
+    # ── SUM EACH COMPONENT SEPARATELY BY LEVEL + DATE ─────────────────────────
+    # Keep the three flow types separate — required for validation and
+    # for the correct denominator/numerator construction below.
     agg = (
         df
         .groupby([aif_field, "ibor_date"], as_index=False)
         .agg({
-            "BMV_Local": "sum",
-            "EMV_Local": "sum",
-            "CF_Local": "sum",
-            "Income_Local": "sum"
+            "EMV_Local":            "sum",
+            "EMV_Book":             "sum",
+            "Open_CF_Local":        "sum",
+            "Open_CF_Book":         "sum",
+            "Close_CF_Local":       "sum",
+            "Close_CF_Book":        "sum",
+            "Currency_Flows_Local": "sum",
+            "Currency_Flows_Book":  "sum",
+            "Income_Local":         "sum",
+            "Income_Book":          "sum",
         })
     )
 
-    # -----------------------------------------
-    # ENSURE GROUP COLUMN PERSISTS (CRITICAL FOR TOTAL)
-    # -----------------------------------------
     agg[aif_field] = agg[aif_field].astype(str)
+    agg = agg.sort_values([aif_field, "ibor_date"]).reset_index(drop=True)
 
-    # -----------------------------------------
-    # SORT (CRITICAL FOR TIME SERIES)
-    # -----------------------------------------
-    agg = agg.sort_values([aif_field, "ibor_date"])
+    # ── BMV = prior day's EMV per group ───────────────────────────────────────
+    agg["BMV_Local"] = agg.groupby(aif_field)["EMV_Local"].shift(1).fillna(0.0)
+    agg["BMV_Book"]  = agg.groupby(aif_field)["EMV_Book"].shift(1).fillna(0.0)
 
-    # -----------------------------------------
-    # TWR CALCULATION
-    # -----------------------------------------
-    agg["TWR_Local"] = np.where(
-        agg["BMV_Local"] != 0,
-        (agg["EMV_Local"] - agg["BMV_Local"] - agg["CF_Local"]) / agg["BMV_Local"],
-        0.0
+    # Previous_EMV is the same as BMV here (prior day's ending value)
+    agg["Previous_EMV_Local"] = agg["BMV_Local"]
+    agg["Previous_EMV_Book"]  = agg["BMV_Book"]
+
+    # ── TWR — SAME LOGIC AS compute_daily_twr ─────────────────────────────────
+    is_portfolio = (aif_field == "portfolio")
+
+    def calculate_twr(row):
+        if not is_portfolio:
+            # ── LEVEL FORMULA (investment, sector, analyst, etc.) ────────────
+            same_sign_local = (row["Previous_EMV_Local"] >= 0) == (row["Currency_Flows_Local"] >= 0)
+            same_sign_book  = (row["Previous_EMV_Book"]  >= 0) == (row["Currency_Flows_Book"]  >= 0)
+
+            denominator_local = (
+                row["Previous_EMV_Local"] + row["Open_CF_Local"]
+                + (row["Currency_Flows_Local"] if same_sign_local else 0)
+            )
+            denominator_book = (
+                row["Previous_EMV_Book"] + row["Open_CF_Book"]
+                + (row["Currency_Flows_Book"] if same_sign_book else 0)
+            )
+
+            numerator_local = (
+                row["EMV_Local"] - row["Previous_EMV_Local"]
+                - row["Open_CF_Local"] - row["Close_CF_Local"]
+                - row["Currency_Flows_Local"] + row["Income_Local"]
+            )
+            numerator_book = (
+                row["EMV_Book"] - row["Previous_EMV_Book"]
+                - row["Open_CF_Book"] - row["Close_CF_Book"]
+                - row["Currency_Flows_Book"] + row["Income_Book"]
+            )
+        else:
+            # ── PORTFOLIO FORMULA — only external capital, no income term ────
+            numerator_local = (
+                row["EMV_Local"] - row["Previous_EMV_Local"]
+                - row["Open_CF_Local"] - row["Close_CF_Local"]
+                - row["Currency_Flows_Local"]
+            )
+            denominator_local = row["Previous_EMV_Local"]
+
+            numerator_book = (
+                row["EMV_Book"] - row["Previous_EMV_Book"]
+                - row["Open_CF_Book"] - row["Close_CF_Book"]
+                - row["Currency_Flows_Book"]
+            )
+            denominator_book = row["Previous_EMV_Book"]
+
+        twr_local = None if denominator_local == 0 else numerator_local / denominator_local
+        twr_book  = None if denominator_book  == 0 else numerator_book  / denominator_book
+        return pd.Series([twr_local, twr_book], index=["TWR_Local", "TWR_Book"])
+
+    agg[["TWR_Local", "TWR_Book"]] = agg.apply(calculate_twr, axis=1)
+
+    # ── CHAINED INDEX (within this range) ─────────────────────────────────────
+    agg["LocalToDate"] = agg.groupby(aif_field)["TWR_Local"].transform(
+        lambda x: (1 + x.fillna(0)).cumprod()
+    )
+    agg["BookToDate"] = agg.groupby(aif_field)["TWR_Book"].transform(
+        lambda x: (1 + x.fillna(0)).cumprod()
     )
 
-    # -----------------------------------------
-    # INDEX (CHAINED RETURN)
-    # -----------------------------------------
-    agg["Index_Local"] = (
-        (1 + agg["TWR_Local"])
-        .groupby(agg[aif_field])
-        .cumprod()
-    )
+    agg["BookToDate_Percent"]  = (agg["BookToDate"]  - 1) * 100
+    agg["LocalToDate_Percent"] = (agg["LocalToDate"] - 1) * 100
 
-    # -----------------------------------------
-    # CUMULATIVE FLOWS
-    # -----------------------------------------
-    agg["CumCF_Local"] = (
-        agg.groupby(aif_field)["CF_Local"].cumsum()
+    # ── CATEGORY FLOWS — presentation only (points to the relevant flow) ──────
+    agg["Category_Flows_Local"] = (
+        agg["Open_CF_Local"] + agg["Close_CF_Local"] + agg["Currency_Flows_Local"]
     )
-
-    agg["CumInc_Local"] = (
-        agg.groupby(aif_field)["Income_Local"].cumsum()
+    agg["Category_Flows_Book"] = (
+        agg["Open_CF_Book"] + agg["Close_CF_Book"] + agg["Currency_Flows_Book"]
     )
 
     return agg

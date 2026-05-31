@@ -47,7 +47,6 @@ COMPUTE_REGISTRY = {
     "compute_accounting_ledger": compute_accounting_ledger,
     "compute_appraisal": compute_appraisal,
     "compute_position_ledger": compute_position_ledger,
-    "compute_performance": compute_performance,
     "compute_capital": compute_capital,
     "compute_balance_sheet": compute_balance_sheet,
     "compute_income": compute_income,
@@ -55,6 +54,7 @@ COMPUTE_REGISTRY = {
     "compute_unrealized": compute_unrealized,
     "compute_recon": compute_recon,
     "compute_cost_basis": compute_cost_basis,
+    "compute_performance": compute_performance,
     "compute_performance_summary": compute_performance_summary
 
 }

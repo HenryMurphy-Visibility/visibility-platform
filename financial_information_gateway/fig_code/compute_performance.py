@@ -37,7 +37,7 @@ from typing import Optional
 import pandas as pd
 
 from financial_information_gateway.fig_code.compute_result import ComputeResult
-from performance import compute_daily_twr
+
 from financial_information_gateway.fig_performance_carving import (
     performance_carving_periods,
     aggregate_by_aif,
@@ -262,6 +262,371 @@ def _merge_aif(df: pd.DataFrame, level: str) -> pd.DataFrame:
 
     return df
 
+def compute_capital_flows(je_data, level):
+
+    external_accounts = [
+        "ContributedCost",
+        # add more if needed
+    ]
+
+    ext_flows = je_data[
+        je_data["financial_account"].isin(external_accounts)
+    ][[
+        level,
+        "ibor_date",
+        "local",
+        "book"
+    ]].copy()
+
+    ext_flows = (
+        ext_flows.groupby([level, "ibor_date"], as_index=False)
+        .agg({"local": "sum", "book": "sum"})
+    )
+
+    ext_flows.rename(columns={
+        "local": "External_CF_Local",
+        "book": "External_CF_Book"
+    }, inplace=True)
+
+    return ext_flows
+
+def compute_opening_cash_flows_investments(investment_master, je_data, level):
+    currencies = ['USD', 'AUD', 'GBP', 'EUR', 'JPY']
+    valid_accounts = ['Cost']
+
+    # Define grouping columns based on the level
+    #group_by_cols = [level, 'ibor_date'] if level != 'ibor_date' else ['ibor_date']
+    group_by_cols = [level, 'ibor_date']
+
+    # For non-currencies, apply the 'Book' > 0 filter.- For currencies, just check the valid accounts.
+
+    # Conditions for filtering rows
+    condition1 = (~je_data['investment'].isin(currencies) & (je_data['book'] > 0))
+    condition2 = je_data['financial_account'].isin(valid_accounts)
+
+    # Combine conditions
+    opening_flows = je_data[condition1 & condition2]
+
+    opening_flows = opening_flows.groupby(group_by_cols).agg(
+        {'local': 'sum', 'book': 'sum'}).reset_index()
+
+    # Rename columns for clarity
+    opening_flows.rename(columns={'local': 'Open_CF_Local', 'book': 'Open_CF_Book'}, inplace=True)
+
+    return opening_flows
+
+def compute_cash_flows_currencies(investment_master, je_data, level):
+    currencies = ['USD', 'AUD', 'GBP', 'EUR', 'JPY']
+    valid_accounts = ['Cost', 'Payable', 'Receivable', 'DividendsReceivable', 'DividendsPayable',
+                      'AccruedInterestPayable', 'AccruedInterestReceivable', 'DividendsReceivable',
+                      'DividendsPayable', 'ExpensesPayable', 'InterestPayable', 'InterestReceivable']
+
+    # Define grouping columns based on the level
+    group_by_cols = [level,'ibor_date'] if level != 'ibor_date' else ['ibor_date']
+
+    # For non-currencies, apply the 'Book' > 0 filter. For currencies, just check the valid accounts.
+
+    # Conditions for filtering rows
+    condition1 = je_data['investment'].isin(currencies)
+    condition2 = je_data['financial_account'].isin(valid_accounts)
+
+    # Combine conditions
+    currency_flows = je_data[condition1 & condition2]
+
+    currency_flows = currency_flows.groupby(group_by_cols).agg(
+        {'local': 'sum', 'book': 'sum'}).reset_index()
+
+    # Rename columns for clarity
+    currency_flows.rename(columns={'local': 'Currency_Flows_Local', 'book': 'Currency_Flows_Book'}, inplace=True)
+
+    return currency_flows
+
+def compute_closing_cash_flows_for_investments(investment_master, je_data, level):
+    currencies = ['USD', 'AUD', 'GBP', 'EUR', 'JPY']
+    # Condition 1
+    condition1 = je_data['financial_account'].isin(['PriceGainInvestment', 'FXGainInvestment'])
+    # Condition 2
+    condition2 = (je_data['financial_account'] == 'Cost') & (je_data['book'] < 0) & (je_data['ls'] == 'l')
+    # Condition 3
+    condition3 = (je_data['financial_account'] == 'Cost') & (je_data['book'] > 0) & (je_data['ls'] == 's')
+    # Condition 4
+    condition4 = ~je_data['investment'].isin(currencies)
+
+    # Combine conditions
+    closing_flows = je_data[(condition1 | condition2 | condition3) & condition4]
+
+    # Group by Investment, IBOR Date, and Tax Date
+    closing_flows_agg = closing_flows.groupby([level, 'ibor_date']).agg(
+        {'local': 'sum', 'book': 'sum'}).reset_index()
+
+    # Rename columns for clarity
+    closing_flows_agg.rename(columns={'local': 'Close_CF_Local', 'book': 'Close_CF_Book'}, inplace=True)
+
+    return closing_flows_agg
+
+def compute_income(investment_master, je_data, level):
+
+
+    print(je_data['financial_account'].unique())
+
+# Must use a bitwise | as Python evaluates the expression in aggregate if OR is used!!!
+    income_entries = je_data[(je_data['financial_account'] == 'DividendReceipt') |
+                         (je_data['financial_account'] == 'FXGainCurrency') |
+                         (je_data['financial_account'] == 'FXGainTradeSettle') |
+                         (je_data['financial_account'] == 'AccruedInterestReceipt') |
+                         (je_data['financial_account'] == 'AccruedInterestIncome') |
+                         (je_data['financial_account'] == 'DividendExpense')]
+
+    print(income_entries.head())
+    # Group by both 'Investment' and 'IBOR Date' and flip the sign on the sum
+    income_je_data = income_entries.groupby([level, 'ibor_date'])[['local', 'book']].sum().reset_index()
+
+    # Flip the sign
+    income_je_data[['local', 'book']] *= -1
+
+    income_je_data.rename(columns={'local': 'Income_Local', 'book': 'Income_Book'}, inplace=True)
+
+    return income_je_data
+
+# ══════════════════════════════════════════════════════════════════════════════
+# ORIGINAL compute_daily_twr — DOMAIN CODE — verbatim, do not alter logic.
+# This REPLACES the collapsed refactored version in performance.py that
+# calls compute_capital_flows. Signature is 5-arg:
+#   (journal_entries, period_start, period_end, agg_level, level, include_local_currency=True)
+# Returns: (finalized_inputs, summary_finalized_inputs, indices)
+#
+# The adapter _compute_daily_twr_period in compute_performance.py calls this
+# with period_start/period_end derived from the journal date span.
+# ══════════════════════════════════════════════════════════════════════════════
+
+def compute_daily_twr(journal_entries, period_start, period_end, agg_level, level, include_local_currency=True):
+    import os
+    import pandas as pd
+
+    # ✅ Load reference data
+    coa_je_data = pd.read_csv("C:/Users/hjmne/PycharmProjects/chest/refdata/chart_of_accounts.csv", encoding="cp1252")
+    investment_master = pd.read_csv("C:/Users/hjmne/PycharmProjects/chest/refdata/investment_master.csv",
+                                    encoding="cp1252")
+
+    # ✅ Normalize journal entries
+    def normalize_journal_entries(journal_entries):
+        data = [entry.to_dict() for entry in journal_entries]
+        return pd.DataFrame(data)
+
+    je_data = normalize_journal_entries(journal_entries)
+
+    from business_days import get_previous_business_day
+    adj_period_start = get_previous_business_day(period_start)
+
+    # Fetch EMV from day before period_start — POLICY: day-1 BMV comes from
+    # prior business day's ending market value.
+    prior_je = [je.to_dict() for je in journal_entries if
+                pd.to_datetime(je.ibor_date) == adj_period_start and je.financial_account == 'MarketVal']
+    prior_df = pd.DataFrame(prior_je)
+
+    if not prior_df.empty and 'investment' in prior_df.columns:
+        prior_df = pd.merge(prior_df, investment_master[['Ticker', 'Analyst']],
+                            left_on='investment', right_on='Ticker', how='left')
+        prior_df.drop(columns='Ticker', inplace=True)
+
+    if not prior_df.empty:
+        prior_emv = prior_df.groupby(level).agg({
+            'local': 'sum',
+            'book': 'sum'
+        }).reset_index().rename(columns={'local': 'BMV_Local', 'book': 'BMV_Book'})
+    else:
+        prior_emv = pd.DataFrame(columns=[level, 'BMV_Local', 'BMV_Book'])
+
+    # ✅ Convert and filter by ibor_date
+    je_data["ibor_date"] = pd.to_datetime(je_data["ibor_date"], errors="coerce")
+    je_data = je_data[(je_data["ibor_date"] >= period_start) & (je_data["ibor_date"] <= period_end)]
+
+    # ✅ Merge journal entries with investment master
+    je_data = pd.merge(je_data, investment_master, left_on='investment', right_on='ticker', how='left').drop('ticker',
+                                                                                                             axis=1)
+    je_data.rename(columns=lambda col: col.replace('_y', '') if col.endswith('_y') else col, inplace=True)
+
+    # ✅ Process market values
+    market_values = je_data[je_data['financial_account'] == 'MarketVal']
+    market_values = market_values.rename(columns={'local': 'EMV_Local', 'book': "EMV_Book"})
+    market_values = market_values.groupby([level, 'ibor_date']).agg(
+        {'EMV_Local': 'sum', 'EMV_Book': 'sum'}).reset_index()
+
+    # ✅ Apply BMV logic
+    market_values['ibor_date'] = pd.to_datetime(market_values['ibor_date'])
+    market_values = market_values.sort_values(by=[level, 'ibor_date'])
+
+    # Seed BMV from prior row's EMV within the period. First row of each
+    # level-value gets 0 here (no prior row → NaN → 0). The prior-business-day
+    # MarketVal patch below overwrites the first row ONLY for positions that
+    # already existed. A level-value with no prior-day MarketVal keeps BMV = 0
+    # on its first day — genuine inception — so the opening flow drives the
+    # denominator: TWR = (EMV - Open_CF) / Open_CF.
+    market_values['BMV_Local'] = market_values.groupby(level)['EMV_Local'].shift(1).fillna(0.0)
+    market_values['BMV_Book'] = market_values.groupby(level)['EMV_Book'].shift(1).fillna(0.0)
+
+
+    first_dates = market_values.groupby(level)['ibor_date'].min().reset_index()
+    first_rows_mask = market_values.merge(first_dates, on=[level, 'ibor_date'], how='left', indicator=True)[
+                          '_merge'] == 'both'
+
+    market_values = pd.merge(market_values, prior_emv, on=level, how='left', suffixes=('', '_from_prior'))
+
+    # Only overwrite where the prior value is actually present (not NaN).
+    # Newer pandas raises on assigning an all-NaN array into float64 via .loc mask,
+    # so guard with notna and coerce explicitly.
+    prior_local = market_values['BMV_Local_from_prior']
+    prior_book = market_values['BMV_Book_from_prior']
+
+    local_mask = first_rows_mask & prior_local.notna()
+    book_mask = first_rows_mask & prior_book.notna()
+
+    market_values.loc[local_mask, 'BMV_Local'] = prior_local[local_mask].astype(float).values
+    market_values.loc[book_mask, 'BMV_Book'] = prior_book[book_mask].astype(float).values
+
+    market_values['BMV_Local'] = market_values['BMV_Local'].fillna(0)
+    market_values['BMV_Book'] = market_values['BMV_Book'].fillna(0)
+    market_values.drop(columns=['BMV_Local_from_prior', 'BMV_Book_from_prior'], inplace=True)
+
+    # ✅ Merge cash flows and income data (three flow types kept SEPARATE)
+    opening_flows = compute_opening_cash_flows_investments(investment_master, je_data, level)
+    currency_flows = compute_cash_flows_currencies(investment_master, je_data, level)
+    closing_flows = compute_closing_cash_flows_for_investments(investment_master, je_data, level)
+    income_data = compute_income(investment_master, je_data, level)
+
+    for df in [opening_flows, currency_flows, closing_flows, income_data]:
+        df['ibor_date'] = pd.to_datetime(df['ibor_date'])
+        market_values = pd.merge(market_values, df, on=[level, 'ibor_date'], how='left').fillna(0)
+
+    # ✅ Initialize finalized_inputs
+    finalized_inputs = market_values
+    finalized_inputs = finalized_inputs.sort_values(by=[level, 'ibor_date'])
+
+    finalized_inputs['Previous_EMV_Local'] = finalized_inputs.groupby(level)['EMV_Local'].shift(1)
+    finalized_inputs['Previous_EMV_Book'] = finalized_inputs.groupby(level)['EMV_Book'].shift(1)
+
+    bmv_map_local = market_values.groupby(level)['BMV_Local'].first().to_dict()
+    bmv_map_book = market_values.groupby(level)['BMV_Book'].first().to_dict()
+    first_rows = finalized_inputs.groupby(level).head(1).index
+
+    for i in first_rows:
+        lv = finalized_inputs.at[i, level]
+        if lv in bmv_map_local:
+            finalized_inputs.at[i, 'Previous_EMV_Local'] = bmv_map_local[lv]
+        if lv in bmv_map_book:
+            finalized_inputs.at[i, 'Previous_EMV_Book'] = bmv_map_book[lv]
+
+    finalized_inputs['Previous_EMV_Local'] = finalized_inputs['Previous_EMV_Local'].fillna(0)
+    finalized_inputs['Previous_EMV_Book'] = finalized_inputs['Previous_EMV_Book'].fillna(0)
+
+    # ✅ Compute TWR — POLICY: level formula vs portfolio formula
+    #   Non-portfolio: Open_CF in denominator, Currency conditional (same-sign),
+    #                  income in numerator.
+    #   Portfolio:     denominator = Previous_EMV only, no income term.
+    def calculate_twr(row):
+        if row[level] != 'portfolio':
+            same_sign_local = (row['Previous_EMV_Local'] >= 0) == (row['Currency_Flows_Local'] >= 0)
+            same_sign_book = (row['Previous_EMV_Book'] >= 0) == (row['Currency_Flows_Book'] >= 0)
+
+            denominator_local = (row['Previous_EMV_Local'] + row['Open_CF_Local'] + (
+                row['Currency_Flows_Local'] if same_sign_local else 0))
+            denominator_book = (row['Previous_EMV_Book'] + row['Open_CF_Book'] + (
+                row['Currency_Flows_Book'] if same_sign_book else 0))
+
+            numerator_local = (
+                    row['EMV_Local'] - row['Previous_EMV_Local'] - row['Open_CF_Local'] - row['Close_CF_Local'] -
+                    row['Currency_Flows_Local'] + row['Income_Local'])
+            numerator_book = (
+                    row['EMV_Book'] - row['Previous_EMV_Book'] - row['Open_CF_Book'] - row['Close_CF_Book'] - row[
+                'Currency_Flows_Book'] + row['Income_Book'])
+        else:  # Portfolio Level Calculation
+            numerator_local = (
+                    row['EMV_Local'] - row['Previous_EMV_Local'] - row['Open_CF_Local'] - row['Close_CF_Local'] -
+                    row['Currency_Flows_Local'])
+            denominator_local = row['Previous_EMV_Local']
+
+            numerator_book = (
+                    row['EMV_Book'] - row['Previous_EMV_Book'] - row['Open_CF_Book'] - row['Close_CF_Book'] - row[
+                'Currency_Flows_Book'])
+            denominator_book = row['Previous_EMV_Book']
+
+        twr_local = None if denominator_local == 0 else numerator_local / denominator_local
+        twr_book = None if denominator_book == 0 else numerator_book / denominator_book
+
+        return pd.Series([twr_local, twr_book], index=['TWR_Local', 'TWR_Book'])
+
+    finalized_inputs[['TWR_Local', 'TWR_Book']] = finalized_inputs.apply(calculate_twr, axis=1)
+
+    # ✅ Compute Cumulative Returns (within-period chain)
+    finalized_inputs['LocalToDate'] = finalized_inputs.groupby(level)['TWR_Local'].transform(
+        lambda x: (1 + x).cumprod())
+    finalized_inputs['BookToDate'] = finalized_inputs.groupby(level)['TWR_Book'].transform(
+        lambda x: (1 + x).cumprod())
+
+    finalized_inputs['TWR_Local_Percent'] = finalized_inputs['TWR_Local'] * 100
+    finalized_inputs['TWR_Book_Percent'] = finalized_inputs['TWR_Book'] * 100
+    finalized_inputs['LocalToDate_Percent'] = (finalized_inputs['LocalToDate'] - 1) * 100
+    finalized_inputs['BookToDate_Percent'] = (finalized_inputs['BookToDate'] - 1) * 100
+
+    # ✅ Category Flows — REPORTING combination of the three types.
+    #   Single net flow for the chosen level. Both sides ADD all three
+    #   (the prior Book-side minus on Currency was a latent bug — fixed).
+    finalized_inputs['Category_Flows_Local'] = (
+            finalized_inputs['Open_CF_Local']
+            + finalized_inputs['Close_CF_Local']
+            + finalized_inputs['Currency_Flows_Local']
+    )
+    finalized_inputs['Category_Flows_Book'] = (
+            finalized_inputs['Open_CF_Book']
+            + finalized_inputs['Close_CF_Book']
+            + finalized_inputs['Currency_Flows_Book']
+    )
+
+    return finalized_inputs
+
+# ──────────────────────────────────────────────────────────────────────────────
+# THIN ADAPTER — maps the period-by-period caller to the original
+# compute_daily_twr signature WITHOUT touching its domain logic.
+# The original compute_daily_twr stays exactly as written in performance.py.
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# PERIOD CHAINING ENGINE
+# ──────────────────────────────────────────────────────────────────────────────
+
+# ──────────────────────────────────────────────────────────────────────────────
+# THIN ADAPTER — maps the period-by-period caller to the original
+# compute_daily_twr signature WITHOUT touching its domain logic.
+# The original compute_daily_twr stays exactly as written in performance.py.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _compute_daily_twr_period(journal_entries, level, period_key):
+    """
+    Adapter for the period-by-period chaining caller.
+
+    The original compute_daily_twr signature is:
+        compute_daily_twr(journal_entries, period_start, period_end,
+                          agg_level, level, include_local_currency=True)
+        → returns (finalized_inputs, summary_finalized_inputs, indices)
+
+    The caller passes prior+current period journals so BMV seeds correctly.
+    period_start/period_end are derived from the journal entries' date span.
+    No domain logic is altered — this only maps arguments.
+    """
+    dates = [pd.to_datetime(je.ibor_date) for je in journal_entries]
+    period_start = min(dates)
+    period_end = max(dates)
+
+    finalized_inputs = compute_daily_twr(
+        journal_entries,
+        period_start,
+        period_end,
+        level,
+        level,
+        include_local_currency=True,
+    )
+    return finalized_inputs
+
 
 # ──────────────────────────────────────────────────────────────────────────────
 # PERIOD CHAINING ENGINE
@@ -272,63 +637,72 @@ def _build_chained_daily_state(
         periods: list[str],
         calendar: str,
         level: str,
-        portfolio: str,  # ADD THIS
+        portfolio: str,
 ) -> pd.DataFrame:
-
-
     """
-    Core chaining engine. Runs compute_daily_twr at daily grain for each
-    period and chains the resulting Index across period boundaries.
+    Core chaining engine. Calls the ORIGINAL compute_daily_twr (via thin
+    adapter) per period and chains across period boundaries from inception.
 
-    For each period, loads the PRIOR period's journal entries alongside
-    the current period so BMV is correctly seeded on day 1 via shift(1).
+    The original compute_daily_twr returns all domain columns, untouched:
+      EMV_Local/Book, BMV_Local/Book, Previous_EMV_Local/Book,
+      Open_CF_Local/Book, Close_CF_Local/Book,
+      Currency_Flows_Local/Book, Income_Local/Book,
+      Category_Flows_Local/Book,
+      TWR_Local/Book, LocalToDate, BookToDate,
+      TWR_*_Percent, LocalToDate_Percent, BookToDate_Percent
 
-    Prior_Index tracked independently per level-value so each investment
-    carries its own unbroken chain.
+    This function PRESERVES every one of those columns and ADDS chained /
+    cumulative columns carried from inception:
+      - Index_Local/Book           = LocalToDate/BookToDate × prior ending index
+      - Cum_Open_CF_Local/Book     = cumulative opening flows from inception
+      - Cum_Close_CF_Local/Book    = cumulative closing flows from inception
+      - Cum_Currency_Flows_*       = cumulative currency flows from inception
+      - Cum_Income_Local/Book      = cumulative income from inception
+
+    The three flow types stay SEPARATE and are RETURNED so a performance
+    analyst can validate every TWR by hand. Delta of any cumulative between
+    two dates = flows of that type over the range.
     """
     from financial_information_gateway.extraction.box_extractor import extract_box_components
 
+    # ── PRIOR STATE TRACKERS — per level-value, carried from inception ────────
     prior_index: dict[str, dict] = {}
+    prior_open_cf: dict[str, dict] = {}
+    prior_close_cf: dict[str, dict] = {}
+    prior_currency_cf: dict[str, dict] = {}
+    prior_income: dict[str, dict] = {}
+
     all_frames: list[pd.DataFrame] = []
 
     for i, period_key in enumerate(periods):
         p_start, p_end = _period_boundaries(period_key, calendar)
 
-        # ── LOAD JOURNALS ─────────────────────────────────────────
-        # If first period — use current period only
-        # If subsequent — load prior + current so shift(1) seeds BMV
+        # ── LOAD JOURNALS (prior + current seeds BMV via shift) ───────────────
         if i == 0:
             extracted = extract_box_components(
-                portfolio=_portfolio_from_journals(journal_entries),
-                calendar=calendar,
-                period_start=period_key,
-                period_end=period_key,
+                portfolio=portfolio, calendar=calendar,
+                period_start=period_key, period_end=period_key,
             )
         else:
             prior_period_key = periods[i - 1]
             extracted = extract_box_components(
-                portfolio=_portfolio_from_journals(journal_entries),
-                calendar=calendar,
-                period_start=prior_period_key,
-                period_end=period_key,
+                portfolio=portfolio, calendar=calendar,
+                period_start=prior_period_key, period_end=period_key,
             )
 
         period_jes = extracted["journal_entries"]
-
         if not period_jes:
             print(f">>> No journals for period {period_key} — skipping")
             continue
 
-        # ── COMPUTE DAILY TWR ─────────────────────────────────────
-        period_df, _, _ = compute_daily_twr(period_jes, level, period_key)
+        # ── COMPUTE DAILY TWR via original domain function (adapter) ──────────
+        period_df = _compute_daily_twr_period(period_jes, level, period_key)
 
         if period_df is None or period_df.empty:
             print(f">>> Empty TWR result for {period_key} — skipping")
             continue
 
-        # ── FILTER TO CURRENT PERIOD ONLY ────────────────────────
-        # Prior period journals seed BMV via shift(1) but we only
-        # keep current period rows in the output
+        # ── FILTER TO CURRENT PERIOD ONLY ─────────────────────────────────────
         period_df["ibor_date"] = pd.to_datetime(period_df["ibor_date"])
         period_df = period_df[
             (period_df["ibor_date"] >= p_start) &
@@ -341,25 +715,87 @@ def _build_chained_daily_state(
 
         period_df = period_df.sort_values([level, "ibor_date"]).copy()
 
-        # ── CHAIN INDEX ───────────────────────────────────────────
+        # ── INITIALIZE CHAIN + CUMULATIVE COLUMNS ─────────────────────────────
         period_df["Index_Local"] = 0.0
         period_df["Index_Book"] = 0.0
+        period_df["Cum_Open_CF_Local"] = 0.0
+        period_df["Cum_Open_CF_Book"] = 0.0
+        period_df["Cum_Close_CF_Local"] = 0.0
+        period_df["Cum_Close_CF_Book"] = 0.0
+        period_df["Cum_Currency_Flows_Local"] = 0.0
+        period_df["Cum_Currency_Flows_Book"] = 0.0
+        period_df["Cum_Income_Local"] = 0.0
+        period_df["Cum_Income_Book"] = 0.0
 
         for lv in period_df[level].unique():
             lv_key = str(lv)
             mask = period_df[level] == lv
-            prior = prior_index.get(lv_key, {"local": 1.0, "book": 1.0})
 
+            # ── INDEX — within-period LocalToDate × prior ending index ────────
+            prior_idx = prior_index.get(lv_key, {"local": 1.0, "book": 1.0})
             period_df.loc[mask, "Index_Local"] = (
-                    period_df.loc[mask, "Period_Index_Local"] * prior["local"]
+                    period_df.loc[mask, "LocalToDate"] * prior_idx["local"]
             )
             period_df.loc[mask, "Index_Book"] = (
-                    period_df.loc[mask, "Period_Index_Book"] * prior["book"]
+                    period_df.loc[mask, "BookToDate"] * prior_idx["book"]
             )
 
+            # ── CUMULATIVE OPEN CF = within-period cumsum + prior ending ──────
+            p_ocf = prior_open_cf.get(lv_key, {"local": 0.0, "book": 0.0})
+            period_df.loc[mask, "Cum_Open_CF_Local"] = (
+                    period_df.loc[mask, "Open_CF_Local"].cumsum() + p_ocf["local"]
+            )
+            period_df.loc[mask, "Cum_Open_CF_Book"] = (
+                    period_df.loc[mask, "Open_CF_Book"].cumsum() + p_ocf["book"]
+            )
+
+            # ── CUMULATIVE CLOSE CF ───────────────────────────────────────────
+            p_ccf = prior_close_cf.get(lv_key, {"local": 0.0, "book": 0.0})
+            period_df.loc[mask, "Cum_Close_CF_Local"] = (
+                    period_df.loc[mask, "Close_CF_Local"].cumsum() + p_ccf["local"]
+            )
+            period_df.loc[mask, "Cum_Close_CF_Book"] = (
+                    period_df.loc[mask, "Close_CF_Book"].cumsum() + p_ccf["book"]
+            )
+
+            # ── CUMULATIVE CURRENCY FLOWS ─────────────────────────────────────
+            p_fx = prior_currency_cf.get(lv_key, {"local": 0.0, "book": 0.0})
+            period_df.loc[mask, "Cum_Currency_Flows_Local"] = (
+                    period_df.loc[mask, "Currency_Flows_Local"].cumsum() + p_fx["local"]
+            )
+            period_df.loc[mask, "Cum_Currency_Flows_Book"] = (
+                    period_df.loc[mask, "Currency_Flows_Book"].cumsum() + p_fx["book"]
+            )
+
+            # ── CUMULATIVE INCOME ─────────────────────────────────────────────
+            p_inc = prior_income.get(lv_key, {"local": 0.0, "book": 0.0})
+            period_df.loc[mask, "Cum_Income_Local"] = (
+                    period_df.loc[mask, "Income_Local"].cumsum() + p_inc["local"]
+            )
+            period_df.loc[mask, "Cum_Income_Book"] = (
+                    period_df.loc[mask, "Income_Book"].cumsum() + p_inc["book"]
+            )
+
+            # ── UPDATE PRIORS for next period ─────────────────────────────────
             prior_index[lv_key] = {
                 "local": float(period_df.loc[mask, "Index_Local"].iloc[-1]),
                 "book": float(period_df.loc[mask, "Index_Book"].iloc[-1]),
+            }
+            prior_open_cf[lv_key] = {
+                "local": float(period_df.loc[mask, "Cum_Open_CF_Local"].iloc[-1]),
+                "book": float(period_df.loc[mask, "Cum_Open_CF_Book"].iloc[-1]),
+            }
+            prior_close_cf[lv_key] = {
+                "local": float(period_df.loc[mask, "Cum_Close_CF_Local"].iloc[-1]),
+                "book": float(period_df.loc[mask, "Cum_Close_CF_Book"].iloc[-1]),
+            }
+            prior_currency_cf[lv_key] = {
+                "local": float(period_df.loc[mask, "Cum_Currency_Flows_Local"].iloc[-1]),
+                "book": float(period_df.loc[mask, "Cum_Currency_Flows_Book"].iloc[-1]),
+            }
+            prior_income[lv_key] = {
+                "local": float(period_df.loc[mask, "Cum_Income_Local"].iloc[-1]),
+                "book": float(period_df.loc[mask, "Cum_Income_Book"].iloc[-1]),
             }
 
         all_frames.append(period_df)
@@ -376,13 +812,11 @@ def _build_chained_daily_state(
 
     return final
 
-
 def _portfolio_from_journals(journal_entries: list) -> str:
     """Extract portfolio name from first journal entry."""
     if journal_entries:
         return getattr(journal_entries[0], "portfolio", "Portfolio1")
     return "Portfolio1"
-
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -443,7 +877,6 @@ def _load_index_returns(refdata_path: str) -> pd.DataFrame:
 # ──────────────────────────────────────────────────────────────────────────────
 # MAIN COMPUTE FUNCTION
 # ──────────────────────────────────────────────────────────────────────────────
-
 def compute_performance(
     portfolio:    str,
     calendar:     str,
@@ -458,9 +891,17 @@ def compute_performance(
     Compute chained Time-Weighted Returns for the requested range,
     level, and cadence.
 
-    First call for a given portfolio/calendar/range builds the chained
-    daily state and caches it. All subsequent calls are cache hits —
-    carving and aggregation run on the cached state in sub-second time.
+    Performance is a PERSPECTIVE on accounting. The chain and cumulative
+    flows depend on ALL history from inception, so the build ALWAYS starts
+    at inception (available_periods[0]) regardless of the requested
+    period_start. The requested period_start controls DISPLAY only — the
+    output is filtered to the display window after the chain is built,
+    aggregated, and carved.
+
+    First call for a given portfolio/calendar/inception→period_end span
+    builds the chained daily state and caches it. All subsequent calls are
+    cache hits — carving, aggregation, and display-window filtering run on
+    the cached state in sub-second time.
 
     prep is required. It is a dict returned by prep_state().
     All access via prep["key"].
@@ -504,21 +945,6 @@ def compute_performance(
             metadata={},
         )
 
-    # Apply uber_filter for single-investment queries
-    # Filter BEFORE cache lookup — cache always holds full portfolio state
-    filtered_entries = journal_entries
-    if uber_filter:
-        field = list(uber_filter.keys())[0]
-        value = str(uber_filter[field]).upper()
-        filtered_entries = [
-            je for je in journal_entries
-            if str(getattr(je, field, "")).upper() == value
-        ]
-        print(
-            f">>> uber_filter {field}={value} "
-            f"→ {len(filtered_entries)} journal entries"
-        )
-
     t_state_ms = (time.perf_counter() - t_state) * 1000
 
     # ── PERIOD LIST ───────────────────────────────────────────────────
@@ -533,34 +959,40 @@ def compute_performance(
             f"period_end '{period_end}' not found in snapshots."
         )
 
-    periods = _sorted_periods(period_start, period_end, available_periods)
+    # Build ALWAYS starts at inception — the chain and cumulative flows
+    # depend on all prior history. period_start controls display only.
+    inception = available_periods[0]
+
+    build_periods   = _sorted_periods(inception, period_end, available_periods)
+    display_periods = _sorted_periods(period_start, period_end, available_periods)
+    periods = build_periods  # builder chains the full inception→period_end span
 
     print(
         f">>> compute_performance | {portfolio} | {calendar} "
-        f"| {period_start} → {period_end} "
-        f"| {len(periods)} periods | level={level} | cadence={cadence}"
+        f"| build {inception} → {period_end} ({len(build_periods)} periods) "
+        f"| display {period_start} → {period_end} ({len(display_periods)} periods) "
+        f"| level={level} | cadence={cadence}"
     )
 
     # ── CACHE KEY ─────────────────────────────────────────────────────
-    # Cache is keyed on full portfolio range only — NOT on uber_filter.
-    # uber_filter is applied after cache retrieval so the full portfolio
-    # state is always cached and any single investment can be served
-    # from it instantly without a separate cache entry per investment.
-    cache_key = (portfolio, calendar, period_start, period_end)
+    # Build span is inception → period_end, so the cache keys on that span —
+    # NOT the display period_start. Any display window ending at period_end
+    # reuses the same built chain. uber_filter is applied AFTER cache
+    # retrieval so the full portfolio state is always cached and any single
+    # investment is served from it instantly without a per-investment entry.
+    cache_key = (portfolio, calendar, inception, period_end)
 
     # ── GET OR BUILD CHAINED DAILY STATE ─────────────────────────────
-    # Pass filtered_entries to the builder when uber_filter is set —
-    # smaller dataset, faster build on first filtered call.
-    # For full portfolio (no filter) the full journal list is used
-    # and the result is cached for all subsequent calls.
-    entries_for_build = filtered_entries if uber_filter else journal_entries
-
+    # Always build the FULL portfolio with the full journal list and full
+    # cache_key. uber_filter is applied to the cached DataFrame afterward,
+    # so single-investment queries hit the cache instantly instead of
+    # triggering a fresh build every call.
     daily_state, build_ms, cache_hit = _get_cached_daily_state(
-        cache_key=cache_key if not uber_filter else None,
-        journal_entries=entries_for_build,
+        cache_key=cache_key,
+        journal_entries=journal_entries,
         periods=periods,
         calendar=calendar,
-        portfolio=portfolio,  # ADD THIS
+        portfolio=portfolio,
     )
 
     if daily_state.empty:
@@ -578,14 +1010,18 @@ def compute_performance(
         )
 
     # ── FILTER CACHED STATE for uber_filter ──────────────────────────
-    # If we hit the full-portfolio cache, filter the DataFrame now
-    if cache_hit and uber_filter:
+    # Single-investment queries filter the full cached state here.
+    if uber_filter:
         field = list(uber_filter.keys())[0]
         value = str(uber_filter[field]).upper()
         if field in daily_state.columns:
             daily_state = daily_state[
                 daily_state[field].astype(str).str.upper() == value
             ].copy()
+            print(
+                f">>> uber_filter {field}={value} "
+                f"→ {len(daily_state)} daily-state rows"
+            )
 
     # ── AGGREGATE to requested level ──────────────────────────────────
     t_agg = time.perf_counter()
@@ -639,6 +1075,20 @@ def compute_performance(
     except Exception as e:
         print(f">>> Index merge failed (non-fatal): {e}")
 
+    # ── FILTER TO DISPLAY WINDOW ──────────────────────────────────────
+    # The chain was built from inception. Now restrict the output to the
+    # requested display window [period_start, period_end] inclusive. The
+    # build covered inception → period_end; trimming the leading periods
+    # leaves the chain/cumulatives intact (they were computed with full
+    # history) while showing only the dates the caller asked for.
+    if "ibor_date" in output_df.columns and display_periods:
+        disp_start_dt, _ = _period_boundaries(display_periods[0], calendar)
+        _, disp_end_dt   = _period_boundaries(display_periods[-1], calendar)
+        od = pd.to_datetime(output_df["ibor_date"])
+        output_df = output_df[
+            (od >= disp_start_dt) & (od <= disp_end_dt)
+        ].copy()
+
     # ── METADATA ──────────────────────────────────────────────────────
     t_total_ms = (time.perf_counter() - t_total) * 1000
 
@@ -655,8 +1105,9 @@ def compute_performance(
         "carving_ms":      round(t_carve_ms, 1),
         "cache_hit":       cache_hit,
         "investments":     n_investments,
-        "periods_chained": len(periods),
-        "journal_count":   len(filtered_entries),
+        "build_periods":   len(build_periods),
+        "display_periods": len(display_periods),
+        "inception":       inception,
         "output_rows":     len(output_df),
         "uber_filter":     uber_filter,
     }
@@ -665,7 +1116,7 @@ def compute_performance(
         f">>> compute_performance COMPLETE "
         f"| {'CACHE HIT' if cache_hit else 'CACHE MISS — built'} "
         f"| {n_investments} investments "
-        f"| {len(periods)} periods "
+        f"| build {len(build_periods)} / display {len(display_periods)} periods "
         f"| {len(output_df)} output rows "
         f"| {t_total_ms:.0f}ms total"
     )

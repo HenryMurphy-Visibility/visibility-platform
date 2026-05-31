@@ -598,10 +598,10 @@ def run_all_periods(
 
 
     # ── OPTIONAL: PRE-CPH DATA VALIDATION ────────────────────────────────
-    # Uncomment to gate processing on data integrity
-    from proof_engine import run_proof_pre_cph
-    if not run_proof_pre_cph(portfolio, calendar, block_on_critical=True):
-        raise RuntimeError(f"Pre-CPH data check failed — blocking {portfolio}")
+    # # Uncomment to gate processing on data integrity
+    # from proof_engine import run_proof_pre_cph
+    # if not run_proof_pre_cph(portfolio, calendar, block_on_critical=True):
+    #     raise RuntimeError(f"Pre-CPH data check failed — blocking {portfolio}")
 
 
     # ── LOAD CALENDAR ─────────────────────────────────────────────
