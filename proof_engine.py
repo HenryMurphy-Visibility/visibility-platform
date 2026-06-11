@@ -2,7 +2,7 @@
 """
 proof_engine.py — Visibility VAI Proof Engine
 ══════════════════════════════════════════════════════════════════════════════
-Six pillars. Consistent return structure. Summary and verbose modes.
+Eight pillars. Consistent return structure. Summary and verbose modes.
 
 Pillars:
   1. availability      prices and FX rates exist for all required dates
@@ -11,13 +11,17 @@ Pillars:
   4. marks             period end MV = qty × price × pf × fx_rate
   5. chart_of_accounts every financial_account posted exists in COA
   6. data              event file integrity (kdbegin, holidays, qty, price, dupes)
+  7. accrual_residual  closed positions carry no accrued residual; accrued
+                       accounts touched only by declared transaction names
+  8. accrual_policy    journal postings exhibit the fund's declared accrual
+                       election (vocabulary, date placement, gap multiples)
 
 Usage:
   python proof_engine.py Portfolio1 Monthly
   python proof_engine.py Portfolio1 Monthly 2024-06
   python proof_engine.py Portfolio1 Monthly --period-from 2024-01 --period-to 2024-06
   python proof_engine.py Portfolio1 Monthly --pillar marks --verbose
-  python proof_engine.py Portfolio1 Monthly --pillar data
+  python proof_engine.py Portfolio1 Monthly --pillar accrual_policy --verbose
   python proof_engine.py Portfolio1 Monthly --investment AAPL --verbose
 
 CPH integration (optional):
@@ -39,6 +43,9 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from v_config import REFDATA_PATH, FUNDS_PATH
+
+# ── Default Base- Use for now add portfolio lookup later ──────────────────────
+BASE_CURRENCY = "USD"
 
 # ── TOLERANCES ────────────────────────────────────────────────────────────────
 AMOUNT_TOLERANCE = 0.01
@@ -93,6 +100,40 @@ SETTLE_FX_METHODS = {
     "buy_bond", "sell_bond",
 }
 
+# ── ACCRUAL CONVENTION CONSTANTS (Pillars 7 and 8) ────────────────────────────
+# Institutional memory of the $277.77 discovery (DOMAIN_MODEL Ch. 9).
+
+ACCRUED_ACCOUNTS = {"AccruedInterestReceivable", "AccruedInterestPayable"}
+
+# Transaction names allowed to post to accrued-interest accounts:
+# the accrual vocabulary (per recognition policy) + known relief paths.
+ACCRUAL_TXN_VOCABULARY = {
+    "BondAccrual",          # own-day accrual, every policy
+    "SingleDayFactor",      # gap days, dated themselves
+    "MultiDayPreceding",    # gap days, stamped prior business day
+    "MultiDayFollowing",    # gap days, stamped following business day
+}
+ACCRUED_TOUCH_ALLOWED = ACCRUAL_TXN_VOCABULARY | {
+    "Settlement",           # Phase-2 reclass in / relief out
+    "Coupon",               # Phase-4 relief (when coupon rule lands)
+}
+
+# Which transaction names each declared policy may produce.
+POLICY_VOCAB = {
+    "single_day_factor":  {"BondAccrual", "SingleDayFactor"},
+    "multiday_preceding": {"BondAccrual", "MultiDayPreceding"},
+    "multiday_following": {"BondAccrual", "MultiDayFollowing"},
+}
+
+# Tolerance for a "zero" residual after full close. Trade-side figures
+# round to the penny (quotes in thirds), so a closed round trip can
+# legitimately leave +/- a cent or two. Anything beyond this is a real
+# residual -- e.g. 277.77 is two missing days, not rounding.
+RESIDUAL_TOLERANCE = 0.02
+
+# Tolerance for gap-entry amounts as multiples of the daily amount.
+MULTIPLE_TOLERANCE = 0.02
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # PROOF RESULT — consistent structure across all pillars
@@ -106,6 +147,93 @@ class ProofItem:
     message:  str
     period:   str = ""
     investment: str = ""
+
+
+def _print_summary_grid(results: list):
+    """
+    Verdict grid — one line per pillar. The default view.
+
+    SAFETY: a pillar that only SKIPPED (no data to check) has zero failures,
+    but it is NOT a pass — it proved nothing. The engine must never report
+    ALL CLEAR when it examined no data. A run where the substantive,
+    data-dependent pillars all skipped is reported as NOTHING PROVEN, not
+    as a clean pass. Reporting green on an empty run is worse than useless —
+    it manufactures false confidence.
+    """
+    print(f"\n{BOLD}{'─' * 70}{RESET}")
+    print(f"{BOLD}  {'PILLAR':<20}{'VERDICT':<10}{'✓':>8}{'⚠':>8}{'✗':>8}{'skip':>6}   {'CRIT':>4}{RESET}")
+    print(f"  {'─' * 72}")
+
+    any_fail = False
+
+    # A pillar "ran" if it produced at least one real check (pass/warn/fail).
+    # A pillar that only has skips examined nothing.
+    def _ran(r):
+        return (len(r.passes) + len(r.warnings) + len(r.failures)) > 0
+
+    for r in results:
+        if not r.all_clear:
+            any_fail = True
+        n_pass = len(r.passes)
+        n_warn = len(r.warnings)
+        n_fail = len(r.failures)
+        n_skip = len(r.skipped)
+        crit = f"{RED}⛔{RESET}" if r.has_critical else ""
+
+        # Per-pillar verdict: FAIL if failures; else NOT RUN if it only skipped;
+        # else PASS. "NOT RUN" is visually distinct from PASS on purpose.
+        if n_fail > 0:
+            vtxt, vcol = "FAIL", RED
+        elif not _ran(r):
+            vtxt, vcol = "NOT RUN", YELLOW
+        else:
+            vtxt, vcol = "PASS", GREEN
+
+        print(f"  {r.pillar:<20}{vcol}{vtxt:<10}{RESET}"
+              f"{n_pass:>8}{n_warn:>8}{n_fail:>8}{n_skip:>6}   {crit:>4}")
+    print(f"  {'─' * 72}")
+
+    # ── Honest overall verdict ────────────────────────────────────────────────
+    # The substantive, data-dependent pillars. If NONE of these examined any
+    # data, the run proved nothing regardless of the absence of failures.
+    DATA_PILLARS = {"availability", "balance", "marks"}
+    data_results = [r for r in results if r.pillar in DATA_PILLARS]
+    data_ran = [r for r in data_results if _ran(r)]
+    total_checks = sum(len(r.passes) + len(r.warnings) + len(r.failures)
+                       for r in results)
+
+    failed = [r.pillar for r in results if not r.all_clear]
+
+    if any_fail:
+        print(f"\n{RED}{BOLD}  ✗ {len(failed)} pillar(s) failed: {', '.join(failed)}{RESET}")
+        print(f"  {DIM}  → rerun with --pillar <name> --verbose to drill in{RESET}\n")
+        return
+
+    # No failures — but did we actually CHECK anything?
+    if total_checks == 0:
+        print(f"\n{YELLOW}{BOLD}  ⚠ NOTHING PROVEN — the engine examined NO data.{RESET}")
+        print(f"  {YELLOW}    0 checks ran across all pillars. This is NOT an all-clear.{RESET}")
+        print(f"  {DIM}    Likely cause: no journals/periods loaded for this portfolio+calendar.{RESET}")
+        print(f"  {DIM}    Check that processing (CPH) has run and that the calendar name is correct.{RESET}\n")
+        return
+
+    if not data_ran:
+        # Some pillar ran (e.g. chart_of_accounts on an empty book) but every
+        # data-dependent pillar skipped — still hollow.
+        skipped_names = ", ".join(r.pillar for r in data_results if not _ran(r))
+        print(f"\n{YELLOW}{BOLD}  ⚠ NOTHING PROVEN ON POSITIONS — data pillars examined no data.{RESET}")
+        print(f"  {YELLOW}    No data checked by: {skipped_names}.{RESET}")
+        print(f"  {YELLOW}    This is NOT a clean book — it is an unexamined one.{RESET}")
+        print(f"  {DIM}    Likely cause: no periods/journals loaded. Confirm CPH ran and the{RESET}")
+        print(f"  {DIM}    calendar/portfolio names match what's on disk.{RESET}\n")
+        return
+
+    # Genuine all-clear: no failures AND the data pillars actually examined data.
+    n_data_checks = sum(len(r.passes) + len(r.warnings) + len(r.failures)
+                        for r in data_ran)
+    print(f"\n{GREEN}{BOLD}  ✓ ALL CLEAR{RESET}  "
+          f"{DIM}{total_checks} checks across {len(results)} pillars "
+          f"({n_data_checks} on positions/periods){RESET}\n")
 
 
 class ProofResult:
@@ -244,6 +372,16 @@ def _je_date(je, field: str) -> str:
     if hasattr(val, "strftime"):
         return val.strftime("%Y-%m-%d")
     return _norm_date(str(val))
+
+def _je_date_obj(je, field: str) -> Optional[date_type]:
+    """Date object from a JE field, or None. For calendar arithmetic."""
+    s = _je_date(je, field)
+    if not s:
+        return None
+    try:
+        return datetime.strptime(s, "%Y-%m-%d").date()
+    except Exception:
+        return None
 
 def _find_rate(index: dict, key_prefix: str, date: str,
                tolerance_days: int = 5) -> tuple:
@@ -472,29 +610,68 @@ def pillar_availability(events, im, calendar_records,
 # ══════════════════════════════════════════════════════════════════════════════
 
 def pillar_balance(jes_by_period) -> ProofResult:
+    """
+    Verify all JEs balance per tranID (local and book each sum to ~0 per tran).
+    Excludes UNREALIZED_ACCOUNTS (e.g. MarketVal — single-sided stat entries).
+    Reports failures by tranID so the offending transaction is identifiable.
+    """
     result = ProofResult("balance")
     for period_name, jes in sorted(jes_by_period.items()):
-        local_sum = book_sum = je_count = 0.0
+        # tranid -> [local_sum, book_sum, je_count]
+        by_tran = defaultdict(lambda: [0.0, 0.0, 0])
+        no_tranid = []   # JEs missing tranid — flagged individually
+        excluded = 0
+
         for je in jes:
             fa = str(_je_val(je, "financial_account") or "")
             if any(u.lower() in fa.lower() for u in UNREALIZED_ACCOUNTS):
+                excluded += 1
                 continue
-            local_sum += _safe_float(_je_val(je, "local")) or 0.0
-            book_sum  += _safe_float(_je_val(je, "book"))  or 0.0
-            je_count  += 1
-        if je_count == 0:
-            result.skip(f"{period_name} — no JEs", period=period_name)
+            tranid_raw = _je_val(je, "tranid")
+            if tranid_raw is None or str(tranid_raw).strip() == "":
+                no_tranid.append(fa)
+                continue
+            tranid = str(tranid_raw)
+            by_tran[tranid][0] += _safe_float(_je_val(je, "local")) or 0.0
+            by_tran[tranid][1] += _safe_float(_je_val(je, "book"))  or 0.0
+            by_tran[tranid][2] += 1
+
+        # Flag missing-tranid JEs (data integrity, separate from balance math)
+        for fa in no_tranid:
+            result.fail(f"{period_name} — JE missing tranID "
+                        f"(financial_account={fa!r})",
+                        period=period_name)
+
+        if not by_tran:
+            if not no_tranid:
+                result.skip(f"{period_name} — no balancing JEs to check "
+                            f"(excluded {excluded} stat entries)",
+                            period=period_name)
             continue
-        if abs(local_sum) <= AMOUNT_TOLERANCE and abs(book_sum) <= AMOUNT_TOLERANCE:
-            result.ok(f"{period_name} — {int(je_count)} JEs balance",
-                     period=period_name)
+
+        # Per-tranID balance check
+        failing = []
+        for tranid, (l_sum, b_sum, n) in by_tran.items():
+            if abs(l_sum) > AMOUNT_TOLERANCE or abs(b_sum) > AMOUNT_TOLERANCE:
+                failing.append((tranid, l_sum, b_sum, n))
+
+        if not failing:
+            total_jes = sum(n for _, _, n in by_tran.values())
+            result.ok(f"{period_name} — {len(by_tran)} tranIDs balance "
+                      f"({total_jes} JEs, {excluded} stat entries excluded)",
+                      period=period_name)
         else:
-            if abs(local_sum) > AMOUNT_TOLERANCE:
-                result.fail(f"{period_name} — LOCAL out of balance: {local_sum:.4f}",
-                           period=period_name)
-            if abs(book_sum) > AMOUNT_TOLERANCE:
-                result.fail(f"{period_name} — BOOK out of balance: {book_sum:.4f}",
-                           period=period_name)
+            # Sorted for deterministic output
+            for tranid, l_sum, b_sum, n in sorted(failing, key=lambda x: x[0]):
+                parts = []
+                if abs(l_sum) > AMOUNT_TOLERANCE:
+                    parts.append(f"LOCAL={l_sum:.4f}")
+                if abs(b_sum) > AMOUNT_TOLERANCE:
+                    parts.append(f"BOOK={b_sum:.4f}")
+                result.fail(f"{period_name} — tranID {tranid} out of balance "
+                            f"({n} JEs): {'; '.join(parts)}",
+                            period=period_name)
+
     if result.total == 0:
         result.skip("No periods processed")
     return result
@@ -889,7 +1066,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
         result.fail(f"D-009 amount mismatches — {d009} total (showing first 5)",
                    severity="HIGH")
 
-    # # ── D-010 contract_size and pricing_factor never zero in IM ──────────────────
+    # # ── D-010 contract_size and pricing_factor never zero in IM ──────────────
     # if im:
     #     d010 = 0
     #     for inv, attrs in im.items():
@@ -946,9 +1123,6 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
                        severity="HIGH")
 
         # ── D-006 MarketVal non-zero for active positions ─────────────────────
-        from collections import defaultdict
-        import pandas as pd
-
         mv_issues = 0
         by_inv_date = defaultdict(lambda: {"cost_qty": 0.0, "mv": 0.0})
         for je in all_jes:
@@ -964,6 +1138,12 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
                 by_inv_date[k]["mv"] += local
 
         for (inv, dt), vals in by_inv_date.items():
+            # Base-currency cash has no FX mark — nothing to mark against the
+            # unit of account. Skip it. (Today base = USD; when firms run other
+            # base currencies, this should read the portfolio's base ccy, not a
+            # literal.) Foreign-currency positions still get checked.
+            if inv == BASE_CURRENCY:
+                continue
             if vals["cost_qty"] != 0 and vals["mv"] == 0:
                 mv_issues += 1
                 if mv_issues <= 5:
@@ -978,6 +1158,311 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
         elif mv_issues > 5:
             result.fail(f"D-006 MarketVal=0 issues — {mv_issues} total (showing first 5)",
                        severity="HIGH")
+
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 7 — ACCRUAL RESIDUAL
+# ══════════════════════════════════════════════════════════════════════════════
+# Institutional memory of the $277.77 discovery (DOMAIN_MODEL Ch. 9).
+#
+#   1. RESIDUAL-FREE CLOSES: for every (investment, location, ls) whose
+#      position quantity has returned to zero across the examined span
+#      (a full close), the AccruedInterestReceivable/Payable balance must
+#      also be ~zero. A surviving residual means two code paths disagreed
+#      about day counts, a recognition policy was mis-executed, or the
+#      processing order was disturbed. A standing convention-mismatch
+#      detector.
+#
+#   2. TRANSACTION-NAME VOCABULARY: every JE posted to an accrued-interest
+#      account carries a transaction name from the declared accrual
+#      vocabulary (or a known relief path: Settlement / Coupon). An
+#      unknown name on an accrued account means a new code path is
+#      touching the balance without declaring itself -- the
+#      key-fragmentation failure mode.
+#
+# FIELD NAMES used: investment, location, ls, financial_account,
+# quantity, local, book, transaction.
+
+def pillar_accrual_residual(jes_by_period) -> ProofResult:
+    """
+    Residual-free closes + accrued-account vocabulary.
+
+    Accumulates position quantity (Cost) and accrued-interest balances
+    per (investment, location, ls) across ALL periods in chronological
+    order, then asserts: closed position => zero accrued balance. Open
+    positions carry accrued legitimately and report as passes.
+    """
+    result = ProofResult("accrual_residual")
+
+    # (investment, location, ls) -> accumulators
+    qty_by_key   = defaultdict(float)   # Cost quantity (position)
+    accr_local   = defaultdict(float)   # accrued local balance
+    accr_book    = defaultdict(float)   # accrued book balance
+    saw_accrued  = set()                # keys that ever had accrued
+    bad_txn      = []                   # vocabulary violations
+    examined_jes = 0
+
+    for period_name, jes in sorted(jes_by_period.items()):
+        for je in jes:
+            fa  = str(_je_val(je, "financial_account") or "")
+            inv = str(_je_val(je, "investment") or "")
+            loc = str(_je_val(je, "location") or "")
+            ls  = str(_je_val(je, "ls") or "")
+            key = (inv, loc, ls)
+
+            if fa == "Cost":
+                qty_by_key[key] += _safe_float(_je_val(je, "quantity")) or 0.0
+                examined_jes += 1
+
+            elif fa in ACCRUED_ACCOUNTS:
+                accr_local[key] += _safe_float(_je_val(je, "local")) or 0.0
+                accr_book[key]  += _safe_float(_je_val(je, "book"))  or 0.0
+                saw_accrued.add(key)
+                examined_jes += 1
+
+                txn = str(_je_val(je, "transaction") or "")
+                if txn not in ACCRUED_TOUCH_ALLOWED:
+                    bad_txn.append((period_name, key, txn, fa))
+
+    if examined_jes == 0:
+        result.skip("No Cost or accrued-interest JEs to examine")
+        return result
+
+    # ── CHECK 1: residual-free closes ─────────────────────────────────────────
+    for key in sorted(saw_accrued):
+        inv, loc, ls = key
+        qty   = qty_by_key.get(key, 0.0)
+        l_bal = accr_local[key]
+        b_bal = accr_book[key]
+        label = f"{inv} @ {loc} ({ls})"
+
+        if abs(qty) <= 1e-9:
+            # Position fully closed -- accrued must be ~zero.
+            if abs(l_bal) <= RESIDUAL_TOLERANCE and \
+               abs(b_bal) <= RESIDUAL_TOLERANCE:
+                result.ok(f"{label} -- closed position, accrued "
+                          f"residual {l_bal:.2f} within tolerance",
+                          investment=inv)
+            else:
+                result.fail(
+                    f"{label} -- CLOSED position with surviving "
+                    f"accrued residual: local={l_bal:.2f} "
+                    f"book={b_bal:.2f}. Convention mismatch between "
+                    f"code paths, mis-executed recognition policy, "
+                    f"or disturbed processing order.",
+                    investment=inv)
+        else:
+            # Position open -- accrued legitimately outstanding.
+            result.ok(f"{label} -- open position (qty={qty:,.0f}), "
+                      f"accrued balance {l_bal:.2f} carried",
+                      investment=inv)
+
+    # ── CHECK 2: vocabulary on accrued accounts ───────────────────────────────
+    if bad_txn:
+        for period_name, key, txn, fa in bad_txn:
+            inv, loc, ls = key
+            result.fail(
+                f"{period_name} -- {fa} touched by undeclared "
+                f"transaction {txn!r} ({inv} @ {loc} ({ls})). Every "
+                f"accrued-account JE must carry a declared accrual "
+                f"or relief transaction name.",
+                period=period_name, investment=inv)
+    else:
+        result.ok(f"Accrued-account vocabulary clean "
+                  f"({len(ACCRUED_TOUCH_ALLOWED)} declared names)")
+
+    return result
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 8 — ACCRUAL POLICY EXECUTION
+# ══════════════════════════════════════════════════════════════════════════════
+# Validates that the journal's accrual postings exhibit the DECLARED
+# recognition policy's structural signature (Tier A) and amount
+# discipline (Tier B). DOMAIN_MODEL Ch. 3/8: "posted accrual equals the
+# RESOLVED declared convention."
+#
+# Would have caught live: stale-config execution (declared
+# single_day_factor, executed multiday_preceding) -- the vocabulary/
+# policy cross-check fails on the first entry.
+#
+# Tier A (cheap, structural -- always runs):
+#   A1. Vocabulary matches the declared policy per posting date
+#       (effective-dated resolution).
+#   A2. Date placement: SingleDayFactor entries must be dated ON
+#       non-business days; own-day BondAccrual entries on business
+#       days; MultiDayPreceding entries on a business day that
+#       PRECEDES a gap; MultiDayFollowing on one that FOLLOWS a gap.
+#
+# Tier B (taxing, amount -- deep=True):
+#   B1. Self-referential daily amount: own-day entries establish the
+#       daily figure per (investment, location, ls); every gap entry
+#       must be that figure x the calendar gap length. No instrument-
+#       rate lookup required. NOTE: assumes a stable rate within the
+#       examined span; floater resets need per-window grouping when
+#       they arrive.
+#
+# Uses the engine's own calendar (US_HOLIDAYS / _is_holiday_or_weekend)
+# rather than importing business_days -- keeps the engine import-clean.
+# Resolves the declared policy via global_domain.get_accrual_posting_policy
+# (function-level import; skips gracefully if unavailable).
+
+def pillar_accrual_policy(jes_by_period, portfolio: str,
+                          deep: bool = True) -> ProofResult:
+    """
+    Tier A: structural signature of the declared policy.
+    Tier B (deep=True): gap amounts are exact multiples of the
+    self-established daily amount.
+    """
+    result = ProofResult("accrual_policy")
+
+    try:
+        from global_domain import get_accrual_posting_policy
+    except ImportError as e:
+        result.skip(f"Policy resolver unavailable "
+                    f"(global_domain import failed: {e})")
+        return result
+
+    # Collect accrual JEs (one leg per posting: the A/L leg).
+    rows = []
+    for period_name, jes in sorted(jes_by_period.items()):
+        for je in jes:
+            txn = str(_je_val(je, "transaction") or "")
+            if txn not in ACCRUAL_TXN_VOCABULARY:
+                continue
+            fa = str(_je_val(je, "financial_account") or "")
+            if fa not in ACCRUED_ACCOUNTS:
+                continue
+            d = _je_date_obj(je, "tradedate")
+            if d is None:
+                result.fail(f"{period_name} -- accrual JE with "
+                            f"unparseable tradedate "
+                            f"({_je_val(je, 'investment')})",
+                            period=period_name)
+                continue
+            rows.append({
+                "period":     period_name,
+                "investment": str(_je_val(je, "investment") or ""),
+                "loc":        str(_je_val(je, "location") or ""),
+                "ls":         str(_je_val(je, "ls") or ""),
+                "date":       d,
+                "txn":        txn,
+                "local":      _safe_float(_je_val(je, "local")) or 0.0,
+            })
+
+    if not rows:
+        result.skip("No accrual postings to examine")
+        return result
+
+    # ── TIER A — structural signature ─────────────────────────────────────────
+    a_fail_count = 0
+    for r in rows:
+        d = r["date"]
+        policy = get_accrual_posting_policy(portfolio, d)
+        tag = f"{r['investment']} {d} {r['txn']}"
+        nonbiz = _is_holiday_or_weekend(d)
+
+        # A1 -- vocabulary vs declared policy
+        if r["txn"] not in POLICY_VOCAB.get(policy, set()):
+            result.fail(
+                f"{tag} -- transaction belongs to a DIFFERENT election "
+                f"than the declared policy '{policy}'. "
+                f"Declared-vs-executed divergence.",
+                period=r["period"], investment=r["investment"])
+            a_fail_count += 1
+            continue
+
+        # A2 -- date placement per transaction type
+        if r["txn"] == "BondAccrual" and nonbiz:
+            result.fail(f"{tag} -- own-day accrual dated on a "
+                        f"non-business day.",
+                        period=r["period"], investment=r["investment"])
+            a_fail_count += 1
+        elif r["txn"] == "SingleDayFactor" and not nonbiz:
+            result.fail(f"{tag} -- gap-day entry dated on a "
+                        f"business day.",
+                        period=r["period"], investment=r["investment"])
+            a_fail_count += 1
+        elif r["txn"] == "MultiDayPreceding":
+            if nonbiz:
+                result.fail(f"{tag} -- dated on a non-business day.",
+                            period=r["period"],
+                            investment=r["investment"])
+                a_fail_count += 1
+            elif not _is_holiday_or_weekend(d + timedelta(days=1)):
+                result.fail(f"{tag} -- no gap follows this date; "
+                            f"anticipation entry has nothing to "
+                            f"anticipate.",
+                            period=r["period"],
+                            investment=r["investment"])
+                a_fail_count += 1
+        elif r["txn"] == "MultiDayFollowing":
+            if nonbiz:
+                result.fail(f"{tag} -- dated on a non-business day.",
+                            period=r["period"],
+                            investment=r["investment"])
+                a_fail_count += 1
+            elif not _is_holiday_or_weekend(d - timedelta(days=1)):
+                result.fail(f"{tag} -- no gap precedes this date; "
+                            f"catch-up entry has nothing to catch up.",
+                            period=r["period"],
+                            investment=r["investment"])
+                a_fail_count += 1
+
+    if a_fail_count == 0:
+        result.ok(f"Tier A -- {len(rows)} accrual postings exhibit "
+                  f"the declared policy's structural signature")
+
+    # ── TIER B — amount discipline (deep) ─────────────────────────────────────
+    if deep:
+        by_key = defaultdict(list)
+        for r in rows:
+            by_key[(r["investment"], r["loc"], r["ls"])].append(r)
+
+        for key, krows in sorted(by_key.items()):
+            inv, loc, ls = key
+            dailies = [abs(r["local"]) for r in krows
+                       if r["txn"] in ("BondAccrual", "SingleDayFactor")
+                       and abs(r["local"]) > 0]
+            if not dailies:
+                result.skip(f"{inv} @ {loc} ({ls}) -- no own-day "
+                            f"entries to establish daily amount",
+                            investment=inv)
+                continue
+            daily = sorted(dailies)[len(dailies) // 2]   # median
+
+            key_ok = True
+            for r in krows:
+                if r["txn"] not in ("MultiDayPreceding",
+                                    "MultiDayFollowing"):
+                    continue
+                d = r["date"]
+                n = 0
+                if r["txn"] == "MultiDayPreceding":
+                    probe = d + timedelta(days=1)
+                    while _is_holiday_or_weekend(probe):
+                        n += 1
+                        probe += timedelta(days=1)
+                else:
+                    probe = d - timedelta(days=1)
+                    while _is_holiday_or_weekend(probe):
+                        n += 1
+                        probe -= timedelta(days=1)
+
+                expected = daily * n
+                if abs(abs(r["local"]) - expected) > MULTIPLE_TOLERANCE:
+                    result.fail(
+                        f"{inv} {d} {r['txn']} -- amount "
+                        f"{abs(r['local']):.2f} != {n} gap day(s) x "
+                        f"daily {daily:.2f} = {expected:.2f}",
+                        period=r["period"], investment=inv)
+                    key_ok = False
+            if key_ok:
+                result.ok(f"{inv} @ {loc} ({ls}) -- gap amounts are "
+                          f"exact multiples of daily {daily:.2f}",
+                          investment=inv)
 
     return result
 
@@ -1158,6 +1643,8 @@ def run_proof(portfolio: str, calendar: str,
         "marks":             lambda: pillar_marks(events, im, calendar_records, jes_by_period, price_index, fx_index),
         "chart_of_accounts": lambda: pillar_chart_of_accounts(jes_by_period),
         "data":              lambda: pillar_data(events, jes_by_period),
+        "accrual_residual":  lambda: pillar_accrual_residual(jes_by_period),
+        "accrual_policy":    lambda: pillar_accrual_policy(jes_by_period, portfolio, deep=True),
     }
 
     for name, fn in pillar_map.items():
@@ -1165,32 +1652,12 @@ def run_proof(portfolio: str, calendar: str,
             print(f"\n{CYAN}Running {name}...{RESET}")
             r = fn()
             results.append(r)
-            _print_pillar(r, verbose)
+            if verbose:
+                _print_pillar(r, verbose=True)
 
     # ── SUMMARY ───────────────────────────────────────────────────────────────
-    total_pass = sum(len(r.passes)    for r in results)
-    total_warn = sum(len(r.warnings)  for r in results)
-    total_fail = sum(len(r.failures)  for r in results)
-    all_clear  = all(r.all_clear      for r in results)
-    has_crit   = any(r.has_critical   for r in results)
-
-    print(f"\n{BOLD}{'═'*65}{RESET}")
-    print(f"{BOLD}  PROOF SUMMARY{RESET}")
-    print(f"{'═'*65}")
-    print(f"  {GREEN}✓ PASS    {total_pass}{RESET}")
-    print(f"  {YELLOW}⚠ WARN    {total_warn}{RESET}")
-    print(f"  {RED}✗ FAIL    {total_fail}{RESET}")
-    if has_crit:
-        print(f"  {RED}⛔ CRITICAL issues present{RESET}")
-
-    if all_clear and total_pass > 0:
-        print(f"\n{GREEN}{BOLD}  ✓ ALL CLEAR{RESET}")
-    elif not all_clear:
-        print(f"\n{RED}{BOLD}  ✗ PROOF FAILED — {total_fail} failure(s){RESET}")
-    print(f"{'═'*65}\n")
-
+    _print_summary_grid(results)
     return results
-
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CLI
@@ -1208,13 +1675,17 @@ Pillars:
   marks             period end MV = qty x price x pf x fx_rate
   chart_of_accounts every account posted exists in COA
   data              event file integrity (kdbegin, holidays, qty, price, dupes)
+  accrual_residual  closed positions carry no accrued residual; accrued
+                    accounts touched only by declared transaction names
+  accrual_policy    journal postings exhibit the fund's declared accrual
+                    election (vocabulary, date placement, gap multiples)
 
 Examples:
   python proof_engine.py Portfolio1 Monthly
   python proof_engine.py Portfolio1 Monthly 2024-06
   python proof_engine.py Portfolio1 Monthly --period-from 2024-01 --period-to 2024-06
   python proof_engine.py Portfolio1 Monthly --pillar marks --verbose
-  python proof_engine.py Portfolio1 Monthly --pillar data
+  python proof_engine.py Portfolio1 Monthly --pillar accrual_policy --verbose
   python proof_engine.py Portfolio1 Monthly --investment AAPL --verbose
         """
     )
@@ -1227,26 +1698,38 @@ Examples:
     parser.add_argument("--investment",  type=str)
     parser.add_argument("--pillar",      type=str,
                         choices=["availability","balance","settle_fx",
-                                 "marks","chart_of_accounts","data"])
-    parser.add_argument("--verbose",     action="store_true")
-    parser.add_argument("--funds",       default=None)
+                                 "marks","chart_of_accounts","data",
+                                 "accrual_residual","accrual_policy"])
+    parser.add_argument("--verbose", action="store_true")
+    parser.add_argument("--raw", action="store_true",
+                        help="skip the readable report, show only the engine's native output")
+    parser.add_argument("--funds", default=None)
     parser.add_argument("--refdata",     default=None)
 
     args = parser.parse_args()
 
     results = run_proof(
-        portfolio         = args.portfolio,
-        calendar          = args.calendar,
-        period            = args.period,
-        period_from       = args.period_from,
-        period_to         = args.period_to,
-        tranid_filter     = args.tranid,
-        investment_filter = args.investment,
-        pillar_filter     = args.pillar,
-        verbose           = args.verbose,
-        funds_path        = args.funds,
-        refdata_path      = args.refdata,
+        portfolio=args.portfolio,
+        calendar=args.calendar,
+        period=args.period,
+        period_from=args.period_from,
+        period_to=args.period_to,
+        tranid_filter=args.tranid,
+        investment_filter=args.investment,
+        pillar_filter=args.pillar,
+        verbose=args.verbose,
+        funds_path=args.funds,
+        refdata_path=args.refdata,
     )
+
+    # ── Readable report (additive; --raw skips it) ──
+    if not args.raw:
+        try:
+            from proof_report import render_report
+
+            render_report(results)
+        except ImportError:
+            print("  (proof_report.py not found — skipping readable report)")
 
     has_critical = any(r.has_critical for r in results)
     has_failures = any(not r.all_clear for r in results)
