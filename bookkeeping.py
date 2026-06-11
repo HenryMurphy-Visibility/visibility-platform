@@ -144,14 +144,15 @@ class EventScheduler:
             'split_equity': 1065, 'dividend_equity': 1068,
             'mark_prices': 9000, 'perf_mark': 9000,
             'allocate': 9500,
-            'schedule_update_smf_record_status': 1045,
+            'mark_bond_accruals': 1040,
+            'relieve_accrued_on_close_settle': 1043,
+            'schedule_mark_settled': 1045,
             'settle_bond_flows_in': 1050,
             'settle_bond_flows_out': 1053,
             'settle_single_flow_in': 1051,
             'settle_single_flow_out': 1054,
             'settle_multiple_flows_in_out': 1055,
             'settle_pay_rec_by_tranid': 1056,
-            'mark_bond_accruals': 1060,
             'bond_coupon': 1061,
             'assign_call_long': 1113,
             'assign_put_short': 1114,
@@ -244,7 +245,7 @@ class EventScheduler:
         func(*args)
         return 1
 
-def accrue_interest(space, smf, portfolio, investment, current_date, fx_rates_df):
+def accrue_interest(space, af, portfolio, investment, current_date, fx_rates_df):
     investment_cache = {}
 
     # Cache investment types and subspaces to minimize redundant accesses
@@ -264,7 +265,7 @@ def accrue_interest(space, smf, portfolio, investment, current_date, fx_rates_df
         if investment_type == "BOND":
             print(f"Processing BOND investment: {investment}")
 
-            net_positions = smf.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
+            net_positions = af.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
             print(f"Net Positions for {investment}: {net_positions}")
 
             for location, positions in net_positions.items():
@@ -870,108 +871,579 @@ class SecurityInformationRepository:
     def __repr__(self):
         return f"<SIR {self.fields}>"
 
-class SettlementChores:
+from datetime import datetime
+
+
+class AdministrativeFacility:
+    """
+    Administrative Facility (AF).
+
+    Holds CURRENT administrative state for trades and other operational
+    concerns. Separation membrane between accounting and administrative-
+    operational state -- the COA stays clean, the account key stays pure,
+    administrative metadata never leaks into journals.
+
+    Rules consult the AF to answer administrative questions ("what's the
+    entitled position now?", "did this settlement close net to zero?",
+    "is this loan in grace?"). Rules then decide what to post based on
+    the AF's answer plus accounting domain knowledge. Rules post JEs;
+    the AF never does.
+
+    Current responsibilities:
+      - Track trade settlement lifecycle (Unsettled -> Settled, plus
+        PartiallySettled, Failed, Cancelled).
+      - Answer entitled-position queries for accrual / coupon / reporting.
+      - Answer "does this settlement close net to zero?" so settlement
+        rules know when to relieve accrued interest.
+      - Expose subscription queries for proof, recon, ops dashboards.
+
+    Future responsibilities (architecture supports without redesign):
+      - Bank-debt grace periods, covenant events, contractual modifiers.
+      - Trade-failure tracking with reason codes.
+      - Recon flags, lifecycle exceptions.
+
+    Current-state-mirror model: the AF reflects whatever state the
+    time-series walker has reached. No historical event log; yesterday's
+    state lives in the journal. Records persist past trade settlement
+    (retention-period-driven cleanup, NOT netted-to-zero-driven --
+    appraisal residue lines and settlement-close queries both need
+    historical tranids available).
+    """
+
+    # Status vocabulary -- treated as constants so callers can reference
+    # them without stringly-typed risk.
+    UNSETTLED         = "Unsettled"
+    PARTIALLY_SETTLED = "PartiallySettled"
+    SETTLED           = "Settled"
+    FAILED            = "Failed"
+    CANCELLED         = "Cancelled"
+
+    OPEN_STATUSES   = {UNSETTLED, PARTIALLY_SETTLED}
+    CLOSED_STATUSES = {SETTLED, FAILED, CANCELLED}
 
     def __init__(self):
-        # Track flows by tranid
-        self.flow_tracker = {}
-        self.records = {}  # Manages records by transaction ID
-        self.position_cache = {}  # Caching mechanism
+        # tranid -> record dict
+        self.records = {}
+        # Query cache, invalidated on any mutation. Keyed by query
+        # signature; values are computed answers.
+        self._query_cache = {}
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def reset(self):
         """
-        Execution-safe reset.
-        Restores SettlementChores to a pristine state.
+        Execution-safe reset. Restores AF to a pristine state. Called
+        between processing runs so prior-run state doesn't bleed in.
         """
         self.__init__()
 
     def __iter__(self):
-        # This allows the object to be iterable over its records
+        """Iterate over records (values, not keys) for backward
+        compatibility with prior AdministrativeFacility callers."""
         return iter(self.records.values())
 
-    def add_record(self, tranid, portfolio, investment, position, position_effect, location, currency, qty,
-                   currency_amount, status):
-        new_record = {
-            'tranid': tranid,
-            'portfolio': portfolio,
-            'investment': investment,
-            'position': position,
-            'position_effect': position_effect,
-            'location': location,
-            'currency': currency,
-            'qty': qty,
-            'currency_amount': currency_amount,
-            'status': status
+    def __len__(self):
+        return len(self.records)
+
+    def __contains__(self, tranid):
+        return tranid in self.records
+
+    # ------------------------------------------------------------------
+    # Cache management
+    # ------------------------------------------------------------------
+
+    def _invalidate_cache(self):
+        """Any mutation invalidates the entire query cache. Cache is
+        small and queries are fast to recompute; correctness over
+        cleverness here."""
+        self._query_cache.clear()
+
+    # ------------------------------------------------------------------
+    # Mutators -- add a record, mark events
+    # ------------------------------------------------------------------
+
+    def add_record(self, tranid, portfolio, investment, location, ls,
+                   position_effect, qty, currency_amount,
+                   trade_date, expected_settle_date,
+                   currency=None, notes=None):
+        """
+        Register a new trade with the AF. Initial status is Unsettled,
+        settled_qty/amount are zero.
+
+        Args:
+            tranid:                primary key (caller-provided)
+            portfolio, investment: context
+            location:              first-class -- entitled_position
+                                   buckets by location
+            ls:                    'l' or 's' -- position direction,
+                                   tied to the trade, stable across
+                                   its lifecycle
+            position_effect:       'open' or 'close'
+            qty:                   magnitude of trade (stored as
+                                   trade_qty internally)
+            currency_amount:       local amount (stored as
+                                   trade_amount internally)
+            trade_date:            when booked
+            expected_settle_date:  when supposed to settle (string or
+                                   date object -- stored as given)
+            currency:              optional, for reporting
+            notes:                 free-form admin notes
+        """
+        if tranid in self.records:
+            # Duplicate add is almost certainly a bug; surface it loudly
+            # rather than silently overwriting.
+            print(f"AF WARNING: tranid {tranid} already exists; "
+                  f"add_record ignored. Use mark_* to update state.")
+            return
+
+        ls_norm = str(ls).strip().lower() if ls else ""
+        if ls_norm not in ("l", "s"):
+            print(f"AF WARNING: ls={ls!r} for tranid {tranid} is not "
+                  f"'l' or 's'; record added anyway but queries may "
+                  f"behave unexpectedly.")
+
+        effect_norm = str(position_effect).strip().lower() \
+            if position_effect else ""
+        if effect_norm not in ("open", "close"):
+            print(f"AF WARNING: position_effect={position_effect!r} for "
+                  f"tranid {tranid} is not 'open' or 'close'; record "
+                  f"added anyway but queries may behave unexpectedly.")
+
+        self.records[tranid] = {
+            "tranid": tranid,
+            "portfolio": portfolio,
+            "investment": investment,
+            "location": location,
+            "ls": ls_norm,
+            "position_effect": effect_norm,
+            "trade_qty": float(qty) if qty is not None else 0.0,
+            "trade_amount": float(currency_amount) if currency_amount is not None else 0.0,
+            "trade_date": trade_date,
+            "expected_settle_date": expected_settle_date,
+            "currency": currency,
+            # Current administrative state
+            "status": self.UNSETTLED,
+            "settled_qty": 0.0,
+            "settled_amount": 0.0,
+            "last_status_date": trade_date,
+            "notes": notes,
         }
-        self.records[tranid] = new_record
-        print(f"Record for TranID {tranid} added to SMF.")
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} added "
+              f"({portfolio}/{investment} {ls_norm}/{effect_norm} "
+              f"qty={qty}).")
 
-    def update_record_status(self, tranid, new_status, portfolio):
-        record = self.records.get(tranid, {})
-        if record and record.get('portfolio') == portfolio:
-            self.records[tranid]['status'] = new_status
-            self.position_cache.clear()  # invalidate — status changed
-            print(f"Status of record {tranid} updated to {new_status}.")
+    def mark_settled(self, tranid, settle_date, qty=None, amount=None):
+        """
+        Mark a tranid as (partially or fully) settled.
+
+        Args:
+            tranid:      which trade
+            settle_date: when this settlement occurred
+            qty:         qty that settled in this event. None means
+                         full remaining (typical case for bonds).
+            amount:      local that settled in this event. None means
+                         proportional to qty.
+
+        After this call:
+            - settled_qty is incremented (capped at trade_qty)
+            - settled_amount is incremented (capped at trade_amount)
+            - status -> PartiallySettled if not fully settled yet,
+                        Settled if cumulative settled_qty == trade_qty
+            - last_status_date = settle_date
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_settled called for unknown tranid "
+                  f"{tranid}; ignored.")
+            return
+
+        if record["status"] in self.CLOSED_STATUSES \
+                and record["status"] != self.PARTIALLY_SETTLED:
+            print(f"AF WARNING: tranid {tranid} already in terminal "
+                  f"status {record['status']}; mark_settled ignored.")
+            return
+
+        # Figure out how much is settling
+        remaining_qty    = record["trade_qty"]    - record["settled_qty"]
+        remaining_amount = record["trade_amount"] - record["settled_amount"]
+
+        if qty is None:
+            settling_qty = remaining_qty
         else:
-            print(f"Record not found for TranID {tranid} with portfolio {portfolio}.")
+            settling_qty = float(qty)
 
-    def query_records(self, portfolio, **filters):
-        return [record for record in self if record.get('portfolio', '').strip().lower() == portfolio.lower() and
-                all(record.get(k, '').strip().lower() == v.lower() for k, v in filters.items())]
+        if amount is None:
+            # Proportional to qty
+            if record["trade_qty"] != 0:
+                settling_amount = record["trade_amount"] * \
+                                  (settling_qty / record["trade_qty"])
+            else:
+                settling_amount = remaining_amount
+        else:
+            settling_amount = float(amount)
 
-    def calculate_net_positions(self, portfolio, investment, date, status='Settled'):
-        cache_key = (portfolio, investment, date)
-        if cache_key in self.position_cache:
-            return self.position_cache[cache_key]
+        # Apply
+        record["settled_qty"]    += settling_qty
+        record["settled_amount"] += settling_amount
+        record["last_status_date"] = settle_date
 
-        net_positions = {}
-        for record in self.query_records(portfolio, investment=investment, status=status):
-            location = record['location']
-            position_key = f"{record['position']}_{record['position_effect']}"
-            if location not in net_positions:
-                net_positions[location] = {}
-            if position_key not in net_positions[location]:
-                net_positions[location][position_key] = 0
-            effect_multiplier = 1 if record['position_effect'] == 'open' else -1
-            net_positions[location][position_key] += record['qty'] * effect_multiplier
+        # Determine new status. Use a small tolerance so float rounding
+        # doesn't keep a record stuck in PartiallySettled forever.
+        TOL = 1e-9
+        if abs(record["settled_qty"] - record["trade_qty"]) <= TOL:
+            record["status"] = self.SETTLED
+            # Snap to exact to avoid lingering float dust
+            record["settled_qty"]    = record["trade_qty"]
+            record["settled_amount"] = record["trade_amount"]
+        else:
+            record["status"] = self.PARTIALLY_SETTLED
 
-        self.position_cache[cache_key] = net_positions
-        return net_positions
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} {record['status']} "
+              f"(settled_qty={record['settled_qty']}/"
+              f"{record['trade_qty']}).")
 
-    def cleanup_records(self, retention_period_days=365):
-        """ Clean up records that have been fully settled and net to zero, and are older than the retention period. """
+    def mark_failed(self, tranid, fail_date, reason=None):
+        """Mark a tranid as failed (e.g. settlement broke). Settled
+        portions remain in settled_qty/amount."""
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_failed called for unknown tranid "
+                  f"{tranid}; ignored.")
+            return
+        record["status"] = self.FAILED
+        record["last_status_date"] = fail_date
+        if reason:
+            existing = record.get("notes") or ""
+            sep = " | " if existing else ""
+            record["notes"] = f"{existing}{sep}FAILED ({fail_date}): {reason}"
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} FAILED.")
+
+    def mark_cancelled(self, tranid, cancel_date, reason=None):
+        """Mark a tranid as cancelled. Settled portions remain (a
+        cancellation after partial settlement is meaningful state)."""
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_cancelled called for unknown "
+                  f"tranid {tranid}; ignored.")
+            return
+        record["status"] = self.CANCELLED
+        record["last_status_date"] = cancel_date
+        if reason:
+            existing = record.get("notes") or ""
+            sep = " | " if existing else ""
+            record["notes"] = f"{existing}{sep}CANCELLED ({cancel_date}): {reason}"
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} CANCELLED.")
+
+    # ------------------------------------------------------------------
+    # Core query -- entitled position
+    # ------------------------------------------------------------------
+
+    def entitled_position(self, portfolio, investment,
+                          location=None, ls=None):
+        """
+        What's the net entitled position right now for accrual / coupon
+        / reporting purposes?
+
+        Computed from each matching record's SETTLED_QTY (not trade_qty).
+        Only settled portions count toward entitlement. Opens add,
+        closes subtract.
+
+        Args:
+            portfolio:  required
+            investment: required
+            location:   if provided, only this location; if None, every
+                        location with non-zero entitlement included
+            ls:         if provided, only this side ('l' or 's'); if
+                        None, both sides included separately
+
+        Returns:
+            dict keyed by (location, ls) -> net entitled qty
+
+            Locations/sides with net zero ARE included in the returned
+            dict (caller can filter if they want only non-zero).
+        """
+        cache_key = ("entitled_position", portfolio, investment,
+                     location, ls)
+        if cache_key in self._query_cache:
+            return self._query_cache[cache_key]
+
+        ls_filter = str(ls).strip().lower() if ls else None
+
+        # Aggregate: (location, ls) -> qty
+        result = {}
+        for record in self.records.values():
+            if record["portfolio"]  != portfolio:  continue
+            if record["investment"] != investment: continue
+            if location is not None and record["location"] != location:
+                continue
+            if ls_filter is not None and record["ls"] != ls_filter:
+                continue
+
+            # Open adds settled qty toward entitlement; close subtracts
+            effect = record["position_effect"]
+            if effect == "open":
+                contrib = record["settled_qty"]
+            elif effect == "close":
+                contrib = -record["settled_qty"]
+            else:
+                # Unknown effect -- skip with warning; shouldn't happen
+                # if add_record validation worked
+                print(f"AF WARNING: tranid {record['tranid']} has "
+                      f"position_effect={effect!r}; skipped in "
+                      f"entitled_position.")
+                continue
+
+            key = (record["location"], record["ls"])
+            result[key] = result.get(key, 0.0) + contrib
+
+        self._query_cache[cache_key] = result
+        return result
+
+    def entitled_position_total(self, portfolio, investment,
+                                location=None, ls=None):
+        """
+        Convenience wrapper: returns a single signed number instead of
+        the dict. Long contributions stay positive, short contributions
+        flipped negative (so a flat net-long-and-short-equal position
+        returns zero).
+
+        Useful for accrual rules that want one number and don't care
+        about location breakdown.
+        """
+        positions = self.entitled_position(portfolio, investment,
+                                           location, ls)
+        total = 0.0
+        for (loc, side), qty in positions.items():
+            if side == "l":
+                total += qty
+            elif side == "s":
+                total -= qty
+        return total
+
+    # ------------------------------------------------------------------
+    # Decision-support query -- would this settlement close net to zero?
+    # ------------------------------------------------------------------
+
+    def settlement_causes_full_close(self, tranid, hypothetical_qty=None):
+        """
+        Would marking THIS tranid as fully settled cause net entitled
+        position to drop to zero for its (portfolio, investment,
+        location, ls) bucket?
+
+        Used by the settlement rule to decide whether to relieve any
+        outstanding accrued interest as part of the settlement entry --
+        same way a coupon rule would, since economically the settlement
+        is a payment flow that closes the accrued claim.
+
+        Args:
+            tranid:           which trade is settling
+            hypothetical_qty: how much qty would settle in this call.
+                              None means the remaining unsettled qty
+                              (typical full-settle case).
+
+        Returns:
+            True if this settlement would bring (location, ls) net
+            entitled qty to zero (within tolerance). False otherwise.
+
+            Also returns False if tranid is unknown -- caller should
+            not act on a missing record.
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            return False
+
+        # What would settle if this call goes through?
+        if hypothetical_qty is None:
+            settling_qty = record["trade_qty"] - record["settled_qty"]
+        else:
+            settling_qty = float(hypothetical_qty)
+
+        # What's the contribution sign for THIS record?
+        if record["position_effect"] == "open":
+            this_contrib = settling_qty
+        elif record["position_effect"] == "close":
+            this_contrib = -settling_qty
+        else:
+            return False
+
+        # What's the current net for this bucket BEFORE this settlement?
+        current_net = 0.0
+        for r in self.records.values():
+            if r["portfolio"]      != record["portfolio"]:  continue
+            if r["investment"]     != record["investment"]: continue
+            if r["location"]       != record["location"]:   continue
+            if r["ls"]             != record["ls"]:         continue
+
+            effect = r["position_effect"]
+            if effect == "open":
+                current_net += r["settled_qty"]
+            elif effect == "close":
+                current_net -= r["settled_qty"]
+
+        projected_net = current_net + this_contrib
+
+        TOL = 1e-9
+        # Full close means: was non-zero before, would be zero after
+        return (abs(current_net)   >  TOL and
+                abs(projected_net) <= TOL)
+
+    # ------------------------------------------------------------------
+    # Subscription queries -- for proof, recon, ops, reporting
+    # ------------------------------------------------------------------
+
+    def lifecycle(self, tranid):
+        """
+        Return current state of a single tranid as a dict, or None if
+        not found. For proof engine, recon reports, ops dashboards.
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            return None
+        # Return a copy so callers can't accidentally mutate AF state
+        return dict(record)
+
+    def exceptions(self, portfolio, include_partials=True):
+        """
+        Return list of records in non-clean administrative states:
+        Failed, Cancelled, and (if include_partials) PartiallySettled
+        past their expected_settle_date.
+
+        For proof engine "is administrative state healthy?" pillar,
+        ops dashboards, recon reports.
+        """
+        results = []
         today = datetime.now()
+
+        for record in self.records.values():
+            if record["portfolio"] != portfolio:
+                continue
+
+            status = record["status"]
+
+            if status in (self.FAILED, self.CANCELLED):
+                results.append(dict(record))
+                continue
+
+            if include_partials and status == self.PARTIALLY_SETTLED:
+                # Past expected settle date? Then it's an exception.
+                expected = self._parse_date(
+                    record.get("expected_settle_date"))
+                if expected is not None and expected < today:
+                    results.append(dict(record))
+
+        return results
+
+    def pending_settlement(self, portfolio, as_of_date):
+        """
+        Return records still expecting settlement as of the given date:
+        status in {Unsettled, PartiallySettled} AND expected_settle_date
+        <= as_of_date.
+
+        I.e. "what should have settled by now but hasn't?"
+        """
+        as_of = self._parse_date(as_of_date)
+        if as_of is None:
+            print(f"AF WARNING: pending_settlement got unparseable "
+                  f"as_of_date={as_of_date!r}; returning empty list.")
+            return []
+
+        results = []
+        for record in self.records.values():
+            if record["portfolio"] != portfolio:
+                continue
+            if record["status"] not in self.OPEN_STATUSES:
+                continue
+            expected = self._parse_date(record.get("expected_settle_date"))
+            if expected is not None and expected <= as_of:
+                results.append(dict(record))
+
+        return results
+
+    # ------------------------------------------------------------------
+    # Retention-driven cleanup
+    # ------------------------------------------------------------------
+
+    def cleanup_records(self, retention_period_days=365, as_of=None):
+        """
+        Remove records older than retention_period_days, measured from
+        last_status_date. Retention-period-driven, NOT netted-to-zero-
+        driven -- residue (accrued balances, settle-close queries) may
+        need historical tranids until retention expires.
+
+        Args:
+            retention_period_days: how long to keep records past their
+                                   last status change
+            as_of:                 reference "today" for retention math
+                                   (defaults to actual now)
+        """
+        today = self._parse_date(as_of) if as_of else datetime.now()
+        if today is None:
+            today = datetime.now()
+
         keys_to_remove = []
         for tranid, record in self.records.items():
-            record_date = datetime.strptime(record['settled_date'], '%Y-%m-%d')
-            if (today - record_date).days > retention_period_days and self.is_fully_settled_and_netted(tranid):
-                keys_to_remove.append(tranid)
+            last = self._parse_date(record.get("last_status_date"))
+            if last is None:
+                # Can't compute age -- leave it alone
+                continue
+            age_days = (today - last).days
+            if age_days > retention_period_days:
+                # Don't delete unless terminal (don't sweep away active
+                # Unsettled or PartiallySettled trades just because
+                # they're old -- those are real exceptions)
+                if record["status"] in self.CLOSED_STATUSES:
+                    keys_to_remove.append(tranid)
 
         for tranid in keys_to_remove:
             del self.records[tranid]
-            print(f"Record {tranid} removed from SMF due to cleanup policy.")
+            print(f"AF: tranid {tranid} removed (retention policy).")
 
-    def is_fully_settled_and_netted(self, tranid):
-        """ Determine if a transaction is fully settled and netted to zero. """
-        record = self.records[tranid]
-        # Assuming there's a way to check if the position is netted to zero (simplified here)
-        return record['status'] == 'Settled' and record['net_position'] == 0
+        if keys_to_remove:
+            self._invalidate_cache()
 
-    def calculate_net_long_qty(self, portfolio, investment, date, status='Settled'):
+        return len(keys_to_remove)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _parse_date(self, val):
         """
-        Returns net settled quantity as a single number.
-        Long opens add, long closes subtract.
-        Short opens subtract, short closes add.
-        Zero or negative means no accrual entitlement.
+        Tolerant date parser. Returns datetime or None. Accepts:
+            datetime, date, 'YYYY-MM-DD', 'YYYY-MM-DDTHH:MM:SS', etc.
         """
-        net_positions = self.calculate_net_positions(portfolio, investment, date, status)
-        total = 0
-        for location, positions in net_positions.items():
-            total += positions.get('long_open', 0)
-            total -= positions.get('long_close', 0)
-            total -= positions.get('short_open', 0)
-            total += positions.get('short_close', 0)
-        return total
+        if val is None:
+            return None
+        if isinstance(val, datetime):
+            return val
+        # date object (not datetime) -> upgrade
+        if hasattr(val, "year") and hasattr(val, "month") \
+                and hasattr(val, "day") and not isinstance(val, datetime):
+            return datetime(val.year, val.month, val.day)
+        s = str(val).strip()
+        if not s:
+            return None
+        # Try a few common formats
+        for fmt in ("%Y-%m-%d",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d %H:%M:%S",
+                    "%m/%d/%Y"):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        # Last-ditch ISO fromisoformat (handles many variants)
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return None
+
 class BookkeepingSpace:
     """
     BOOKKEEPING SPACE (CONDUCTOR)
@@ -1001,7 +1473,7 @@ class BookkeepingSpace:
         self.asset_liability_repository = AssetLiabilityRepository()
         self.revenue_expense_repository = RevenueExpenseCapitalRepository()
         self.stat_repo = StatisticalRepository()
-        self.chores = SettlementChores()
+        self.admin_facility = AdministrativeFacility()
 
 
 
@@ -1152,7 +1624,7 @@ class BookkeepingSpace:
         # --------------------------------------------------
         self.settlement_chores = snapshot_state.get(
             "settlement_chores",
-            SettlementChores()
+            AdministrativeFacility()
         )
 
         # --------------------------------------------------
@@ -1189,7 +1661,7 @@ class BookkeepingSpace:
         # self.asset_liability_repository = AssetLiabilityRepository()
         # self.statistical_repository = StatisticalRepository()
         # self.revenue_expense_repository = RevenueExpenseCapitalRepository()
-        # self.settlement_chores = SettlementChores()
+        # self.settlement_chores = AdministrativeFacility()
 
         self.sequence_counter = 0
 
@@ -1610,6 +2082,41 @@ class AssetLiabilitySubspace:
             for key, vals in self.position_state.items()
         }
 
+    def get_position_state_by_account(self):
+        """
+        Return runtime position state keyed by (location, ls, financial_account).
+        Same shape as get_position_state but with financial_account preserved
+        rather than aggregated away. For consumers that need per-account
+        balances (e.g. accrued-interest relief on settlement, which needs
+        the current AccruedInterestReceivable balance, not summed with
+        other accounts).
+
+        Returns:
+            {
+                (location, ls, financial_account): {
+                    "position_qty": float,
+                    "local_cost":   float,
+                    "book_cost":    float,
+                    "notional":     float,
+                }
+            }
+        """
+        result = {}
+        for key, (qty, local, book, notional, oface) in self.entries.items():
+            (_, inv, lotid, tax_date, ls, loc, fa) = key
+            pos_key = (loc, ls, fa)
+            if pos_key not in result:
+                result[pos_key] = {
+                    "position_qty": 0.0,
+                    "local_cost": 0.0,
+                    "book_cost": 0.0,
+                    "notional": 0.0,
+                }
+            result[pos_key]["position_qty"] += qty
+            result[pos_key]["local_cost"] += local
+            result[pos_key]["book_cost"] += book
+            result[pos_key]["notional"] += notional
+        return result
 
     # ========================================================
     # RESET

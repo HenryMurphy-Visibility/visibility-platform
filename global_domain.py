@@ -4,11 +4,82 @@ from itertools import groupby
 
 from utilities import round_to_precision
 
+import json
+import os
+
+# Module-level cache: portfolio.json read once per portfolio per process,
+# not once per accrual event.
+import json
+import os
+
+# Module-level: config cache and a record of which file each
+# portfolio's config was loaded from (for diagnostics).
+_PORTFOLIO_CONFIG_CACHE = {}
+_PORTFOLIO_CONFIG_PATHS = {}
 
 
+def get_portfolio_config(portfolio):
+    """
+    Load and cache the portfolio configuration (portfolio.json).
+    Cached per process: config edits require a process restart.
+    Every log line carries the absolute path so config staleness
+    and wrong-file ambiguity are visible facts, not mysteries.
+    """
+    if portfolio in _PORTFOLIO_CONFIG_CACHE:
+        print(f"PORTFOLIO CONFIG: {portfolio} from CACHE (loaded this "
+              f"process from {_PORTFOLIO_CONFIG_PATHS.get(portfolio, '?')})")
+        return _PORTFOLIO_CONFIG_CACHE[portfolio]
+
+    config_path = os.path.join("funds", portfolio, "portfolio.json")
+    abs_path = os.path.abspath(config_path)
+    try:
+        with open(config_path, "r") as f:
+            config = json.load(f)
+        print(f"PORTFOLIO CONFIG: {portfolio} loaded from {abs_path}")
+    except FileNotFoundError:
+        print(f"PORTFOLIO CONFIG: {portfolio} NOT FOUND at {abs_path} "
+              f"-- defaulting empty")
+        config = {}
+    except json.JSONDecodeError as e:
+        print(f"PORTFOLIO CONFIG: {portfolio} JSON ERROR at {abs_path}: "
+              f"{e} -- defaulting empty")
+        config = {}
+
+    _PORTFOLIO_CONFIG_CACHE[portfolio] = config
+    _PORTFOLIO_CONFIG_PATHS[portfolio] = abs_path
+    return config
 
 
-def execute_rule_event(event, space, stat_repo, smf, sir):
+def get_accrual_posting_policy(portfolio, as_of_date):
+    """
+    Resolve the fund's accrual posting policy from
+    accrual_method_history, effective-dated: the entry with the
+    latest effective_from <= as_of_date governs.
+
+    Values (industry verbiage, per ICI operations guidance):
+      single_day_factor   -- each calendar day posts dated itself.
+                             DEFAULT when no election exists.
+      multiday_preceding  -- weekend/holiday stamped on the prior
+                             business day (Friday carries Fri+Sat+Sun).
+      multiday_following  -- weekend/holiday stamped on the next
+                             business day (Monday carries Sat+Sun+Mon).
+    """
+    config = get_portfolio_config(portfolio)
+    history = config.get("accrual_method_history", [])
+    effective = None
+    for entry in history:
+        eff_from = entry.get("effective_from")
+        if eff_from and str(eff_from) <= str(as_of_date)[:10]:
+            if effective is None or eff_from > effective["effective_from"]:
+                effective = entry
+
+    resolved = effective["value"] if effective else "single_day_factor"
+    print(f"POLICY RESOLVE: portfolio={portfolio} as_of={str(as_of_date)[:10]} "
+          f"history={history} -> '{resolved}'")
+    return resolved
+
+
+def execute_rule_event(event, space, stat_repo, af, sir):
     """
     Execute a single rule invocation event.
     Domain logic remains untouched.
@@ -85,12 +156,14 @@ def global_lot_iterator(investment, space):
     else:
         return []
 
+
 def mark_prices(
-    portfolio, investment, mark_date,
-    space, tranid,
-    mark_price, mark_fx, per_100FV_accrue, per_100FV_amort
+        portfolio, investment, mark_date,
+        space, tranid,
+        mark_price, mark_fx, per_100FV_accrue, per_100FV_amort
 ):
     from business_days import is_non_business_day
+    from bookkeeping import Journals
 
     stat_repo = space.stat_repo
     repo = space.asset_liability_repository
@@ -112,8 +185,6 @@ def mark_prices(
     # --------------------------------------------------------------
     # 3. GET INVESTMENT ATTRIBUTES (CANONICAL LOCATION)
     # --------------------------------------------------------------
-   # print("DEBUG KEYS:", list(repo.investment_attributes.keys())[:10])
-
     sub = repo.investment_attributes.get(investment)
 
     if not sub:
@@ -123,41 +194,78 @@ def mark_prices(
 
     attributes = sub.investment_attributes.get("AIF", {})
 
+    # --------------------------------------------------------------
+    # ACCOUNT CLASSIFICATION
+    # --------------------------------------------------------------
+    # MARK_PRICE_ACCOUNTS aggregate into a single price-driven MV per
+    # (location, ls). Works correctly when the investment is a currency
+    # (all balances are par-natured) AND when the investment is a
+    # security (Cost is the dominant balance and accrued/receivable
+    # currency-natured balances are tagged to a CURRENCY investment,
+    # not the security).
+    MARK_PRICE_ACCOUNTS = {
+        "Cost",
+        "Receivable",
+        "Payable",
+        "DividendsReceivable", "DividendsPayable",
+        "InterestReceivable", "InterestPayable",  # coupon with lag
+        "SpotFXReceivable", "SpotFXPayable",
+    }
 
+    # PAR_PRICED_ACCOUNTS are currency-natured balances that happen to
+    # be tagged to a non-currency investment (a bond, in current scope).
+    # They mark at par: MV = book balance, no Unreal G/L from price
+    # movement. Each account posts its own MV entry; not aggregated
+    # into the standard MV per (location, ls).
+    #
+    # Tactical: when the proper pricing-method assignment is built
+    # (see HOUSEKEEPING in issue log), this list becomes a pricing-
+    # method classification on the account / investment configuration
+    # rather than a hardcoded list here.
+    PAR_PRICED_ACCOUNTS = {"PurchasedInterest", "SoldInterest","AccruedInterestReceivable", "AccruedInterestPayable"}
 
-    MARK_PRICE_ACCOUNTS = {"Cost",
-                           "Receivable",
-                           "Payable",
-                           "DividendsReceivable", "DividendsPayable",
-                           "AccruedInterestReceivable", "AccruedInterestPayable",
-                           "SpotFXReceivable", "SpotFXPayable"
-                           "SoldAccruedReceivable", "PurchasedAccruedPayable",
-                           "ForwardFXReceivable", "ForwardFXPayable"}
-
-    position_data = {}
-    for key, (qty, local, book, notional, oface) in subspace.entries.items():
-        (_, inv, lotid, tax_date, ls, loc, fa) = key
-        if fa not in MARK_PRICE_ACCOUNTS:
-            continue
-        pos_key = (loc, ls)
-        if pos_key not in position_data:
-            position_data[pos_key] = {
-                "position_qty": 0.0,
-                "local_cost": 0.0,
-                "book_cost": 0.0,
-                "notional": 0.0,
-                "oface": 0.0,
-            }
-        position_data[pos_key]["position_qty"] += qty
-        position_data[pos_key]["local_cost"] += local
-        position_data[pos_key]["book_cost"] += book
-        position_data[pos_key]["notional"] += notional
-        position_data[pos_key]["oface"] += oface
-
-#    position_data = subspace.position_state
 
     # --------------------------------------------------------------
-    # 4. PRICE / FX — FROM EVENT (NOT LOOKUP)
+    # 4. BUILD POSITION DATA — TWO TRACKS
+    # --------------------------------------------------------------
+    position_data = {}  # (location, ls) -> aggregated for price-mark
+    par_data = {}  # (location, ls, fa) -> per-account for par-mark
+
+    for key, (qty, local, book, notional, oface) in subspace.entries.items():
+        (_, inv, lotid, tax_date, ls, loc, fa) = key
+
+        if fa in MARK_PRICE_ACCOUNTS:
+            pos_key = (loc, ls)
+            if pos_key not in position_data:
+                position_data[pos_key] = {
+                    "position_qty": 0.0,
+                    "local_cost": 0.0,
+                    "book_cost": 0.0,
+                    "notional": 0.0,
+                    "oface": 0.0,
+                }
+            position_data[pos_key]["position_qty"] += qty
+            position_data[pos_key]["local_cost"] += local
+            position_data[pos_key]["book_cost"] += book
+            position_data[pos_key]["notional"] += notional
+            position_data[pos_key]["oface"] += oface
+
+        elif fa in PAR_PRICED_ACCOUNTS:
+            # Track separately; each par-priced account posts its own
+            # MV entry. Not aggregated with anything.
+            par_key = (loc, ls, fa)
+            if par_key not in par_data:
+                par_data[par_key] = {
+                    "position_qty": 0.0,
+                    "local": 0.0,
+                    "book": 0.0,
+                }
+            par_data[par_key]["position_qty"] += qty
+            par_data[par_key]["local"] += local
+            par_data[par_key]["book"] += book
+
+    # --------------------------------------------------------------
+    # 5. PRICE / FX — FROM EVENT (NOT LOOKUP)
     # --------------------------------------------------------------
     if mark_price is None:
         raise ValueError(f"Missing mark_price for {investment} on {mark_date}")
@@ -176,7 +284,7 @@ def mark_prices(
     contract_size = attributes.get("contract_size", 1)
 
     # --------------------------------------------------------------
-    # 5. PROCESS EACH POSITION
+    # 6. PROCESS PRICE-MARKED POSITIONS
     # --------------------------------------------------------------
     for (location, ls), pos_fields in position_data.items():
         process_position(
@@ -187,6 +295,28 @@ def mark_prices(
             pricing_factor,
             contract_size
         )
+
+    # --------------------------------------------------------------
+    # 7. PROCESS PAR-MARKED POSITIONS (PurchasedInterest, SoldInterest)
+    # --------------------------------------------------------------
+    # MV = book balance. No price lookup, no Unreal G/L from price
+    # movement. Each (location, ls, fa) posts its own MV entry.
+    for (location, ls, fa), par_fields in par_data.items():
+        # Skip zero balances (e.g. closed-out PurchasedInterest after
+        # settlement reclassed it into AccruedInterestReceivable)
+        if par_fields["position_qty"] == 0.0 and par_fields["book"] == 0.0:
+            continue
+
+        par_mv_entry = Journals(
+            portfolio, investment, 0, 0, ls, location, "MarketVal",
+            par_fields["position_qty"],
+            par_fields["local"],
+            par_fields["book"],
+            0, None,
+            0, "Valuation", mark_date, mark_date, mark_date, mark_date, mark_date,
+            "Revenue/Expense/Capital"
+        )
+        space.post_journal_entry(par_mv_entry)
 
 def process_position(portfolio, investment, mark_date, stat_repo, space,
                      price, fx_rate, location, ls, position_data, pricing_factor, contract_size):
@@ -305,92 +435,152 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     )
     space.post_journal_entry(unreal_gl_fx_entry)
 
-def calculate_net_long_qty(self, portfolio, investment, date, status='Settled'):
-    net_positions = self.calculate_net_positions(portfolio, investment, date, status)
-    total = 0
-    for location, positions in net_positions.items():
-        total += positions.get('long_open', 0)
-        total -= positions.get('long_close', 0)
-        total -= positions.get('short_open', 0)
-        total += positions.get('short_close', 0)
-    return total
 
 def mark_bond_accruals(portfolio, investment, mark_date,
-    space, tranid, mark_price, mark_fx, per_100FV_accrue, mark_100FV_amort, smf):
+                       space, tranid, mark_price, mark_fx, per_100FV_accrue, mark_100FV_amort, af):
+    """
+    Daily bond accrual, basis-true, policy-aware.
+    Fires BEFORE mark_settled (precedence 1040 < 1045): the ordering
+    encodes through-settle-inclusive ownership -- on a disposal-settle
+    day the final owned day posts while the AF still shows the
+    position entitled.
+
+    AMOUNT: instrument's basis (per_100FV_accrue daily rate).
+    OWNERSHIP: trade terms, via AF settled entitlement.
+    RECOGNITION: fund policy from portfolio.json accrual_method_history.
+
+    Transaction naming (bifurcated): own-day entries are normal
+    accruals (BondAccrual) under every policy; only non-business-day
+    treatment carries the election's name:
+      single_day_factor  -- gap days post EACH dated themselves,
+                            named SingleDayFactor
+      multiday_preceding -- gap days post as ONE entry dated the
+                            PRIOR business day, named MultiDayPreceding
+                            (computed in this run: today's pre-settlement
+                            AF state equals that day's post-settlement
+                            state, since nothing settles over a gap)
+      multiday_following -- gap days post as ONE entry dated TODAY,
+                            named MultiDayFollowing
+    """
     from bookkeeping import Journals
     from business_days import is_non_business_day
+    from datetime import timedelta
 
-    # Skip non-business days
     if is_non_business_day(mark_date):
-        print(f"Skipping bond marking for {investment} on {mark_date} as it is a non-business day.")
         return
 
-    # Only process bonds
     repo = space.asset_liability_repository
     sub = repo.investment_attributes.get(investment)
     if not sub:
         return
     attributes = sub.investment_attributes.get("AIF", {})
-    investment_type = attributes.get("investment_type")
-    currency = attributes.get("currency")
-
-    if investment_type != "BOND":
+    if attributes.get("investment_type") != "BOND":
+        return
+    if per_100FV_accrue is None or per_100FV_accrue == 0:
         return
 
-    # ── NET SETTLED QUANTITY ──────────────────────────────────
-    # Accounts for long opens, long closes, short opens, short covers
-    # Zero or negative = no accrual entitlement
-    net_qty = smf.calculate_net_long_qty(
-        portfolio=portfolio,
-        investment=investment,
-        date=mark_date,
-        status="Settled"
-    )
+    rate = float(per_100FV_accrue)
+    pf = float(attributes.get("pricing_factor", 1))
+    fx = float(mark_fx)
 
-    if net_qty <= 0:
-        print(
-            f"Net position is zero or short for portfolio {portfolio}, "
-            f"investment {investment} on {mark_date}. Skipping bond mark event."
-        )
+    # ── RESOLVE FUND POLICY (effective-dated) ─────────────────────
+    policy = get_accrual_posting_policy(portfolio, mark_date)
+
+    # ── COVERAGE, STAMPING, AND TRANSACTION NAME PER POLICY ──────
+    # postings: list of (posting_date, n_days_covered, txn_name)
+    if policy == "single_day_factor":
+        postings = [(mark_date, 1, "BondAccrual")]
+        probe = mark_date - timedelta(days=1)
+        while is_non_business_day(probe):
+            postings.insert(0, (probe, 1, "SingleDayFactor"))
+            probe -= timedelta(days=1)
+
+    elif policy == "multiday_preceding":
+        postings = [(mark_date, 1, "BondAccrual")]
+        n = 0
+        probe = mark_date - timedelta(days=1)
+        while is_non_business_day(probe):
+            n += 1
+            probe -= timedelta(days=1)
+        if n:
+            # probe is now the business day preceding the gap;
+            # the gap's accrual stamps onto it, named for the election.
+            postings.insert(0, (probe, n, "MultiDayPreceding"))
+
+    elif policy == "multiday_following":
+        postings = [(mark_date, 1, "BondAccrual")]
+        n = 0
+        probe = mark_date - timedelta(days=1)
+        while is_non_business_day(probe):
+            n += 1
+            probe -= timedelta(days=1)
+        if n:
+            postings.append((mark_date, n, "MultiDayFollowing"))
+
+    else:
+        raise ValueError(f"Unknown accrual posting policy '{policy}' "
+                         f"for portfolio {portfolio}")
+
+    # ── ENTITLEMENT: PRE-SETTLEMENT AF STATE ──────────────────────
+    positions = af.entitled_position(portfolio=portfolio,
+                                     investment=investment)
+    if not positions:
+        print(f"Bond accruals: {portfolio}/{investment} "
+              f"{mark_date:%Y-%m-%d} policy={policy} -- no AF "
+              f"positions, skipping.")
         return
 
-    # Use the accrued interest per 100 FV for bonds
-    accrued_interest_per_100fv = per_100FV_accrue
-    fx_rate = mark_fx
+    posted_any = False
 
-    if accrued_interest_per_100fv > 0:
-        # Iterate through lots for this investment
-        lots_grouped = global_lot_iterator_by_location_ls(investment, space)
+    for (location, ls_key), entitled_qty in positions.items():
+        if entitled_qty == 0:
+            continue
+        economic_direction = entitled_qty * rate
+        if economic_direction == 0:
+            continue
+        if economic_direction > 0:
+            al_account, re_account, ls = ("AccruedInterestReceivable",
+                                          "InterestIncome", "l")
+        else:
+            al_account, re_account, ls = ("AccruedInterestPayable",
+                                          "InterestExpense", "s")
 
-        for (lot_ls, lot_location), lots in lots_grouped:
-            for lot_info in lots:
-                account_key, lot_qty, lot_local, lot_book, lot_notional = lot_info
+        daily_local = abs(entitled_qty * rate * pf)
 
-                # Calculate accrued interest for this lot
-                accrued_interest_local = lot_qty * accrued_interest_per_100fv
-                accrued_interest_book  = accrued_interest_local * float(fx_rate)
+        for posting_date, n_days, txn in postings:
+            accrued_local = daily_local * n_days
+            accrued_book = accrued_local * fx
 
-                # AccruedInterestReceivable
-                space.post_journal_entry(Journals(
-                    portfolio, currency, 0, None, lot_ls, lot_location,
-                    'AccruedInterestReceivable',
-                    accrued_interest_local, accrued_interest_local, accrued_interest_book,
-                    None, None, tranid, "BondAccrual",
-                    mark_date, mark_date, mark_date, mark_date, mark_date,
-                    "Asset/Liability"
-                ))
+            space.post_journal_entry(Journals(
+                portfolio, investment, 0, None, ls, location,
+                al_account,
+                accrued_local, accrued_local, accrued_book,
+                None, None, tranid, txn,
+                posting_date, posting_date, posting_date,
+                posting_date, posting_date,
+                "Asset/Liability"
+            ))
+            space.post_journal_entry(Journals(
+                portfolio, investment, 0, 0, ls, location,
+                re_account,
+                0, -accrued_local, -accrued_book,
+                None, None, tranid, txn,
+                posting_date, posting_date, posting_date,
+                posting_date, posting_date,
+                "Revenue/Expense/Capital"
+            ))
+            posted_any = True
 
-                # InterestIncome
-                space.post_journal_entry(Journals(
-                    portfolio, investment, 0, 0, lot_ls, lot_location,
-                    'InterestIncome',
-                    0, -accrued_interest_local, -accrued_interest_book,
-                    None, None, tranid, "BondAccrual",
-                    mark_date, mark_date, mark_date, mark_date, mark_date,
-                    "Revenue/Expense/Capital"
-                ))
+    if posted_any:
+        print(f"Bond accruals: {portfolio}/{investment} "
+              f"{mark_date:%Y-%m-%d} policy={policy} postings="
+              f"{[(f'{d:%m-%d}', n, t) for d, n, t in postings]}")
+    else:
+        print(f"Bond accruals: {portfolio}/{investment} "
+              f"{mark_date:%Y-%m-%d} policy={policy} -- entitled "
+              f"positions all zero, nothing posted.")
 
-    print(f"Bond accruals processed for portfolio {portfolio}, investment {investment} on {mark_date}.")
+
 def allocate(portfolio,  investment, location, quantity, local, book, fund_structures_space_journal_entries,
             tranid, transaction, tradedate, settledate, kdbegin, kdend, period_start,
             period_cutoff, investment_accounting_space, fund_structures_space, allocation_entities, allocation_currency, allocation_percents):
