@@ -3075,7 +3075,7 @@ class GWIUnified(QMainWindow):
 
     import pandas as pd
 
-    from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, SettlementChores
+    from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, AdministrativeFacility
     import main  # your canonical process_events
     from utilities import load_fx_data_as_rows, load_price_data_as_rows
 
@@ -3170,7 +3170,7 @@ class GWIUnified(QMainWindow):
         # NOTE:
         # - period_start=None → let process_events decide how to handle "from inception"
         # - journal_entries=None → no journals in Operational
-        # - price_data/fx_data/smf=None → let process_events load as it currently does
+        # - price_data/fx_data/af=None → let process_events load as it currently does
         # - rebuild_marks=True → force fresh marks/accruals for this derive run
         # ------------------------------------------------------------------
         process_events(
@@ -3183,7 +3183,7 @@ class GWIUnified(QMainWindow):
             scheduler=scheduler,
             price_data=None,
             fx_data=None,
-            smf=None,
+            af=None,
             stat_repo=space.statistical_repository,
             rebuild_marks=True,
         )

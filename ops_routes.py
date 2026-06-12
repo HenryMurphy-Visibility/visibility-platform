@@ -23,11 +23,14 @@ ops_router = APIRouter(prefix="/api/v1/ops", tags=["Operations"])
 # ============================================================
 # MODELS
 # ============================================================
+# Module level -- above the class, alongside CALENDAR_PRESETS
+ACCRUAL_METHODS = {"single_day_factor", "multiday_preceding", "multiday_following"}
 
 class PortfolioConfig(BaseModel):
     portfolio_id:     str
     base_currency:    str             = "USD"
     domicile_country: str             = "US"
+    primary_benchmark: str = "SPX"
     inception_date:   str
     managers:         List[str]       = []
     description:      Optional[str]   = None
@@ -36,6 +39,11 @@ class PortfolioConfig(BaseModel):
     amort_method:     str             = "straight_line"
     calendars:        List[str]       = ["Monthly"]
     calendar_preset:  Optional[str]   = None
+    accrual_method: str = "single_day_factor"
+
+    class PortfolioConfig(BaseModel):
+        # ... existing fields ...
+        accrual_method: str = "single_day_factor"
 
 
 class InvestmentRecord(BaseModel):
@@ -175,11 +183,18 @@ def save_portfolio_config(portfolio_id: str, config: dict) -> None:
 @ops_router.post("/portfolio")
 def create_portfolio(config: PortfolioConfig):
     try:
-        portfolio_id  = config.portfolio_id.strip()
+        portfolio_id = config.portfolio_id.strip()
         if not portfolio_id:
             raise HTTPException(status_code=400, detail="portfolio_id is required")
         if not config.inception_date:
             raise HTTPException(status_code=400, detail="inception_date is required")
+
+        accrual_method = (config.accrual_method or "single_day_factor").strip()
+        if accrual_method not in ACCRUAL_METHODS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"accrual_method must be one of "
+                       f"{sorted(ACCRUAL_METHODS)}, got '{accrual_method}'")
 
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if portfolio_dir.exists():
@@ -196,18 +211,33 @@ def create_portfolio(config: PortfolioConfig):
             calendars = ["Monthly"]
 
         config_data = {
-            "portfolio_id":     portfolio_id,
-            "base_currency":    config.base_currency,
+            "portfolio_id": portfolio_id,
+            "base_currency": config.base_currency,
             "domicile_country": config.domicile_country,
-            "inception_date":   config.inception_date,
-            "managers":         config.managers,
-            "description":      config.description,
-            "status":           "active",
-            "created_at":       datetime.now().isoformat(),
-            "calendars":        calendars,
+            "inception_date": config.inception_date,
+            "primary_benchmark": config.primary_benchmark,
+            "managers": config.managers,
+            "description": config.description,
+            "status": "active",
+            "created_at": datetime.now().isoformat(),
+            "calendars": calendars,
             "closing_method_history": [{"value": config.closing_method, "effective_from": config.inception_date}],
-            "accrual_method_history": [{"value": config.accrual_method, "effective_from": config.inception_date}],
-            "amort_method_history":   [{"value": config.amort_method,   "effective_from": config.inception_date}],
+            "accrual_method_history": [{"value": accrual_method, "effective_from": config.inception_date}],
+            "_accrual_method_choices": {
+                "single_day_factor": "Each calendar day posts dated itself; "
+                                     "weekends and holidays identical to "
+                                     "business days. ICI emerging practice. "
+                                     "Default.",
+                "multiday_preceding": "Non-business days post as one entry "
+                                      "dated the preceding business day "
+                                      "(Friday carries Fri+Sat+Sun). ICI "
+                                      "Practice 1, most common variant.",
+                "multiday_following": "Non-business days post as one entry "
+                                      "dated the following business day "
+                                      "(Monday carries Sat+Sun+Mon). ICI "
+                                      "Practice 1, less common variant.",
+            },
+            "amort_method_history": [{"value": config.amort_method, "effective_from": config.inception_date}],
         }
 
         with open(portfolio_dir / "portfolio.json", "w") as f:
@@ -231,7 +261,7 @@ def create_portfolio(config: PortfolioConfig):
         with open(portfolio_dir / "RefData" / "investment_master.csv", "w", newline="") as f:
             csv.DictWriter(f, fieldnames=im_columns).writeheader()
 
-        print(f">>> PORTFOLIO CREATED | {portfolio_id}")
+        print(f">>> PORTFOLIO CREATED | {portfolio_id} | accrual={accrual_method}")
         return {"status": "created", "portfolio_id": portfolio_id,
                 "path": str(portfolio_dir), "calendars": calendar_results, "config": config_data}
 
@@ -240,6 +270,7 @@ def create_portfolio(config: PortfolioConfig):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
 
 
 @ops_router.get("/portfolio/{portfolio_id}")
@@ -279,8 +310,9 @@ def list_portfolios():
                 "description":      config.get("description"),
                 "base_currency":    config.get("base_currency"),
                 "domicile_country": config.get("domicile_country"),
-                "inception_date":   config.get("inception_date"),
-                "managers":         config.get("managers", []),
+                "inception_date": config.get("inception_date"),
+                "primary_benchmark": config.get("primary_benchmark", "SPX"),
+                "managers": config.get("managers", []),
                 "status":           config.get("status"),
                 "created_at":       config.get("created_at"),
                 "closing_method":   get_method_as_of(config.get("closing_method_history", []), today),
@@ -602,6 +634,112 @@ def list_events(portfolio_id: str, investment: Optional[str] = Query(None),
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ============================================================
+# MARKS VIEW ENDPOINTS — price & FX history lookups
+# ============================================================
+
+def _norm_date_iso(val: str) -> str:
+    """Normalize '1/5/2026', '01/05/2026', '2026-01-05' (with optional
+    ':00:00:00' / 'T..' suffix) → 'YYYY-MM-DD'. Same logic as the FX rate
+    lookup, so date-range filtering actually matches the file's M/D/YYYY dates."""
+    if not val:
+        return ""
+    val = str(val).strip()
+    if "/" in val:
+        parts = val.split("/")
+        if len(parts) >= 3:
+            m = parts[0].zfill(2)
+            d = parts[1].zfill(2)
+            y = parts[2].split(":")[0].split("T")[0].strip()
+            return f"{y}-{m}-{d}"
+    if len(val) >= 10 and val[4] == "-":
+        return val[:10]
+    return val
+
+
+@ops_router.get("/prices")
+def get_prices(ticker:    str = Query(...),
+               date_from: str = Query(None),
+               date_to:   str = Query(None)):
+    """Price history for one ticker, optionally within a date range.
+    Ticker is mandatory — the file is large and is always searched by name."""
+    try:
+        from v_config import REFDATA_PATH
+        path = Path(REFDATA_PATH) / "price_master.csv"
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="price_master.csv not found")
+
+        tkr   = ticker.strip().upper()
+        d_from = _norm_date_iso(date_from) if date_from else None
+        d_to   = _norm_date_iso(date_to)   if date_to   else None
+
+        rows = []
+        with open(path, newline="", encoding="cp1252") as f:
+            for row in csv.DictReader(f):
+                if str(row.get("ticker", "")).strip().upper() != tkr:
+                    continue
+                iso = _norm_date_iso(row.get("date", ""))
+                if d_from and iso < d_from:
+                    continue
+                if d_to and iso > d_to:
+                    continue
+                rows.append({
+                    "date":     iso,
+                    "ticker":   str(row.get("ticker", "")).strip(),
+                    "currency": str(row.get("currency", "")).strip(),
+                    "price":    row.get("price", ""),
+                })
+
+        rows.sort(key=lambda r: r["date"])
+        return {"ticker": tkr, "count": len(rows), "rows": rows}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@ops_router.get("/fx")
+def get_fx_history(currency:  str = Query(...),
+                   date_from: str = Query(None),
+                   date_to:   str = Query(None)):
+    """FX rate history for one currency, optionally within a date range.
+    Currency is mandatory — same fast-search-by-key design as prices."""
+    try:
+        from v_config import REFDATA_PATH
+        path = Path(REFDATA_PATH) / "fx_master.csv"
+        if not path.exists():
+            raise HTTPException(status_code=404, detail="fx_master.csv not found")
+
+        ccy    = currency.strip().upper()
+        d_from = _norm_date_iso(date_from) if date_from else None
+        d_to   = _norm_date_iso(date_to)   if date_to   else None
+
+        rows = []
+        with open(path, newline="", encoding="cp1252") as f:
+            for row in csv.DictReader(f):
+                if str(row.get("currency", "")).strip().upper() != ccy:
+                    continue
+                iso = _norm_date_iso(row.get("date", ""))
+                if d_from and iso < d_from:
+                    continue
+                if d_to and iso > d_to:
+                    continue
+                rows.append({
+                    "date":     iso,
+                    "currency": str(row.get("currency", "")).strip(),
+                    "price":    row.get("price", ""),
+                })
+
+        rows.sort(key=lambda r: r["date"])
+        return {"currency": ccy, "count": len(rows), "rows": rows}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================
 # VALIDATE ENDPOINT
@@ -730,36 +868,86 @@ def view_calendar(portfolio_id: str, calendar: str):
 
 @ops_router.get("/fx/rate")
 def get_fx_rate(currency: str = Query(...), trade_date: str = Query(...)):
+    """
+    Return the FX rate (USD value of one unit of `currency`) on `trade_date`.
+
+    Response shape:
+      {"rate": <float>, "found": true,  "source": "fx_master"}   normal hit
+      {"rate": 1.0,     "found": true,  "source": "passthrough"} USD (rate is genuinely 1.0)
+      {"rate": null,    "found": false, "source": "not_found"}   foreign rate MISSING
+      {"rate": null,    "found": false, "source": "file_not_found"}
+
+    NOTE: for a foreign currency, a missing rate returns found=false with rate=null.
+    It must NOT return 1.0 — the caller treats found=false as an error and refuses
+    to commit, because 1.0 for a foreign trade silently sets base = local (corruption).
+    """
     try:
         from v_config import REFDATA_PATH
 
-        if currency == "USD":
-            return {"rate": 1.0, "source": "passthrough"}
+        # USD is a genuine 1.0 passthrough — distinct from a failed lookup.
+        if currency.upper() == "USD":
+            return {"rate": 1.0, "found": True, "source": "passthrough"}
 
         fx_path = Path(REFDATA_PATH) / "fx_master.csv"
         if not fx_path.exists():
-            return {"rate": 1.0, "source": "file_not_found"}
+            return {"rate": None, "found": False, "source": "file_not_found"}
 
-        td_norm = trade_date[:10]
+        # Normalize the requested date to YYYY-MM-DD.
+        td_norm = _normalize_fx_date(trade_date)
 
-        with open(fx_path, newline="") as f:
+        with open(fx_path, newline="", encoding="utf-8-sig") as f:
             for row in csv.DictReader(f):
-                raw_date = str(row.get("date", "")).strip()
+                # Column-name tolerant: date / fx_date ; currency / ticker ; price / rate / close
+                raw_date = str(row.get("date") or row.get("fx_date") or "").strip()
+                raw_ccy = str(row.get("currency") or row.get("ticker") or "").strip()
+                raw_rate = (row.get("price") or row.get("rate") or
+                            row.get("close") or "")
+
+                if raw_ccy.upper() != currency.upper():
+                    continue
+                if _normalize_fx_date(raw_date) != td_norm:
+                    continue
+
                 try:
-                    file_date = datetime.strptime(raw_date, "%m/%d/%Y").strftime("%Y-%m-%d")
-                except Exception:
-                    file_date = raw_date[:10]
+                    rate = float(raw_rate)
+                except (TypeError, ValueError):
+                    continue
+                if rate <= 0:
+                    continue
 
-                if (file_date == td_norm and
-                        str(row.get("currency", "")).strip().upper() == currency.upper()):
-                    return {"rate": float(row.get("price", 1) or 1), "source": "fx_master"}
+                return {"rate": rate, "found": True, "source": "fx_master"}
 
-        return {"rate": 1.0, "source": "not_found"}
+        # Foreign currency, no row matched — DO NOT default to 1.0.
+        return {"rate": None, "found": False, "source": "not_found"}
 
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+def _normalize_fx_date(val: str) -> str:
+    """
+    Normalize any of these to 'YYYY-MM-DD':
+      '2026-01-02', '2026-01-02T00:00:00',
+      '01/02/2026', '01/02/2026:00:00:00', '1/2/2026'
+    Mirrors the proof engine's _norm_date so the endpoint matches the same
+    rows the close process does.
+    """
+    if not val:
+        return ""
+    val = str(val).strip()
+    # M/D/YYYY (optionally with a :HH:MM:SS suffix)
+    if "/" in val:
+        parts = val.split("/")
+        if len(parts) >= 3:
+            m = parts[0].zfill(2)
+            d = parts[1].zfill(2)
+            y = parts[2].split(":")[0].split("T")[0].strip()
+            return f"{y}-{m}-{d}"
+    # ISO (optionally with T or space time suffix)
+    if len(val) >= 10 and val[4] == "-":
+        return val[:10]
+    return val
 
 # ============================================================
 # PROOF ENGINE
@@ -792,7 +980,7 @@ def run_proof_endpoint(
         im               = load_investment_master(portfolio_id, funds_path)
         price_index      = load_price_index(refdata_path)
         fx_index         = load_fx_index(refdata_path)
-        jes_by_period    = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
+        jes_by_period, _ = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
         calendar_records = load_calendar_records(portfolio_id, calendar, funds_path)
 
         if period:

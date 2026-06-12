@@ -147,7 +147,7 @@ def marks_from_scratch(
     fx_data,
     scheduler=None,
     stat_repo=None,
-    smf=None,
+    af=None,
 ):
     """
     CREATE mark EVENTS from scratch for a portfolio.
@@ -272,7 +272,7 @@ def marks_from_scratch(
                     event,
                     space,
                     stat_repo,
-                    smf,
+                    af,
                 )
 
     # ----------------------------------------------------------
@@ -351,7 +351,7 @@ def marks_append(portfolio, candidates, period_start, period_end,
 # =======================================================================
 
 def load_mark_events_into_scheduler(scheduler, portfolio, space, stat_repo,
-                                    smf, period_cutoff):
+                                    af, period_cutoff):
     """
     Reads the marks CSV and schedules mark_prices + bond accrual events.
     """
@@ -387,7 +387,7 @@ def load_mark_events_into_scheduler(scheduler, portfolio, space, stat_repo,
             price,
             fx,
             per100,
-            smf,
+            af,
             SecurityInformationRepository()
         )
 
@@ -400,7 +400,7 @@ def schedule_bond_coupons(
     scheduler, bond_candidates, portfolio, investment,
      space, tranid, transaction,
     tradedate, settledate, period_start, period_end,
-    payment_currency, per_share # smf
+    payment_currency, per_share # af
 ):
 
     if not bond_candidates:
@@ -435,7 +435,7 @@ def schedule_bond_coupons(
             cd, bond_domain.bond_coupon, portfolio, investment,
              space, tranid, "BondCoupon",
             cd, settledate, period_start, period_end,
-            payment_currency, per_share # smf
+            payment_currency, per_share # af
         )
 
 

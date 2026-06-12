@@ -33,7 +33,7 @@ def open_equity_swap_long(
     portfolio, investment, location, quantity, local, book, notional,
     journal_entries, space, tranid, transaction,
     tradedate, settledate, kdbegin, kdend,
-    payment_currency, tdate_fx, smf, legin, legout
+    payment_currency, tdate_fx, af, legin, legout
 ):
     """
     Post an equity swap long:
@@ -73,7 +73,7 @@ def open_equity_swap_long(
         tranid, transaction,
         tradedate, settledate, kdbegin, kdend,
         payment_currency,
-        smf=None, accrued_local=None, accrued_book=None,
+        af=None, accrued_local=None, accrued_book=None,
         entry_type="Asset/Liability-OBS"
     )
 

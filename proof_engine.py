@@ -486,14 +486,28 @@ def load_fx_index(refdata_path: str) -> dict:
                 index[(ccy, date)] = rate
     return index
 
+
 def load_jes_from_journals(portfolio: str, calendar: str,
                            funds_path: str,
-                           period: str = None) -> dict:
+                           period: str = None):
+    """
+    Returns TWO dicts:
+      jes_by_period  {period_name: [journals]} -- regular pkl
+                     overwrites adjusting for the same period
+                     (alphabetical load order; regular is the
+                     authoritative pass-2 output)
+      period_meta    {pkl_filename: {period_name,
+                                     precedence_version,
+                                     precedence_fingerprint}}
+                     -- one entry per FILE, so adjusting and
+                     regular stamps are both visible to Pillar 9
+    """
     journals_dir = (Path(funds_path) / portfolio / "Calendars" /
                     calendar / "Journals")
-    if not journals_dir.exists():
-        return {}
     result = {}
+    meta = {}
+    if not journals_dir.exists():
+        return result, meta
     for pkl_file in sorted(journals_dir.glob("*.pkl")):
         try:
             with open(pkl_file, "rb") as f:
@@ -501,13 +515,18 @@ def load_jes_from_journals(portfolio: str, calendar: str,
             if not isinstance(data, dict):
                 continue
             period_name = data.get("period_name", pkl_file.stem)
-            jes         = data.get("journals", [])
+            jes = data.get("journals", [])
             if period and period_name != period:
                 continue
             result[period_name] = jes
+            meta[pkl_file.name] = {
+                "period_name": period_name,
+                "precedence_version": data.get("precedence_version"),
+                "precedence_fingerprint": data.get("precedence_fingerprint"),
+            }
         except Exception as e:
             print(f"  WARNING: Could not read {pkl_file.name}: {e}")
-    return result
+    return result, meta
 
 def load_calendar_records(portfolio: str, calendar: str,
                           funds_path: str) -> list:
@@ -895,28 +914,37 @@ def pillar_chart_of_accounts(jes_by_period) -> ProofResult:
         result.ok(f"All accounts valid — {total} JEs vs {len(valid_accounts)} COA entries")
     return result
 
-
 # ══════════════════════════════════════════════════════════════════════════════
 # PILLAR 6 — DATA INTEGRITY
 # ══════════════════════════════════════════════════════════════════════════════
 
-def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
+def pillar_data(events: list, jes_by_period: dict = None,
+                im: dict = None) -> ProofResult:
     """
-    D-001  kdbegin must equal tradedate for non-adjustment events
-    D-002  kdbegin must never be before tradedate
-    D-003  tradedate must not fall on NYSE holiday or weekend
-    D-004  settledate must not be before tradedate
-    D-005  no duplicate journal entries
-    D-006  MarketVal non-zero for active cost positions
-    D-007  quantity not zero for buy/sell events
-    D-008  price not zero/negative for buy/sell events
-    D-009  total_amount = qty x price within tolerance
+    EVENT CHECKS (read the event file):
+      D-001  kdbegin must equal tradedate for non-adjustment events
+      D-002  kdbegin must never be before tradedate
+      D-003  tradedate must not fall on NYSE holiday or weekend
+      D-004  settledate must not be before tradedate
+      D-007  quantity not zero for buy/sell events
+      D-008  price not zero/negative for buy/sell events
+      D-009  total_amount = qty x price (instrument-aware) within tolerance
+
+    JOURNAL CHECKS (read materialized journals, if provided):
+      D-005  no duplicate journal entries
+      D-006  MarketVal non-zero for active cost positions
+
+    (D-010 contract_size/pricing_factor sanity -- parked, commented below.)
     """
     result = ProofResult("data")
 
-    # ── D-001 kdbegin = tradedate ─────────────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════
+    # EVENT CHECKS
+    # ══════════════════════════════════════════════════════════════
+
+    # ── D-001 kdbegin = tradedate ─────────────────────────────────
     d001 = 0
-    for i, e in enumerate(events):
+    for e in events:
         if _is_adjustment(e.get('method', '')):
             continue
         td = _parse_event_date(e.get('tradedate', ''))
@@ -934,7 +962,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     elif d001 > 5:
         result.critical(f"D-001 kdbegin≠tradedate — {d001} total violations (showing first 5)")
 
-    # ── D-002 kdbegin not before tradedate ────────────────────────────────────
+    # ── D-002 kdbegin not before tradedate ────────────────────────
     d002 = 0
     for e in events:
         td = _parse_event_date(e.get('tradedate', ''))
@@ -952,7 +980,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     elif d002 > 5:
         result.critical(f"D-002 kdbegin<tradedate — {d002} total (showing first 5)")
 
-    # ── D-003 no holiday tradedates ───────────────────────────────────────────
+    # ── D-003 no holiday/weekend tradedates ───────────────────────
     d003 = 0
     for e in events:
         method = str(e.get('method', '')).lower()
@@ -973,7 +1001,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
         result.fail(f"D-003 holiday tradedates — {d003} total (showing first 5)",
                    severity="HIGH")
 
-    # ── D-004 settle not before trade ─────────────────────────────────────────
+    # ── D-004 settle not before trade ─────────────────────────────
     d004 = 0
     for e in events:
         td = _parse_event_date(e.get('tradedate', ''))
@@ -991,7 +1019,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     elif d004 > 5:
         result.critical(f"D-004 settle<trade — {d004} total (showing first 5)")
 
-    # ── D-007 qty not zero ────────────────────────────────────────────────────
+    # ── D-007 qty not zero ────────────────────────────────────────
     d007 = 0
     for e in events:
         method = str(e.get('method', '')).lower()
@@ -1014,7 +1042,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     elif d007 > 5:
         result.critical(f"D-007 zero quantities — {d007} total (showing first 5)")
 
-    # ── D-008 price not zero ──────────────────────────────────────────────────
+    # ── D-008 price not zero/negative ─────────────────────────────
     d008 = 0
     for e in events:
         method = str(e.get('method', '')).lower()
@@ -1037,7 +1065,12 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     elif d008 > 5:
         result.critical(f"D-008 zero/neg prices — {d008} total (showing first 5)")
 
-    # ── D-009 total_amount = qty x price ─────────────────────────────────────
+    # ── D-009 total_amount = qty x price (instrument-aware) ──────
+    # Equities: expected = qty * price. Bonds quote per-100 face:
+    # expected = qty * price / 100 * pf.
+    # TODO(register): replace this branch with a universal formula
+    # driven entirely by instrument data (quotation basis declared
+    # in the IM) once per-100 lives there, not here.
     d009 = 0
     for e in events:
         method = str(e.get('method', '')).lower()
@@ -1047,8 +1080,20 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
             qty      = float(str(e.get('quantity', 0)).strip() or 0)
             price    = float(str(e.get('price', 0)).strip() or 0)
             total    = float(str(e.get('total_amount', 0)).strip() or 0)
-            expected = abs(qty * price)
-            actual   = abs(total)
+            inv      = str(e.get('investment', '') or '')
+            inv_type = ""
+            pf       = 1.0
+            cs       = 1.0
+            if im and inv in im:
+                inv_type = str(im[inv].get('investment_type', '') or '').upper()
+                pf       = _safe_float(im[inv].get('pricing_factor')) or 1.0
+                cs       = _safe_float(im[inv].get('contract_size')) or 1.0
+
+            # Universal: quotation convention lives in the IM's
+            # pricing_factor (bond rows carry 0.01 = per-100).
+            # No per-instrument branch; the data declares it.
+            expected = abs(qty * price * pf * cs)
+            actual = abs(total)
             if expected > 0 and abs(expected - actual) / expected > 0.02:
                 d009 += 1
                 if d009 <= 5:
@@ -1066,7 +1111,8 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
         result.fail(f"D-009 amount mismatches — {d009} total (showing first 5)",
                    severity="HIGH")
 
-    # # ── D-010 contract_size and pricing_factor never zero in IM ──────────────
+    # # ── D-010 contract_size and pricing_factor never zero in IM ──
+    # # (Parked. Re-enable when IM hygiene checks come into scope.)
     # if im:
     #     d010 = 0
     #     for inv, attrs in im.items():
@@ -1075,17 +1121,13 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     #         if cs is not None and cs == 0:
     #             d010 += 1
     #             if d010 <= 5:
-    #                 result.critical(
-    #                     f"D-010 contract_size=0 in IM: {inv}",
-    #                     investment=inv
-    #                 )
+    #                 result.critical(f"D-010 contract_size=0 in IM: {inv}",
+    #                                 investment=inv)
     #         if pf is not None and pf == 0:
     #             d010 += 1
     #             if d010 <= 5:
-    #                 result.critical(
-    #                     f"D-010 pricing_factor=0 in IM: {inv}",
-    #                     investment=inv
-    #                 )
+    #                 result.critical(f"D-010 pricing_factor=0 in IM: {inv}",
+    #                                 investment=inv)
     #     if d010 == 0:
     #         result.ok("D-010 contract_size and pricing_factor never zero — all clear")
     #     elif d010 > 5:
@@ -1093,15 +1135,27 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
     # else:
     #     result.skip("D-010 — no investment master provided")
 
-    # ── D-005 duplicate JEs (if journals provided) ────────────────────────────
+    # ══════════════════════════════════════════════════════════════
+    # JOURNAL CHECKS (only when journals are provided)
+    # ══════════════════════════════════════════════════════════════
     if jes_by_period:
         all_jes = [je for jes in jes_by_period.values() for je in jes]
+
+        # ── D-005 no duplicate JEs ────────────────────────────────
         seen = {}
         dupes = 0
         for je in all_jes:
+            # Key includes tradedate (the entry's EFFECTIVE calendar
+            # day) and transaction name: under single_day_factor a
+            # weekend catch-up legitimately posts several identical
+            # amounts in one processing run, distinguished only by
+            # their effective dates. Same ibor_date + same amount is
+            # not duplication; same EFFECTIVE day twice is.
             key = (
                 str(_je_val(je, "investment") or ""),
                 str(_je_date(je, "ibor_date")),
+                str(_je_date(je, "tradedate")),
+                str(_je_val(je, "transaction") or ""),
                 str(_je_val(je, "financial_account") or ""),
                 str(_je_val(je, "quantity") or ""),
                 str(_je_val(je, "local") or ""),
@@ -1110,8 +1164,9 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
                 dupes += 1
                 if dupes <= 5:
                     result.fail(
-                        f"D-005 duplicate JE: {key[0]} {key[1]} {key[2]} "
-                        f"qty={key[3]} local={key[4]}",
+                        f"D-005 duplicate JE: {key[0]} ibor={key[1]} "
+                        f"trade={key[2]} txn={key[3]} {key[4]} "
+                        f"qty={key[5]} local={key[6]}",
                         severity="HIGH"
                     )
             else:
@@ -1122,7 +1177,7 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
             result.fail(f"D-005 duplicate JEs — {dupes} total (showing first 5)",
                        severity="HIGH")
 
-        # ── D-006 MarketVal non-zero for active positions ─────────────────────
+        # ── D-006 MarketVal non-zero for active positions ─────────
         mv_issues = 0
         by_inv_date = defaultdict(lambda: {"cost_qty": 0.0, "mv": 0.0})
         for je in all_jes:
@@ -1138,10 +1193,10 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
                 by_inv_date[k]["mv"] += local
 
         for (inv, dt), vals in by_inv_date.items():
-            # Base-currency cash has no FX mark — nothing to mark against the
-            # unit of account. Skip it. (Today base = USD; when firms run other
-            # base currencies, this should read the portfolio's base ccy, not a
-            # literal.) Foreign-currency positions still get checked.
+            # Base-currency cash has no FX mark — nothing to mark
+            # against the unit of account. Skip it. (Today base =
+            # USD; when firms run other base currencies this should
+            # read the portfolio's base ccy, not a literal.)
             if inv == BASE_CURRENCY:
                 continue
             if vals["cost_qty"] != 0 and vals["mv"] == 0:
@@ -1160,8 +1215,6 @@ def pillar_data(events: list, jes_by_period: dict = None) -> ProofResult:
                        severity="HIGH")
 
     return result
-
-
 # ══════════════════════════════════════════════════════════════════════════════
 # PILLAR 7 — ACCRUAL RESIDUAL
 # ══════════════════════════════════════════════════════════════════════════════
@@ -1466,6 +1519,66 @@ def pillar_accrual_policy(jes_by_period, portfolio: str,
 
     return result
 
+# ══════════════════════════════════════════════════════════════════════════════
+# PILLAR 9 — ORDERING PROVENANCE
+# ══════════════════════════════════════════════════════════════════════════════
+# Every period's books carry the fingerprint of the precedence
+# registry that built them. This pillar reads the stamps:
+#   1. Unstamped files (built before provenance existed) -> WARN.
+#   2. Stamped file vs CURRENT registry: mismatch is a declared
+#      restatement boundary -> WARN with both identities named.
+#   3. MIXED fingerprints across the examined files -> FAIL: the
+#      books were built under different orderings and are
+#      commingled. The one forbidden state.
+
+def pillar_ordering_provenance(period_meta,
+                               current_version=None,
+                               current_fingerprint=None) -> ProofResult:
+    result = ProofResult("ordering_provenance")
+    if not period_meta:
+        result.skip("No journal files to examine")
+        return result
+
+    fps = {}
+    for fname, m in sorted(period_meta.items()):
+        fp    = m.get("precedence_fingerprint")
+        v     = m.get("precedence_version") or "?"
+        pname = m.get("period_name", "")
+
+        if fp is None:
+            result.warn(f"{fname} -- unstamped (built before ordering "
+                        f"provenance existed); reprocess to stamp.",
+                        period=pname)
+            continue
+
+        fps.setdefault(fp, []).append(fname)
+
+        if current_fingerprint is None:
+            result.ok(f"{fname} -- stamped {v}/{fp}", period=pname)
+        elif fp == current_fingerprint:
+            result.ok(f"{fname} -- built under current ordering "
+                      f"({v}/{fp})", period=pname)
+        else:
+            result.warn(f"{fname} -- built under {v}/{fp}; current "
+                        f"registry is {current_version}/"
+                        f"{current_fingerprint}. Reprocessing this "
+                        f"period is a RESTATEMENT, not a reproduction.",
+                        period=pname)
+
+    if len(fps) > 1:
+        detail = "; ".join(f"{fp}: {len(files)} file(s)"
+                           for fp, files in sorted(fps.items()))
+        result.fail(f"MIXED orderings within one book: {detail}. "
+                    f"Periods built under different precedence "
+                    f"registries are commingled -- reprocess to a "
+                    f"single ordering before relying on cross-period "
+                    f"results.")
+
+    if current_fingerprint is None:
+        result.skip("Current registry unavailable in proof context -- "
+                    "stamped-vs-current comparison skipped")
+
+    return result
 
 # ══════════════════════════════════════════════════════════════════════════════
 # CPH INTEGRATION HOOKS (optional)
@@ -1483,8 +1596,10 @@ def run_proof_pre_cph(portfolio: str, calendar: str,
     fp = funds_path or str(FUNDS_PATH)
     rp = refdata_path or str(REFDATA_PATH)
 
+    im = load_investment_master(portfolio, fp)
     events = load_events(portfolio, fp)
-    result = pillar_data(events)
+    result = pillar_data(events, im=im)
+
 
     critical_count = len(result.criticals)
     print(f"\n>>> PRE-CPH DATA CHECK | {portfolio} | {calendar}")
@@ -1519,7 +1634,7 @@ def run_proof_post_cph(portfolio: str, calendar: str,
     im               = load_investment_master(portfolio, fp)
     price_index      = load_price_index(rp)
     fx_index         = load_fx_index(rp)
-    jes_by_period    = load_jes_from_journals(portfolio, calendar, fp, period)
+    jes_by_period, _ = load_jes_from_journals(portfolio, calendar, fp, period)
     calendar_records = load_calendar_records(portfolio, calendar, fp)
 
     if period:
@@ -1609,7 +1724,21 @@ def run_proof(portfolio: str, calendar: str,
     calendar_records = load_calendar_records(portfolio, calendar, fp)
 
     # Filter periods
-    jes_by_period = _filter_periods(jes_by_period, period, period_from, period_to)
+    jes_by_period, period_meta = load_jes_from_journals(portfolio, calendar, fp, period)
+
+    # Current registry identity, for stamped-vs-current comparison.
+    # If the scheduler can't be constructed in this context, Pillar 9
+    # still runs its internal-consistency checks and says so.
+    try:
+        from bookkeeping import precedence_fingerprint as _pfp
+        from bookkeeping import EventScheduler as _ES
+        _sched = _ES()
+        current_version = _sched.precedence_version
+        current_fingerprint = _pfp(_sched.event_type_precedence)
+    except Exception as _e:
+        print(f"  (current registry unavailable to proof engine: {_e})")
+        current_version = None
+        current_fingerprint = None
     if period:
         calendar_records = [r for r in calendar_records
                            if r.get("period_name") == period]
@@ -1642,9 +1771,10 @@ def run_proof(portfolio: str, calendar: str,
         "settle_fx":         lambda: pillar_settle_fx(events, jes_by_period, fx_index),
         "marks":             lambda: pillar_marks(events, im, calendar_records, jes_by_period, price_index, fx_index),
         "chart_of_accounts": lambda: pillar_chart_of_accounts(jes_by_period),
-        "data":              lambda: pillar_data(events, jes_by_period),
+        "data":              lambda: pillar_data(events, jes_by_period, im),
         "accrual_residual":  lambda: pillar_accrual_residual(jes_by_period),
         "accrual_policy":    lambda: pillar_accrual_policy(jes_by_period, portfolio, deep=True),
+        "ordering_provenance": lambda: pillar_ordering_provenance(period_meta, current_version, current_fingerprint),
     }
 
     for name, fn in pillar_map.items():
@@ -1679,6 +1809,8 @@ Pillars:
                     accounts touched only by declared transaction names
   accrual_policy    journal postings exhibit the fund's declared accrual
                     election (vocabulary, date placement, gap multiples)
+  ordering_provenance every period's books match the precedence registry
+                    that built them; mixed orderings are forbidden
 
 Examples:
   python proof_engine.py Portfolio1 Monthly
@@ -1696,10 +1828,11 @@ Examples:
     parser.add_argument("--period-to",   type=str)
     parser.add_argument("--tranid",      type=int)
     parser.add_argument("--investment",  type=str)
-    parser.add_argument("--pillar",      type=str,
-                        choices=["availability","balance","settle_fx",
-                                 "marks","chart_of_accounts","data",
-                                 "accrual_residual","accrual_policy"])
+    parser.add_argument("--pillar", type=str,
+                        choices=["availability", "balance", "settle_fx",
+                                 "marks", "chart_of_accounts", "data",
+                                 "accrual_residual", "accrual_policy",
+                                 "ordering_provenance"])
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument("--raw", action="store_true",
                         help="skip the readable report, show only the engine's native output")

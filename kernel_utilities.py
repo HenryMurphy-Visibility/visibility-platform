@@ -914,16 +914,22 @@ def load_snapshot_into_space(space, snapshot_path):
 
 
 from datetime import datetime
+
+
 def materialize_period_outputs(
-    *,
-    space,
-    regular_journals,
-    adjusting_journals,
-    portfolio: str,
-    calendar: str,
-    period_name: str,
-    snapshot_kd,
+        *,
+        space,
+        regular_journals,
+        adjusting_journals,
+        portfolio: str,
+        calendar: str,
+        period_name: str,
+        snapshot_kd,
+        precedence_version: str = None,
+        precedence_fingerprint: str = None,
+        af=None,
 ):
+
     """
     MATERIALIZE PERIOD ARTIFACTS
     - REGULAR journals
@@ -980,6 +986,8 @@ def materialize_period_outputs(
                 "period_name": period_name,
                 "snapshot_kd": snapshot_kd,
                 "created_at": created_at,
+                "precedence_version": precedence_version,  # ← ADD (write 1)
+                "precedence_fingerprint": precedence_fingerprint,  # ← ADD
                 "journals": list(regular_journals),
             },
             f,
@@ -996,6 +1004,8 @@ def materialize_period_outputs(
                 "period_name": period_name,
                 "snapshot_kd": snapshot_kd,
                 "created_at": created_at,
+                "precedence_version": precedence_version,  # ← ADD (write 1)
+                "precedence_fingerprint": precedence_fingerprint,  # ← ADD
                 "journals": list(adjusting_journals or []),
             },
             f,
@@ -1011,16 +1021,17 @@ def materialize_period_outputs(
             "period_name": period_name,
             "snapshot_kd": snapshot_kd,
             "created_at": created_at,
+            "precedence_version": precedence_version,
+            "precedence_fingerprint": precedence_fingerprint,
             "state": {
                 "asset_liability_repository": space.asset_liability_repository,
                 "stat_repo": space.stat_repo,
                 "chores": space.chores,
-
-                # REQUIRED: Rev/Exp must exist as a real repo
-
-            "revenue_expense_repository": space.revenue_expense_repository,
+                "revenue_expense_repository": space.revenue_expense_repository,
+                "admin_facility": af,
             },
         }
+
     re_repo = space.revenue_expense_repository
 
     xom_space = re_repo.balance_spaces_library.get("XOM")

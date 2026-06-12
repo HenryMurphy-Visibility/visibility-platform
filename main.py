@@ -36,7 +36,7 @@ def process_events(
     scheduler,
     price_data,
     fx_data,
-    smf,
+    af,
     stat_repo,
     sir,
     rebuild_marks,

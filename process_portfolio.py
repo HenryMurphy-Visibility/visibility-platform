@@ -185,6 +185,8 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
         reader = csv.DictReader(f)
         for row in reader:
             inv = (row.get("investment") or "").strip()
+            if inv == "USD":
+                print("made it")
             if inv:
                 candidates.add(inv)
                 td_raw = (row.get("tradedate") or "").strip()
@@ -244,12 +246,17 @@ def bootstrap_portfolio(portfolio: str, force: bool = False) -> dict:
 
 def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
     """
-    Create or append to the portfolio marks file.
+    Create the portfolio marks file.
 
-    - If marks file does not exist — create from scratch for all candidates
-    - If marks file exists — check which investments are already covered
-      and append only for new investments not yet in the file
-    - Never rebuilds existing marks — append only
+    Marks are pure historical fact (price x fx per business day) and are
+    cheap to regenerate. create_portfolio_marks truncates and rewrites the
+    entire marks file, so this function always passes the COMPLETE set of
+    investments. There is no incremental "append only / already covered"
+    logic — that contradicted the truncating writer and silently destroyed
+    marks for any investment not in the filtered subset.
+
+    TEMPORARY WE WILL WANT TO APPEND ONLY IF NEW CANDIDATES FOUND OR MAY CHANGE
+    LOGIC TO post one global event.
     """
     import os
     import csv
@@ -261,32 +268,10 @@ def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
         print(f"    Marks: no events to derive marks from — skipping")
         return 0
 
-    # ── FIND WHICH INVESTMENTS ARE ALREADY COVERED ────────────────
-    covered = set()
-    existing_count = 0
-
-    if marks_path.exists():
-        with open(marks_path, newline="") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                inv = row.get("investment", "").strip()
-                if inv:
-                    covered.add(inv)
-                    existing_count += 1
-
-    # ── FIND INVESTMENTS THAT NEED MARKS ─────────────────────────
-    needed = {
-        inv: td
-        for inv, td in first_trade_dates.items()
-        if inv not in covered
-    }
-    print(f"    Marks: first_trade_dates={first_trade_dates}")
-    print(f"    Marks: needed={needed}")
-    if not needed:
-        print(f"    Marks: all investments covered ({existing_count} rows) — skipping")
-        return existing_count
-
-    print(f"    Marks: {len(needed)} new investment(s) need marks — appending: {list(needed.keys())}")
+    # ── REBUILD ALL MARKS ────────────────────────────────────────
+    # Always pass the full universe; the writer rewrites the whole file.
+    needed = dict(first_trade_dates)
+    print(f"    Marks: rebuilding all {len(needed)} investment(s)")
 
     try:
         from core_ingest_loaders import create_portfolio_marks
@@ -306,8 +291,8 @@ def _create_marks(portfolio: str, first_trade_dates: dict) -> int:
             history_end=history_end,
         )
 
-        print(f"    Marks: {marks_count} marks appended")
-        return existing_count + marks_count
+        print(f"    Marks: {marks_count} marks written")
+        return marks_count
 
     except ImportError as e:
         print(f"    Marks: WARNING — could not import core_ingest_loaders: {e}")
@@ -550,17 +535,19 @@ def run_period(
         flush=True
     )
 
-    from bookkeeping import SettlementChores
+    from bookkeeping import AdministrativeFacility
     import pickle
 
     if selected_snapshot_path:
         with open(selected_snapshot_path, "rb") as f:
             snapshot = pickle.load(f)
-        smf = snapshot["state"].get("chores", SettlementChores())
+        af = snapshot["state"].get("admin_facility")
+        if af is None:
+            print(f"[AF] snapshot carried no admin_facility -- "
+                  f"starting empty (pre-fix snapshot).")
+            af = AdministrativeFacility()
     else:
-        smf = SettlementChores()
-
-
+        af = AdministrativeFacility()
 
     metrics = cph_run_and_materialize(
         portfolio=portfolio,
@@ -570,7 +557,7 @@ def run_period(
         replay_start=replay_start,
         events=event_pool,
         is_first_calendar_period=is_first,
-        smf=smf,
+        af=af,
     )
 
     return metrics
@@ -669,8 +656,6 @@ def run_all_periods(
     # Uncomment to validate MV integrity after every build
     # from proof_engine import run_proof_post_cph
     # run_proof_post_cph(portfolio, calendar)
-
-        return all_metrics
 
     return all_metrics
 

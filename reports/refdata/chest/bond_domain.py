@@ -13,9 +13,9 @@ import cProfile
 from kivygui import ld # lump data
 
 
-def schedule_update_smf_record_status(smf, tranid, new_status, portfolio):
+def schedule_update_af_record_status(af, tranid, new_status, portfolio):
     """Function to schedule the update of SMF record status."""
-    smf.update_record_status(tranid, new_status, portfolio)
+    af.update_record_status(tranid, new_status, portfolio)
     
 def close_bond_lots(investment: str, location: str, quantity: float, local: float, book: float, closing_method: str,
                       tax_date: datetime, journal_entries, sub_ledger, ls: str, tranid) -> List[
@@ -146,7 +146,7 @@ def bond_lot_iterator_by_location(investment, sub_ledger):
     return result
 
 def buy_bond(portfolio, investment, location, quantity, local, book, journal_entries, sub_ledger, tranid, transaction,
-               tradedate, settledate, kdbegin, kdend, payment_currency, smf,
+               tradedate, settledate, kdbegin, kdend, payment_currency, af,
                accrued_local, accrued_book):
     # Create a new je Open IBM
 
@@ -178,13 +178,13 @@ def buy_bond(portfolio, investment, location, quantity, local, book, journal_ent
     sub_ledger.post_journal_entry(je)
 
     # Record the settlement information to SMF
-    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long', position_effect= 'open', location=location,
+    af.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long', position_effect= 'open', location=location,
                    currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
 
     return
 def sell_bond(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
                 sub_ledger, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                smf, accrued_local, accrued_book):
+                af, accrued_local, accrued_book):
     ls = "l"
     ibor_date = tradedate
     financial_account = "Receivable"  # use tranid for payable receivable to close
@@ -297,7 +297,7 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
 
             # Record the settlement information to SMF
             # Record the settlement information to SMF
-            smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long',
+            af.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long',
                            position_effect='close', location=location,
                            currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
     return
@@ -305,7 +305,7 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
 
 def short_bond(portfolio, investment, location, quantity, local, book, journal_entries, sub_ledger, tranid,
              transaction,
-             tradedate, settledate, kdbegin, kdend, payment_currency, smf,
+             tradedate, settledate, kdbegin, kdend, payment_currency, af,
              accrued_local, accrued_book):
     # Create a new je Open IBM
 
@@ -338,7 +338,7 @@ def short_bond(portfolio, investment, location, quantity, local, book, journal_e
     sub_ledger.post_journal_entry(je)
 
     # Record the settlement information to SMF
-    smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short', position_effect='open',
+    af.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short', position_effect='open',
                    location=location,
                    currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
 
@@ -347,7 +347,7 @@ def short_bond(portfolio, investment, location, quantity, local, book, journal_e
 
 def cover_bond(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
                 sub_ledger, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                 smf, accrued_local, accrued_book):
+                 af, accrued_local, accrued_book):
     ls = "s"
     ibor_date = tradedate
     financial_account = "Payable"  # use tranid for payable receivable to close
@@ -462,18 +462,18 @@ def cover_bond(portfolio, investment, location, quantity, local, book, closing_m
 
             # Record the settlement information to SMF
             # Record the settlement information to SMF
-            smf.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short',
+            af.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='short',
                            position_effect='close', location=location,
                            currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')
     return
 
 
 def bond_coupon(portfolio, investment, journal_entries, sub_ledger, tranid,
-                transaction, tradedate, settledate, kdbegin, kdend, payment_currency, per_share,  smf):
+                transaction, tradedate, settledate, kdbegin, kdend, payment_currency, per_share,  af):
     ibor_date = tradedate
 
 
-    net_positions = smf.calculate_net_positions(portfolio=portfolio, investment=investment, date =tradedate,status = "Settled")
+    net_positions = af.calculate_net_positions(portfolio=portfolio, investment=investment, date =tradedate,status = "Settled")
 
     for location, positions in net_positions.items():
         for position_type, qty in positions.items():

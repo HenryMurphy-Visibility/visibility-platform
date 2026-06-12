@@ -38,7 +38,7 @@ import pandas as pd
 
 from financial_information_gateway.fig_code.compute_result import ComputeResult
 
-from financial_information_gateway.fig_performance_carving import (
+from financial_information_gateway.fig_code.fig_performance_carving import (
     performance_carving_periods,
     aggregate_by_aif,
 )
@@ -117,7 +117,7 @@ def _get_cached_daily_state(
         journal_entries=journal_entries,
         periods=periods,
         calendar=calendar,
-        level="investment",
+         level="investment",
         portfolio=portfolio,  # ADD THIS
     )
 
@@ -631,6 +631,9 @@ def _compute_daily_twr_period(journal_entries, level, period_key):
 # ──────────────────────────────────────────────────────────────────────────────
 # PERIOD CHAINING ENGINE
 # ──────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────────
+# PERIOD CHAINING ENGINE
+# ──────────────────────────────────────────────────────────────────────────────
 
 def _build_chained_daily_state(
         journal_entries: list,
@@ -640,62 +643,95 @@ def _build_chained_daily_state(
         portfolio: str,
 ) -> pd.DataFrame:
     """
-    Core chaining engine. Calls the ORIGINAL compute_daily_twr (via thin
-    adapter) per period and chains across period boundaries from inception.
+    Core chaining engine. Chains compute_daily_twr results across period
+    boundaries, building from inception forward.
 
-    The original compute_daily_twr returns all domain columns, untouched:
-      EMV_Local/Book, BMV_Local/Book, Previous_EMV_Local/Book,
+    Daily CF columns (untouched — used for within-period TWR by compute_daily_twr):
       Open_CF_Local/Book, Close_CF_Local/Book,
-      Currency_Flows_Local/Book, Income_Local/Book,
-      Category_Flows_Local/Book,
-      TWR_Local/Book, LocalToDate, BookToDate,
-      TWR_*_Percent, LocalToDate_Percent, BookToDate_Percent
+      Currency_Flows_Local/Book, Income_Local/Book
 
-    This function PRESERVES every one of those columns and ADDS chained /
-    cumulative columns carried from inception:
-      - Index_Local/Book           = LocalToDate/BookToDate × prior ending index
-      - Cum_Open_CF_Local/Book     = cumulative opening flows from inception
-      - Cum_Close_CF_Local/Book    = cumulative closing flows from inception
-      - Cum_Currency_Flows_*       = cumulative currency flows from inception
-      - Cum_Income_Local/Book      = cumulative income from inception
+    Cumulative CF columns (carry forward across periods — for date range queries
+    and validation; deltas between any two dates give the period flows):
+      Cum_Open_CF_Local/Book, Cum_Close_CF_Local/Book,
+      Cum_Currency_Flows_Local/Book, Cum_Income_Local/Book
 
-    The three flow types stay SEPARATE and are RETURNED so a performance
-    analyst can validate every TWR by hand. Delta of any cumulative between
-    two dates = flows of that type over the range.
+    Index chain:
+      Index_Local/Book — a SINGLE continuous compound of the daily TWR
+      (1 + TWR_Local).cumprod() per level-value across the full concatenated
+      series. This is computed ONCE at the end, AFTER all periods are stitched
+      and the prior-period overlap rows are dropped.
+
+      IMPORTANT: the index is NOT chained as (period LocalToDate × prior index).
+      compute_daily_twr produces LocalToDate as a within-call cumprod over the
+      prior+current journal span it is fed; after the period date-filter the
+      first surviving row of each period carries a LocalToDate already > 1.0,
+      so multiplying it by the prior period's ending index double-counts the
+      overlap and compounds an error that explodes by the final period.
+      The daily TWR values are correct, so the index is rebuilt cleanly from
+      them as one continuous product from inception.
     """
     from financial_information_gateway.extraction.box_extractor import extract_box_components
 
-    # ── PRIOR STATE TRACKERS — per level-value, carried from inception ────────
-    prior_index: dict[str, dict] = {}
-    prior_open_cf: dict[str, dict] = {}
-    prior_close_cf: dict[str, dict] = {}
+    # ── PRIOR STATE TRACKERS — per level-value (cumulative CFs only) ──────────
+    prior_open_cf:     dict[str, dict] = {}
+    prior_close_cf:    dict[str, dict] = {}
     prior_currency_cf: dict[str, dict] = {}
-    prior_income: dict[str, dict] = {}
+    prior_income:      dict[str, dict] = {}
+
 
     all_frames: list[pd.DataFrame] = []
 
+    # ── progress timing ───────────────────────────────────────────────
+    import time as _time
+    _build_t0 = _time.perf_counter()
+    _n_periods = len(periods)
+
     for i, period_key in enumerate(periods):
+        # ── progress + honest running-average ETA ─────────────────────
+        _elapsed = _time.perf_counter() - _build_t0
+        if i > 0:
+            _avg = _elapsed / i  # avg over completed periods
+            _remaining = _avg * (_n_periods - i)
+            print(
+                f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
+                f"| elapsed {_elapsed:.0f}s "
+                f"| ~est remaining {_remaining:.0f}s "
+                f"(~{_remaining / 60:.1f}m, updating)",
+                flush=True,
+            )
+        else:
+            print(
+                f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
+                f"| elapsed {_elapsed:.0f}s | estimating...",
+                flush=True,
+            )
+
         p_start, p_end = _period_boundaries(period_key, calendar)
 
-        # ── LOAD JOURNALS (prior + current seeds BMV via shift) ───────────────
+        # ── LOAD JOURNALS (prior + current to seed BMV via shift) ─────────────
         if i == 0:
             extracted = extract_box_components(
-                portfolio=portfolio, calendar=calendar,
-                period_start=period_key, period_end=period_key,
+                portfolio=portfolio,
+                calendar=calendar,
+                period_start=period_key,
+                period_end=period_key,
             )
         else:
             prior_period_key = periods[i - 1]
             extracted = extract_box_components(
-                portfolio=portfolio, calendar=calendar,
-                period_start=prior_period_key, period_end=period_key,
+                portfolio=portfolio,
+                calendar=calendar,
+                period_start=prior_period_key,
+                period_end=period_key,
             )
 
         period_jes = extracted["journal_entries"]
+
         if not period_jes:
             print(f">>> No journals for period {period_key} — skipping")
             continue
 
-        # ── COMPUTE DAILY TWR via original domain function (adapter) ──────────
+        # ── COMPUTE DAILY TWR ─────────────────────────────────────────────────
         period_df = _compute_daily_twr_period(period_jes, level, period_key)
 
         if period_df is None or period_df.empty:
@@ -707,7 +743,7 @@ def _build_chained_daily_state(
         period_df = period_df[
             (period_df["ibor_date"] >= p_start) &
             (period_df["ibor_date"] <= p_end)
-            ].copy()
+        ].copy()
 
         if period_df.empty:
             print(f">>> Empty after date filter for {period_key} — skipping")
@@ -715,87 +751,73 @@ def _build_chained_daily_state(
 
         period_df = period_df.sort_values([level, "ibor_date"]).copy()
 
-        # ── INITIALIZE CHAIN + CUMULATIVE COLUMNS ─────────────────────────────
-        period_df["Index_Local"] = 0.0
-        period_df["Index_Book"] = 0.0
-        period_df["Cum_Open_CF_Local"] = 0.0
-        period_df["Cum_Open_CF_Book"] = 0.0
-        period_df["Cum_Close_CF_Local"] = 0.0
-        period_df["Cum_Close_CF_Book"] = 0.0
+        # ── INITIALIZE CUMULATIVE CF COLUMNS ──────────────────────────────────
+        period_df["Cum_Open_CF_Local"]        = 0.0
+        period_df["Cum_Open_CF_Book"]         = 0.0
+        period_df["Cum_Close_CF_Local"]       = 0.0
+        period_df["Cum_Close_CF_Book"]        = 0.0
         period_df["Cum_Currency_Flows_Local"] = 0.0
-        period_df["Cum_Currency_Flows_Book"] = 0.0
-        period_df["Cum_Income_Local"] = 0.0
-        period_df["Cum_Income_Book"] = 0.0
+        period_df["Cum_Currency_Flows_Book"]  = 0.0
+        period_df["Cum_Income_Local"]         = 0.0
+        period_df["Cum_Income_Book"]          = 0.0
 
         for lv in period_df[level].unique():
             lv_key = str(lv)
-            mask = period_df[level] == lv
+            mask   = period_df[level] == lv
 
-            # ── INDEX — within-period LocalToDate × prior ending index ────────
-            prior_idx = prior_index.get(lv_key, {"local": 1.0, "book": 1.0})
-            period_df.loc[mask, "Index_Local"] = (
-                    period_df.loc[mask, "LocalToDate"] * prior_idx["local"]
-            )
-            period_df.loc[mask, "Index_Book"] = (
-                    period_df.loc[mask, "BookToDate"] * prior_idx["book"]
-            )
-
-            # ── CUMULATIVE OPEN CF = within-period cumsum + prior ending ──────
+            # ── CUMULATIVE CFs — within-period cumsum + prior ending ──────────
+            # These ARE additive and chain correctly: each period's running
+            # cumsum is offset by the prior period's ending cumulative value,
+            # giving a continuous cumulative-from-inception series. Deltas
+            # between any two dates recover the flows over that span.
             p_ocf = prior_open_cf.get(lv_key, {"local": 0.0, "book": 0.0})
             period_df.loc[mask, "Cum_Open_CF_Local"] = (
-                    period_df.loc[mask, "Open_CF_Local"].cumsum() + p_ocf["local"]
+                period_df.loc[mask, "Open_CF_Local"].cumsum() + p_ocf["local"]
             )
             period_df.loc[mask, "Cum_Open_CF_Book"] = (
-                    period_df.loc[mask, "Open_CF_Book"].cumsum() + p_ocf["book"]
+                period_df.loc[mask, "Open_CF_Book"].cumsum() + p_ocf["book"]
             )
 
-            # ── CUMULATIVE CLOSE CF ───────────────────────────────────────────
             p_ccf = prior_close_cf.get(lv_key, {"local": 0.0, "book": 0.0})
             period_df.loc[mask, "Cum_Close_CF_Local"] = (
-                    period_df.loc[mask, "Close_CF_Local"].cumsum() + p_ccf["local"]
+                period_df.loc[mask, "Close_CF_Local"].cumsum() + p_ccf["local"]
             )
             period_df.loc[mask, "Cum_Close_CF_Book"] = (
-                    period_df.loc[mask, "Close_CF_Book"].cumsum() + p_ccf["book"]
+                period_df.loc[mask, "Close_CF_Book"].cumsum() + p_ccf["book"]
             )
 
-            # ── CUMULATIVE CURRENCY FLOWS ─────────────────────────────────────
             p_fx = prior_currency_cf.get(lv_key, {"local": 0.0, "book": 0.0})
             period_df.loc[mask, "Cum_Currency_Flows_Local"] = (
-                    period_df.loc[mask, "Currency_Flows_Local"].cumsum() + p_fx["local"]
+                period_df.loc[mask, "Currency_Flows_Local"].cumsum() + p_fx["local"]
             )
             period_df.loc[mask, "Cum_Currency_Flows_Book"] = (
-                    period_df.loc[mask, "Currency_Flows_Book"].cumsum() + p_fx["book"]
+                period_df.loc[mask, "Currency_Flows_Book"].cumsum() + p_fx["book"]
             )
 
-            # ── CUMULATIVE INCOME ─────────────────────────────────────────────
             p_inc = prior_income.get(lv_key, {"local": 0.0, "book": 0.0})
             period_df.loc[mask, "Cum_Income_Local"] = (
-                    period_df.loc[mask, "Income_Local"].cumsum() + p_inc["local"]
+                period_df.loc[mask, "Income_Local"].cumsum() + p_inc["local"]
             )
             period_df.loc[mask, "Cum_Income_Book"] = (
-                    period_df.loc[mask, "Income_Book"].cumsum() + p_inc["book"]
+                period_df.loc[mask, "Income_Book"].cumsum() + p_inc["book"]
             )
 
-            # ── UPDATE PRIORS for next period ─────────────────────────────────
-            prior_index[lv_key] = {
-                "local": float(period_df.loc[mask, "Index_Local"].iloc[-1]),
-                "book": float(period_df.loc[mask, "Index_Book"].iloc[-1]),
-            }
+            # ── UPDATE CF PRIORS for next period ──────────────────────────────
             prior_open_cf[lv_key] = {
                 "local": float(period_df.loc[mask, "Cum_Open_CF_Local"].iloc[-1]),
-                "book": float(period_df.loc[mask, "Cum_Open_CF_Book"].iloc[-1]),
+                "book":  float(period_df.loc[mask, "Cum_Open_CF_Book"].iloc[-1]),
             }
             prior_close_cf[lv_key] = {
                 "local": float(period_df.loc[mask, "Cum_Close_CF_Local"].iloc[-1]),
-                "book": float(period_df.loc[mask, "Cum_Close_CF_Book"].iloc[-1]),
+                "book":  float(period_df.loc[mask, "Cum_Close_CF_Book"].iloc[-1]),
             }
             prior_currency_cf[lv_key] = {
                 "local": float(period_df.loc[mask, "Cum_Currency_Flows_Local"].iloc[-1]),
-                "book": float(period_df.loc[mask, "Cum_Currency_Flows_Book"].iloc[-1]),
+                "book":  float(period_df.loc[mask, "Cum_Currency_Flows_Book"].iloc[-1]),
             }
             prior_income[lv_key] = {
                 "local": float(period_df.loc[mask, "Cum_Income_Local"].iloc[-1]),
-                "book": float(period_df.loc[mask, "Cum_Income_Book"].iloc[-1]),
+                "book":  float(period_df.loc[mask, "Cum_Income_Book"].iloc[-1]),
             }
 
         all_frames.append(period_df)
@@ -808,6 +830,23 @@ def _build_chained_daily_state(
         .sort_values([level, "ibor_date"])
         .drop_duplicates(subset=[level, "ibor_date"], keep="last")
         .reset_index(drop=True)
+    )
+
+    # ── INDEX CHAIN — single continuous compound of daily TWR ────────────────
+    # Built ONCE here, after concat + dedupe, so every level-value has exactly
+    # one clean daily series with no period-overlap duplicates. The index is the
+    # cumulative product of (1 + daily TWR) from each level-value's first day
+    # (inception) forward. This is the mathematically correct chain-linked
+    # return index and avoids the LocalToDate-overlap double-count entirely.
+    final = final.sort_values([level, "ibor_date"]).reset_index(drop=True)
+
+    final["Index_Local"] = (
+        final.groupby(level)["TWR_Local"]
+             .transform(lambda s: (1.0 + s.fillna(0.0)).cumprod())
+    )
+    final["Index_Book"] = (
+        final.groupby(level)["TWR_Book"]
+             .transform(lambda s: (1.0 + s.fillna(0.0)).cumprod())
     )
 
     return final
@@ -824,16 +863,39 @@ def _portfolio_from_journals(journal_entries: list) -> str:
 # ──────────────────────────────────────────────────────────────────────────────
 
 def _rechain_aggregated_state(df: pd.DataFrame, level: str) -> pd.DataFrame:
-    """Add Book columns if missing after aggregate_by_aif."""
-    df = df.copy()
-    if "Index_Book"   not in df.columns:
-        df["Index_Book"]   = df["Index_Local"]
-    if "CumCF_Book"   not in df.columns:
-        df["CumCF_Book"]   = df.get("CumCF_Local",  0.0)
-    if "CumInc_Book"  not in df.columns:
-        df["CumInc_Book"]  = df.get("CumInc_Local", 0.0)
-    return df
+    """
+    After aggregate_by_aif, expose the chained index under the names the
+    summary readers expect: Index_Local / Index_Book.
 
+    aggregate_by_aif produces the chained index as LocalToDate / BookToDate
+    (within the frame's date span). The summary readers (_period_return,
+    _inception_return) read Index_Local. This function maps the aggregate's
+    chained columns onto Index_Local / Index_Book.
+
+    Basis note: at a mixed-currency aggregate (portfolio/sector/analyst across
+    currencies) the BOOK index is the meaningful series; a "local" index is
+    only coherent at single-basis levels (investment, currency). For a
+    single-currency book (e.g. all-USD) Index_Local == Index_Book. We populate
+    both from the aggregate's own chained columns so single-currency works now
+    and multi-currency is correct when book is the basis.
+    """
+    df = df.copy()
+
+    # Map the aggregate's chained columns to the names summary readers expect.
+    if "Index_Book" not in df.columns:
+        if "BookToDate" in df.columns:
+            df["Index_Book"] = df["BookToDate"]
+        elif "Index_Local" in df.columns:
+            df["Index_Book"] = df["Index_Local"]
+
+    if "Index_Local" not in df.columns:
+        if "LocalToDate" in df.columns:
+            df["Index_Local"] = df["LocalToDate"]
+        elif "Index_Book" in df.columns:
+            # No coherent local at this level — fall back to book basis.
+            df["Index_Local"] = df["Index_Book"]
+
+    return df
 
 _INDEX_CACHE: dict = {}
 
@@ -851,15 +913,15 @@ def _load_index_returns(refdata_path: str) -> pd.DataFrame:
     try:
         df = pd.read_csv(prices_path)
         indices = ["SPY", "AGG", "TLT"]
-        df = df[df["symbol"].isin(indices)].copy()
+        df = df[df["ticker"].isin(indices)].copy()
         df["date"] = pd.to_datetime(df["date"])
-        df = df.sort_values(["symbol", "date"])
+        df = df.sort_values(["ticker", "date"])
 
         # Compute daily return per index
-        df["daily_return"] = df.groupby("symbol")["price"].pct_change()
+        df["daily_return"] = df.groupby("ticker")["price"].pct_change()
 
         # Pivot to wide format: date | SPY | AGG | TLT
-        pivot = df.pivot(index="date", columns="symbol", values="daily_return")
+        pivot = df.pivot(index="date", columns="ticker", values="daily_return")
         pivot = pivot.reset_index().rename(columns={"date": "ibor_date"})
 
         # Build chain index for each

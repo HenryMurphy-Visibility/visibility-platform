@@ -17,6 +17,17 @@ from business_days import generate_business_days, get_previous_business_day, get
 import datetime
 import bond_domain
 
+
+def _safe_float(val):
+    """Coerce a value to float; return None if missing/blank/non-numeric."""
+    if val is None or str(val).strip() == "":
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return None
+
+
 class GlobalRefData:
     def __init__(self):
         # investment -> {date: price}
@@ -353,7 +364,14 @@ def derive_position_windows(events, current_period_cutoff):
     for e in events_sorted:
         inv = e["investment"]
         td = e["tradedate"]
-        qty = e.get("quantity", 0)
+
+        qty_raw = e.get("quantity")
+        if qty_raw is None or str(qty_raw).strip() in ("", "0"):
+            # Monetary trade (deposit, revenue, expense) — no share quantity.
+            # The monetary amount IS the quantity (currencies are priced at 1.0).
+            qty = _safe_float(e.get("total_amount")) or 0.0  # confirm the field name
+        else:
+            qty = _safe_float(qty_raw) or 0.0
 
         prev_qty = position_qty[inv]
         new_qty = prev_qty + qty

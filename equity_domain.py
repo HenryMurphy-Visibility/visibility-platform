@@ -312,7 +312,7 @@ def cover_equity(portfolio, investment, location, quantity, local, book, closing
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lotinfo
 
         fxrate      = book / local if local != 0 else 0
-        pgain_local = closed_local - closed_proceeds  # reversed — gain when price falls
+        pgain_local = closed_proceeds - closed_local  #
         pgain_book  = pgain_local * fxrate
         glbook      = closed_proceeds * fxrate - closed_book - pgain_book
 
@@ -322,7 +322,7 @@ def cover_equity(portfolio, investment, location, quantity, local, book, closing
         # Cost lot closure
         space.post_journal_entry(Journals(
             portfolio, investment, lotid, tax_date, ls, location, "Cost",
-            closed_qty, closed_local, closed_book, 0, 0,
+            -closed_qty, -closed_local, -closed_book, 0, 0,
             tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
             "Asset/Liability"
         ))

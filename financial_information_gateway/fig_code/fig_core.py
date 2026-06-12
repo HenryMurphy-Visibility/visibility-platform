@@ -70,14 +70,21 @@ def prep_state_cached(portfolio, calendar_name, period_start, period_end):
     """
     Cached version of prep_state.
     First call loads from disk and caches.
-    Subsequent calls with same parameters return instantly.
+    Subsequent calls return instantly.
     Cache persists for the server session.
+
+    NOTE: cache key intentionally EXCLUDES period_start. Prep loads
+    journals inception→period_end regardless of the display window
+    (period_start is a display filter applied downstream, same as in
+    compute_performance's daily-state cache). Keying on period_start
+    would force a needless 3.38M-JE reload every time only the display
+    window changes while period_end stays put.
     """
-    cache_key = (portfolio, calendar_name, period_start, period_end)
+    cache_key = (portfolio, calendar_name, period_end)
 
     if cache_key in _PREP_CACHE:
         print(f">>> PREP CACHE HIT | {portfolio} | {calendar_name} "
-              f"| {period_start} → {period_end}")
+              f"| → {period_end}")
         return _PREP_CACHE[cache_key]
 
     print(f">>> PREP CACHE MISS | loading from disk...")
@@ -126,6 +133,15 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
         / "Journals"
     )
 
+    # Load portfolio config once (currency, benchmark, etc.)
+    cfg_path = Path(FUNDS_PATH) / portfolio / "portfolio.json"
+    portfolio_config = {}
+    if cfg_path.exists():
+        import json
+        with open(cfg_path) as f:
+            portfolio_config = json.load(f)
+    base_currency = portfolio_config.get("base_currency", "USD")
+    primary_benchmark = portfolio_config.get("primary_benchmark", "SPX")
     # --------------------------------------------------
     # BUILD PERIOD MAP
     # --------------------------------------------------
@@ -259,6 +275,9 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
         "journal_entries":         journals,
         "prior_cutoff_datetime":   prior_cutoff_datetime,
         "current_cutoff_datetime": current_cutoff_datetime,
+        "base_currency": base_currency,
+        "primary_benchmark": primary_benchmark,
+        "portfolio_config": portfolio_config,
     }
 # ============================================================
 # RENDER
@@ -355,7 +374,7 @@ def _render_api(result: ComputeResult, options: dict):
 
     df = result.data
     page = options.get("page", 1)
-    page_size = options.get("page_size", 1000)
+    page_size = options.get("page_size", 20000)
 
     # Paginate
     if df is not None and not df.empty:

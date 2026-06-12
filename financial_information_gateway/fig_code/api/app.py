@@ -36,6 +36,7 @@ from financial_information_gateway.fig_code.compute_position_ledger import (
 )
 from financial_information_gateway.fig_code.fig_core import (
     prep_state,
+    prep_state_cached,
     render,
 )
 
@@ -644,6 +645,7 @@ def compute_appraisal_endpoint(
             result.data = result.data[
                 result.data["row_type"].isin(["subtotal", "type_total", "grand_total"])
             ].copy()
+        page_size = 20000
         return render(result, target="api", options={"page": page, "page_size": page_size})
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -771,7 +773,7 @@ def compute_performance_summary_endpoint(
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state(portfolio, calendar, period_start, period_end)
+        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
         result      = compute_performance_summary(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
@@ -798,7 +800,7 @@ def compute_performance_endpoint(
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state(portfolio, calendar, period_start, period_end)
+        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
         result      = compute_performance(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
@@ -825,7 +827,7 @@ def compute_performance_csv(
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state(portfolio, calendar, period_start, period_end)
+        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
         result      = compute_performance(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,

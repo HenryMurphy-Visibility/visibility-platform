@@ -4881,7 +4881,7 @@ import pickle
 # Function to concatenate portfolio_name with sub_ledger accounting object and store them
 def concatenate_and_store_ledger(space_manager, events_sheet, portfolio_name, process_start_date,
                                  current_period_start, current_period_cutoff, current_period_knowledge,
-                                 sub_ledger, general_ledger, tdate_fx, scheduler, stat_repo, price_data, fx_data, smf,
+                                 sub_ledger, general_ledger, tdate_fx, scheduler, stat_repo, price_data, fx_data, af,
                                  mark_daily, aggregate_marks, include_marks):
 
     # Directory to store the concatenated ledgers
@@ -4901,7 +4901,7 @@ def concatenate_and_store_ledger(space_manager, events_sheet, portfolio_name, pr
 # Example usage
 # concatenate_and_store_ledger(space_manager, events_sheet, "PortfolioABC", process_start_date,
 #                              current_period_start, current_period_cutoff, current_period_knowledge,
-#                              sub_ledger, general_ledger, tdate_fx, scheduler, stat_repo, price_data, fx_data, smf,
+#                              sub_ledger, general_ledger, tdate_fx, scheduler, stat_repo, price_data, fx_data, af,
 #                              mark_daily=True, aggregate_marks=True, include_marks=False)
 def store_master_query_space(portfolio, journal_entries):
     """

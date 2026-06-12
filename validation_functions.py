@@ -673,6 +673,10 @@ def get_file_fx_rate(
     Same currency → 1.0
     Otherwise     → look up payment_currency row for trade_date, return price directly.
     No cross-rate math needed — file is always USD-based.
+
+    Dates are normalized to YYYY-MM-DD on BOTH sides before comparing, because
+    the file stores M/D/YYYY (e.g. "1/5/2026") while callers pass ISO
+    ("2026-01-05"). A raw string compare misses every time otherwise.
     """
     import csv
     import os
@@ -690,19 +694,34 @@ def get_file_fx_rate(
     if not os.path.exists(fx_path):
         return None
 
-    trade_date_iso = trade_date[:10] if trade_date else ""
+    def _norm_date(val: str) -> str:
+        """Normalize '1/5/2026', '01/05/2026', '2026-01-05', or any of those
+        with a ':00:00:00' / 'T00:00:00' time suffix → 'YYYY-MM-DD'."""
+        if not val:
+            return ""
+        val = str(val).strip()
+        if "/" in val:                       # M/D/YYYY (optionally with time suffix)
+            parts = val.split("/")
+            if len(parts) >= 3:
+                m = parts[0].zfill(2)
+                d = parts[1].zfill(2)
+                y = parts[2].split(":")[0].split("T")[0].strip()
+                return f"{y}-{m}-{d}"
+        if len(val) >= 10 and val[4] == "-": # ISO (optionally with time suffix)
+            return val[:10]
+        return val
+
+    trade_date_norm = _norm_date(trade_date)
 
     with open(fx_path, newline="") as f:
         for row in csv.DictReader(f):
-            row_date = str(row.get("date", "")).strip()[:10]
+            row_date = _norm_date(str(row.get("date", "")))
             ccy      = str(row.get("currency", "")).strip().upper()
-            if row_date == trade_date_iso and ccy == payment_currency.upper():
+            if row_date == trade_date_norm and ccy == payment_currency.upper():
                 try:
                     return float(row.get("price", 0) or 0)
                 except (ValueError, TypeError):
                     return None
 
     return None
-
-
 DEFAULT_FUNCTIONS["get_file_fx_rate"] = get_file_fx_rate

@@ -448,8 +448,8 @@ def _calculate_market_values(rows, appraisal_date, price_rows, fx_rows):
                 local_cost / qty, 6
             ) if qty != 0 else None
         else:
-            market_value_local = qty * price * pricing_factor * fx_rate
-            market_value_book = qty * price * pricing_factor
+            market_value_local = qty * price * pricing_factor
+            market_value_book = qty * price * pricing_factor * fx_rate
 
             r["price"] = price
             r["fx_rate"] = fx_rate
@@ -475,250 +475,234 @@ def _calculate_market_values(rows, appraisal_date, price_rows, fx_rows):
 
 def _build_appraisal_dataframe(rows):
     """
-    Build appraisal DataFrame with investment type grouping,
-    investment subtotals, and grand total.
+    Build appraisal DataFrame.
 
-    Column visibility rules:
-        Detail              — all columns
-        Investment subtotal — qty, local, book, gain (same instrument)
-        Type total          — book columns only (mixed currencies)
-        Grand total         — book columns only
+    Row order / grouping:
+        CURRENCY block (netted, ls ignored)  -> currency details + CURRENCY TOTAL
+        LONG block  (ls = 'l')               -> type -> investment, with
+                                                investment subtotals, per-(ls,type)
+                                                type totals, then LONG TOTAL
+        SHORT block (ls = 's')               -> same, then SHORT TOTAL
+        GRAND TOTAL
 
-    Qty summing rules:
-        Investment subtotal — sum qty (same instrument)
-        Type total          — no qty (mixed instruments)
-        Grand total         — no qty
+    Column visibility:
+        Detail              all columns
+        Investment subtotal qty, local, book, gain (same instrument)
+        Type total          book only (mixed currencies)
+        LS total            book only (long/short total)
+        Currency total      book only
+        Grand total         book only
+
+    NOTE: this changes ONLY ordering, grouping, and which subtotal lines exist.
+    No market value, price, fx, or gain figure is recomputed here. Detail rows
+    carry the values _calculate_market_values already set; this function only
+    groups, sums them into subtotals, and orders the output.
     """
 
     if not rows:
         return pd.DataFrame()
 
-    # Sort: investment_type → investment → tax_date
-    rows = sorted(rows, key=lambda r: (
+    numeric_qty = ["qty"]
+    numeric_local = ["local_cost", "market_value_local", "price_gain_local"]
+    numeric_book = ["book_cost", "market_value_book", "price_gain_book"]
+
+    # ls ordering for NON-currency rows (long first, then short).
+    # Non-currency ls is strictly 'l' or 's' today; unknowns sort last.
+    LS_ORDER = {"l": 0, "s": 1}
+    LS_LABEL = {"l": "LONG", "s": "SHORT"}
+
+    def _is_currency_row(r):
+        return r.get("is_currency", 0) == 1
+
+    # ── PARTITION: currencies (netted, ls ignored) vs non-currencies ──────────
+    currency_rows = [r for r in rows if _is_currency_row(r)]
+    noncurrency_rows = [r for r in rows if not _is_currency_row(r)]
+
+    output_rows = []
+    grand_book = {col: 0.0 for col in numeric_book}
+
+    def _accumulate(dst, r):
+        for col in numeric_book:
+            val = r.get(col)
+            if isinstance(val, (int, float)):
+                dst[col] += val
+
+    # ══════════════════════════════════════════════════════════════════════
+    # CURRENCY BLOCK (top) — netted, ls plays no part
+    # ══════════════════════════════════════════════════════════════════════
+    if currency_rows:
+        currency_rows = sorted(currency_rows, key=lambda r: r.get("investment", ""))
+        ccy_book = {col: 0.0 for col in numeric_book}
+        for r in currency_rows:
+            detail = dict(r)
+            detail["row_type"] = "detail"
+            output_rows.append(detail)
+            _accumulate(ccy_book, r)
+            _accumulate(grand_book, r)
+
+        currency_total = {
+            "investment": "CURRENCY TOTAL", "full_name": "", "lotid": "",
+            "tax_date": "", "location": "", "ls": "", "financial_account": "",
+            "currency": "", "investment_type": "", "is_currency": 0,
+            "sector": "", "country": "", "analyst": "",
+            "qty": None, "price": None, "fx_rate": None, "cost_per_unit": None,
+            "row_type": "currency_total",
+        }
+        for col in numeric_local:
+            currency_total[col] = None
+        for col in numeric_book:
+            currency_total[col] = ccy_book[col]
+        output_rows.append(currency_total)
+
+    # ══════════════════════════════════════════════════════════════════════
+    # NON-CURRENCY: ls (long, short) -> investment_type -> investment
+    # ══════════════════════════════════════════════════════════════════════
+    noncurrency_rows = sorted(noncurrency_rows, key=lambda r: (
+        LS_ORDER.get(r.get("ls", ""), 99),
         r.get("investment_type", ""),
-        r.get("investment",      ""),
-        r.get("tax_date") or datetime.min
+        r.get("investment", ""),
+        r.get("tax_date") or datetime.min,
     ))
 
-    numeric_qty   = ["qty"]
-    numeric_local = ["local_cost", "market_value_local", "price_gain_local"]
-    numeric_book  = ["book_cost",  "market_value_book",  "price_gain_book"]
-    all_numeric   = numeric_qty + numeric_local + numeric_book
+    ls_groups = groupby(noncurrency_rows, key=lambda r: r.get("ls", ""))
 
-    output_rows  = []
-    grand_book   = {col: 0.0 for col in numeric_book}
+    for ls_val, ls_iter in ls_groups:
+        ls_rows = list(ls_iter)
+        ls_book = {col: 0.0 for col in numeric_book}
 
-    # ── GROUP BY INVESTMENT TYPE ──────────────────────────
-    type_groups = groupby(rows, key=lambda r: r.get("investment_type", ""))
+        type_groups = groupby(ls_rows, key=lambda r: r.get("investment_type", ""))
 
-    for inv_type, type_iter in type_groups:
+        for inv_type, type_iter in type_groups:
+            type_rows = list(type_iter)
+            type_book = {col: 0.0 for col in numeric_book}
 
-        type_rows = list(type_iter)
-        type_book = {col: 0.0 for col in numeric_book}
+            inv_groups = groupby(type_rows, key=lambda r: r.get("investment", ""))
 
-        # ── GROUP BY INVESTMENT ───────────────────────────
-        inv_groups = groupby(
-            type_rows,
-            key=lambda r: r.get("investment", "")
-        )
+            for inv, inv_iter in inv_groups:
+                inv_rows = list(inv_iter)
+                inv_qty = 0.0
+                inv_local = {col: 0.0 for col in numeric_local}
+                inv_book = {col: 0.0 for col in numeric_book}
 
-        for inv, inv_iter in inv_groups:
+                for r in inv_rows:
+                    detail = dict(r)
+                    detail["row_type"] = "detail"
+                    output_rows.append(detail)
 
-            inv_rows  = list(inv_iter)
-            inv_qty   = 0.0
-            inv_local = {col: 0.0 for col in numeric_local}
-            inv_book  = {col: 0.0 for col in numeric_book}
+                    qty = r.get("qty", 0.0)
+                    if isinstance(qty, (int, float)):
+                        inv_qty += qty
+                    for col in numeric_local:
+                        val = r.get(col)
+                        if isinstance(val, (int, float)):
+                            inv_local[col] += val
+                    for col in numeric_book:
+                        val = r.get(col)
+                        if isinstance(val, (int, float)):
+                            inv_book[col] += val
+                            type_book[col] += val
+                            ls_book[col] += val
+                            grand_book[col] += val
 
-            for r in inv_rows:
-
-                # Detail row
-                detail             = dict(r)
-                detail["row_type"] = "detail"
-                output_rows.append(detail)
-
-                # Accumulate qty
-                qty = r.get("qty", 0.0)
-                if isinstance(qty, (int, float)):
-                    inv_qty += qty
-
-                # Accumulate local
+                # Investment subtotal (qty + local + book)
+                subtotal = {
+                    "investment": inv, "full_name": "", "lotid": "",
+                    "tax_date": "", "location": "", "ls": ls_val,
+                    "financial_account": "",
+                    "currency": inv_rows[0].get("currency", ""),
+                    "investment_type": inv_type,
+                    "is_currency": inv_rows[0].get("is_currency", 0),
+                    "sector": "", "country": "", "analyst": "",
+                    "qty": inv_qty, "price": None, "fx_rate": None,
+                    "cost_per_unit": None, "row_type": "subtotal",
+                }
                 for col in numeric_local:
-                    val = r.get(col)
-                    if isinstance(val, (int, float)):
-                        inv_local[col] += val
-
-                # Accumulate book
+                    subtotal[col] = inv_local[col]
                 for col in numeric_book:
-                    val = r.get(col)
-                    if isinstance(val, (int, float)):
-                        inv_book[col]  += val
-                        type_book[col] += val
-                        grand_book[col]+= val
+                    subtotal[col] = inv_book[col]
+                output_rows.append(subtotal)
 
-            # Investment subtotal
-            subtotal = {
-                "investment":        inv,
-                "full_name":         "",
-                "lotid":             "",
-                "tax_date":          "",
-                "location":          "",
-                "ls":                "",
-                "financial_account": "",
-                "currency":          inv_rows[0].get("currency", ""),
-                "investment_type":   inv_type,
-                "is_currency":       inv_rows[0].get("is_currency", 0),
-                "sector":            "",
-                "country":           "",
-                "analyst":           "",
-                "qty":               inv_qty,
-                "price":             None,
-                "fx_rate":           None,
-                "cost_per_unit":     None,
-                "row_type":          "subtotal",
+            # Type total — book only, inside this ls block (NOT netted across ls)
+            type_total = {
+                "investment": f"{inv_type} TOTAL", "full_name": "", "lotid": "",
+                "tax_date": "", "location": "", "ls": ls_val,
+                "financial_account": "", "currency": "",
+                "investment_type": inv_type, "is_currency": 0,
+                "sector": "", "country": "", "analyst": "",
+                "qty": None, "price": None, "fx_rate": None, "cost_per_unit": None,
+                "row_type": "type_total",
             }
-
             for col in numeric_local:
-                subtotal[col] = inv_local[col]
-
+                type_total[col] = None
             for col in numeric_book:
-                subtotal[col] = inv_book[col]
+                type_total[col] = type_book[col]
+            output_rows.append(type_total)
 
-            output_rows.append(subtotal)
-
-        # Investment type total — book only, no qty, no local
-        type_total = {
-            "investment":        f"{inv_type} TOTAL",
-            "full_name":         "",
-            "lotid":             "",
-            "tax_date":          "",
-            "location":          "",
-            "ls":                "",
-            "financial_account": "",
-            "currency":          "",
-            "investment_type":   inv_type,
-            "is_currency":       0,
-            "sector":            "",
-            "country":           "",
-            "analyst":           "",
-            "qty":               None,
-            "price":             None,
-            "fx_rate":           None,
-            "cost_per_unit":     None,
-            "row_type":          "type_total",
+        # LS total — LONG TOTAL / SHORT TOTAL, book only
+        ls_total = {
+            "investment": f"{LS_LABEL.get(ls_val, ls_val.upper())} TOTAL",
+            "full_name": "", "lotid": "", "tax_date": "", "location": "",
+            "ls": ls_val, "financial_account": "", "currency": "",
+            "investment_type": "", "is_currency": 0,
+            "sector": "", "country": "", "analyst": "",
+            "qty": None, "price": None, "fx_rate": None, "cost_per_unit": None,
+            "row_type": "ls_total",
         }
-
         for col in numeric_local:
-            type_total[col] = None
-
+            ls_total[col] = None
         for col in numeric_book:
-            type_total[col] = type_book[col]
+            ls_total[col] = ls_book[col]
+        output_rows.append(ls_total)
 
-        output_rows.append(type_total)
-
-    # Grand total — book only
+    # ══════════════════════════════════════════════════════════════════════
+    # GRAND TOTAL — single line, book only (currencies + long + short)
+    # ══════════════════════════════════════════════════════════════════════
     grand_total = {
-        "investment":        "GRAND TOTAL",
-        "full_name":         "",
-        "lotid":             "",
-        "tax_date":          "",
-        "location":          "",
-        "ls":                "",
-        "financial_account": "",
-        "currency":          "",
-        "investment_type":   "",
-        "is_currency":       0,
-        "sector":            "",
-        "country":           "",
-        "analyst":           "",
-        "qty":               None,
-        "price":             None,
-        "fx_rate":           None,
-        "cost_per_unit":     None,
-        "row_type":          "grand_total",
+        "investment": "GRAND TOTAL", "full_name": "", "lotid": "",
+        "tax_date": "", "location": "", "ls": "", "financial_account": "",
+        "currency": "", "investment_type": "", "is_currency": 0,
+        "sector": "", "country": "", "analyst": "",
+        "qty": None, "price": None, "fx_rate": None, "cost_per_unit": None,
+        "row_type": "grand_total",
     }
-
     for col in numeric_local:
         grand_total[col] = None
-
     for col in numeric_book:
         grand_total[col] = grand_book[col]
-
     output_rows.append(grand_total)
 
     df = pd.DataFrame(output_rows)
 
-    # ── FORMAT NUMERIC COLUMNS ───────────────────────────
-    # Two decimal places, comma separated, no scientific notation
-    # Empty string for None/NaN display values
-
+    # ── FORMAT NUMERIC COLUMNS (unchanged from original) ──────────────────────
     for col in numeric_local + numeric_book:
         if col in df.columns:
             df[col] = df[col].apply(
                 lambda x: f"{x:,.2f}"
-                if isinstance(x, (int, float)) and x == x
-                else ""
-            )
-
+                if isinstance(x, (int, float)) and x == x else "")
     if "qty" in df.columns:
         df["qty"] = df["qty"].apply(
-            lambda x: f"{x:,.2f}"
-            if isinstance(x, (int, float)) and x == x
-            else ""
-        )
-
+            lambda x: f"{x:,.2f}" if isinstance(x, (int, float)) and x == x else "")
     if "cost_per_unit" in df.columns:
         df["cost_per_unit"] = df["cost_per_unit"].apply(
-            lambda x: f"{x:,.6f}"
-            if isinstance(x, (int, float)) and x == x
-            else ""
-        )
-
+            lambda x: f"{x:,.6f}" if isinstance(x, (int, float)) and x == x else "")
     if "price" in df.columns:
         df["price"] = df["price"].apply(
-            lambda x: f"{x:,.4f}"
-            if isinstance(x, (int, float)) and x == x
-            else ""
-        )
-
+            lambda x: f"{x:,.4f}" if isinstance(x, (int, float)) and x == x else "")
     if "fx_rate" in df.columns:
         df["fx_rate"] = df["fx_rate"].apply(
-            lambda x: f"{x:,.4f}"
-            if isinstance(x, (int, float)) and x == x
-            else ""
-        )
+            lambda x: f"{x:,.4f}" if isinstance(x, (int, float)) and x == x else "")
 
-    # Fill remaining None/NaN
     df = df.fillna("")
 
-    # ── COLUMN ORDER ─────────────────────────────────────
     col_order = [
-        "investment",
-        "full_name",
-        "lotid",
-        "tax_date",
-        "location",
-        "ls",
-        "financial_account",
-        "currency",
-        "investment_type",
-        "qty",
-        "cost_per_unit",
-        "local_cost",
-        "book_cost",
-        "price",
-        "fx_rate",
-        "market_value_local",
-        "market_value_book",
-        "price_gain_local",
-        "price_gain_book",
-        "row_type",
-        "sector",
-        "country",
-        "analyst",
+        "investment", "full_name", "lotid", "tax_date", "location", "ls",
+        "financial_account", "currency", "investment_type", "qty",
+        "cost_per_unit", "local_cost", "book_cost", "price", "fx_rate",
+        "market_value_local", "market_value_book", "price_gain_local",
+        "price_gain_book", "row_type", "sector", "country", "analyst",
     ]
-
     col_order = [c for c in col_order if c in df.columns]
-    df        = df[col_order]
+    df = df[col_order]
 
     return df
 

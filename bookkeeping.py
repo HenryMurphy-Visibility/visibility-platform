@@ -115,6 +115,16 @@ class PortfolioComposite:
 # NOTE: Precedence is assigned to individual event functions, not just event types.
 # This ensures granular control over execution order, particularly for multi-stage events.
 
+def precedence_fingerprint(registry: dict) -> str:
+    """
+    Deterministic fingerprint of an ordering: hash of the sorted
+    (event, slot) pairs. Same fingerprint => same execution order,
+    by construction.
+    """
+    import hashlib
+    canonical = ";".join(f"{k}={v}" for k, v in sorted(registry.items()))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
 # In EventScheduler class
 from collections import OrderedDict
 
@@ -130,34 +140,97 @@ class EventScheduler:
         self._sorted = False
         self._executed = False
 
+        # ── PRECEDENCE REGISTRY IDENTITY ──────────────────────────
+        # The registry is a convention: declared, versioned, stamped
+        # onto every period it builds. v1 = tied original; v2 = the
+        # de-tied banded registry of 2026-06.
+        self.precedence_version = "v2"
         self.event_type_precedence = {
-            'open_payable': 1073, 'open_receivable': 1074,
-             'buy_equity': 1075, 'sell_equity': 1111,
-            'short_equity': 1076, 'cover_equity': 1111,
-            'buy_bond': 1075, 'sell_bond': 1111,
-            'short_bond': 1111, 'cover_bond': 1111,
-            'buy_future': 1075, 'sell_future': 1111,
-            'short_future': 1076, 'cover_future': 1111,
-            'open_swap': 1075, 'reset_swap': 1111,
-            'spot_fx': 1111, 'forward_fx': 1111,
-            'deposit_currency': 1090, 'withdraw_currency': 1090,
-            'split_equity': 1065, 'dividend_equity': 1068,
-            'mark_prices': 9000, 'perf_mark': 9000,
-            'allocate': 9500,
-            'mark_bond_accruals': 1040,
-            'relieve_accrued_on_close_settle': 1043,
-            'schedule_mark_settled': 1045,
+
+
+            # ═══════════════════════════════════════════════════════════
+            # BEGINNING OF DAY — income recognition & claim maturation
+            # Runs against YESTERDAY's settled state: accrual reads the
+            # AF before anything settles today (through-settle-inclusive
+            # ownership depends on this), and the coupon converts
+            # accrued -> due before the settlement band can wash it.
+            # ═══════════════════════════════════════════════════════════
+            'mark_bond_accruals': 1040,  # daily accrual, policy-aware
+            'schedule_mark_settled': 1045,  # AF lifecycle flip: today's settles become entitled
+            'bond_coupon': 1049,  # ex-date: accrued -> due claim (no income; income was daily)
+
+            # ═══════════════════════════════════════════════════════════
+            # SETTLEMENT — booked claims wash to cash
+            # Settles what was BOOKED, never recomputes. Relief runs
+            # last in the band: it reads post-settlement AF state.
+            # ═══════════════════════════════════════════════════════════
             'settle_bond_flows_in': 1050,
-            'settle_bond_flows_out': 1053,
             'settle_single_flow_in': 1051,
+            'settle_bond_flows_out': 1053,
             'settle_single_flow_out': 1054,
             'settle_multiple_flows_in_out': 1055,
             'settle_pay_rec_by_tranid': 1056,
-            'bond_coupon': 1061,
-            'assign_call_long': 1113,
-            'assign_put_short': 1114,
-            'write_option': 1111
+            'relieve_accrued_on_close_settle': 1058,  # post-settlement: proportional accrued relief on closes
+
+            # ═══════════════════════════════════════════════════════════
+            # CORPORATE ACTIONS — pre-trade position transformations
+            # ═══════════════════════════════════════════════════════════
+            'split_equity': 1065,
+            'dividend_equity': 1068,
+
+            # ═══════════════════════════════════════════════════════════
+            # TRADING — today's events book; claims open
+            # Opens first (buys/shorts), then closes (sells/covers),
+            # then FX events, then option lifecycle.
+            # ═══════════════════════════════════════════════════════════
+            'open_payable': 1073,
+            'open_receivable': 1074,
+            'buy_equity': 1075,
+            'buy_bond': 1076,
+            'buy_future': 1077,
+            'open_swap': 1078,
+            'short_equity': 1080,
+            'short_bond': 1081,
+            'short_future': 1082,
+            'sell_equity': 1111,
+            'cover_equity': 1112,
+            'sell_bond': 1113,
+            'cover_bond': 1114,
+            'sell_future': 1115,
+            'cover_future': 1116,
+            'reset_swap': 1117,
+            'spot_fx': 1118,
+            'forward_fx': 1119,
+            'write_option': 1120,
+            'assign_call_long': 1121,
+            'assign_put_short': 1122,
+
+            # ═══════════════════════════════════════════════════════════
+            # CASH OPERATIONS — capital movements & same-day money
+            # ═══════════════════════════════════════════════════════════
+            'deposit_currency': 1130,
+            'withdraw_currency': 1131,
+            'cash_payment_same_day': 1132,
+
+            # ═══════════════════════════════════════════════════════════
+            # END OF DAY — valuation & allocation
+            # Everything economic has happened; now measure it.
+            # ═══════════════════════════════════════════════════════════
+            'mark_prices': 9000,
+            'perf_mark': 9001,
+            'allocate': 9500,
         }
+
+        # Precedence must be total: every event a unique slot. A tie
+        # is an undeclared ordering convention -- forbidden.
+        _prec = self.event_type_precedence
+        if len(set(_prec.values())) != len(_prec):
+            from collections import Counter
+            dupes = [v for v, n in Counter(_prec.values()).items() if n > 1]
+            raise ValueError(f"event_type_precedence contains tied slots: "
+                             f"{sorted(dupes)} -- every event must have a "
+                             f"unique precedence.")
+
 
     def schedule_event(self, tradedate, event_function, *args):
 

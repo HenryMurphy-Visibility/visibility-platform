@@ -235,7 +235,7 @@ import pandas as pd
 
 import pandas as pd
 
-class SettlementChores:
+class AdministrativeFacility:
     def __init__(self):
         self.records = {}  # Manages records by transaction ID
 

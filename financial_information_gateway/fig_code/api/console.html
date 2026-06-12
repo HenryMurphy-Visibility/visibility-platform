@@ -14,7 +14,7 @@
     --accent:    #2E5FA3;
     --accent2:   #4a7fc1;
     --text:      #d8dce8;
-    --muted:     #5a6080;
+    --muted:     #c4c9d8;;
     --success:   #2a7a4a;
     --success-t: #3dba70;
     --fail:      #7a2a2a;
@@ -82,10 +82,10 @@
   .nav-section {
     padding: 6px 20px 4px;
     font-family: var(--mono);
-    font-size: 0.6em;
+    font-size: 0.75em;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #8a90a8;
+    color: #ffffff;
     cursor: default;
   }
   .nav-section:hover { color: var(--accent2); }
@@ -94,7 +94,7 @@
     padding: 9px 20px;
     font-family: var(--mono);
     font-size: 0.78em;
-    color: var(--muted);
+    color: #7eb8f7;
     cursor: pointer;
     border-left: 2px solid transparent;
     transition: all 0.15s;
@@ -197,6 +197,43 @@
   .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
   .btn-secondary.visible { display: inline-block; }
   .status { font-family: var(--mono); font-size: 0.72em; color: var(--muted); margin-left: auto; }
+
+  /* ── PERIOD BOX PICKER ──────────────────────────────────── */
+  .picker-toggle-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .btn-pick {
+    font-family: var(--mono); font-size: 0.7em; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 7px 16px; border: 1px solid var(--border);
+    background: transparent; color: #8a90a8; cursor: pointer; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn-pick:hover { border-color: var(--accent); color: var(--text); }
+  .btn-pick.open { border-color: var(--accent); color: var(--accent2); }
+  .picker-readout { font-family: var(--mono); font-size: 0.7em; color: var(--muted); }
+  .picker-readout b { color: var(--accent2); font-weight: 500; }
+  .bp-wrap {
+    border: 1px solid var(--border); border-radius: 2px; background: var(--bg);
+    max-height: 300px; overflow-y: auto; padding: 12px 14px; margin-bottom: 18px;
+  }
+  .bp-wrap::-webkit-scrollbar { width: 6px; }
+  .bp-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .bp-loading { font-family: var(--mono); font-size: 0.72em; color: var(--muted); padding: 8px; }
+  .bp-yearblock { margin-bottom: 14px; }
+  .bp-yearblock:last-child { margin-bottom: 0; }
+  .bp-yearlabel {
+    font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px;
+    color: var(--accent2); text-transform: uppercase; margin: 0 0 6px 2px;
+  }
+  .bp-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .bp-box {
+    min-width: 48px; text-align: center; padding: 6px 8px; border-radius: 3px;
+    border: 1px solid var(--border); background: var(--surface); color: #8a90a8;
+    font-family: var(--mono); font-size: 0.66em; cursor: pointer; user-select: none;
+    transition: all 0.1s;
+  }
+  .bp-box:hover { border-color: var(--accent2); color: var(--text); }
+  .bp-box.pending { border-style: dashed; color: var(--muted); }
+  .bp-box.inspan { background: rgba(46,95,163,0.20); border-color: rgba(46,95,163,0.45); color: #cfe0f7; }
+  .bp-box.endpoint { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
 
   .all-clear-banner {
     display: none;
@@ -376,6 +413,12 @@
 
       </div>
 
+      <div class="picker-toggle-row">
+        <button class="btn-pick" id="btn-pick" onclick="togglePicker()">&#9662; Pick Periods</button>
+        <span class="picker-readout" id="picker-readout"></span>
+      </div>
+      <div class="bp-wrap" id="bp-wrap" style="display:none"></div>
+
       <div class="btn-row">
         <button class="btn btn-primary" id="btn-execute" onclick="execute()">Execute</button>
         <button class="btn btn-secondary" id="btn-csv" onclick="downloadCSV()">Download CSV</button>
@@ -534,8 +577,124 @@ function updatePeriodHints() {
   }
 }
 
-document.getElementById('f-calendar').addEventListener('change', updatePeriodHints);
-document.getElementById('f-calendar').addEventListener('blur',   updatePeriodHints);
+document.getElementById('f-calendar').addEventListener('change', () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-calendar').addEventListener('blur',   () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-portfolio').addEventListener('change', reloadGridIfOpen);
+
+/* ============================================================
+   PERIOD BOX PICKER
+   Fetches periods from the ops calendar endpoint and renders a
+   year-partitioned, scrollable grid. Click one period (single)
+   or two (contiguous range — span fills, across years). A third
+   click slides the window. Writes the resolved start/end into
+   f-period-start / f-period-end — the fields execute() reads —
+   so the execute path is completely unchanged.
+   ============================================================ */
+let _bpOrdered  = [];   // flat chronological list of period_name
+let _bpSelected = [];   // up to 2 endpoints, in click order
+let _bpOpen     = false;
+
+function togglePicker() {
+  _bpOpen = !_bpOpen;
+  const wrap = document.getElementById('bp-wrap');
+  const btn  = document.getElementById('btn-pick');
+  wrap.style.display = _bpOpen ? 'block' : 'none';
+  btn.classList.toggle('open', _bpOpen);
+  btn.innerHTML = (_bpOpen ? '&#9652; ' : '&#9662; ') + 'Pick Periods';
+  if (_bpOpen) loadGrid();
+}
+
+function reloadGridIfOpen() { if (_bpOpen) loadGrid(); }
+
+async function loadGrid() {
+  const portfolio = document.getElementById('f-portfolio').value.trim();
+  const calendar  = document.getElementById('f-calendar').value.trim();
+  const wrap = document.getElementById('bp-wrap');
+  wrap.innerHTML = '<div class="bp-loading">Loading periods…</div>';
+
+  let periods = [];
+  try {
+    const r = await fetch(`${BASE}/api/v1/ops/portfolio/${encodeURIComponent(portfolio)}/calendar/${encodeURIComponent(calendar)}`);
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+    periods = (d.periods || []).map(p => ({ name: p.period_name, status: p.status }));
+  } catch (e) {
+    wrap.innerHTML = `<div class="bp-loading">No periods for ${portfolio} · ${calendar} — check the portfolio and calendar names.</div>`;
+    return;
+  }
+  if (!periods.length) {
+    wrap.innerHTML = `<div class="bp-loading">No periods returned for ${portfolio} · ${calendar}.</div>`;
+    return;
+  }
+
+  _bpOrdered = periods.map(p => p.name).sort();          // lexical = chronological
+  const statusBy = Object.fromEntries(periods.map(p => [p.name, p.status]));
+
+  // Pre-select from whatever is currently typed in the period fields.
+  const curStart = document.getElementById('f-period-start').value.trim();
+  const curEnd   = document.getElementById('f-period-end').value.trim();
+  _bpSelected = [];
+  if (_bpOrdered.includes(curStart)) _bpSelected.push(curStart);
+  if (curEnd && curEnd !== curStart && _bpOrdered.includes(curEnd)) _bpSelected.push(curEnd);
+
+  // Group by year (first 4 chars), chronological within each.
+  const byYear = {};
+  for (const name of _bpOrdered) (byYear[name.slice(0,4)] ||= []).push(name);
+
+  wrap.innerHTML = Object.keys(byYear).sort().map(yr => `
+    <div class="bp-yearblock">
+      <div class="bp-yearlabel">${yr}</div>
+      <div class="bp-row">
+        ${byYear[yr].map(name => {
+          const pend  = (statusBy[name] && statusBy[name] !== 'Closed') ? ' pending' : '';
+          const label = name.length <= 4 ? name : name.slice(5);  // MM | Qn | MM-DD
+          return `<div class="bp-box${pend}" data-name="${name}" onclick="bpPick('${name}')">${label}</div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+
+  bpRender();
+}
+
+function bpPick(name) {
+  const i = _bpSelected.indexOf(name);
+  if (i !== -1) { _bpSelected.splice(i, 1); }                 // re-click deselects
+  else { _bpSelected.push(name); if (_bpSelected.length > 2) _bpSelected.shift(); }  // cap 2, slide
+  bpRender();
+}
+
+function bpResolve() {
+  if (_bpSelected.length === 0) return [null, null];
+  if (_bpSelected.length === 1) return [_bpSelected[0], _bpSelected[0]];
+  const s = [..._bpSelected].sort();                          // chronological endpoints
+  return [s[0], s[s.length - 1]];
+}
+
+function bpRender() {
+  const [start, end] = bpResolve();
+
+  // In-span set (inclusive), off the flat ordered list — crosses years naturally.
+  const span = new Set();
+  if (start && end) {
+    const lo = _bpOrdered.indexOf(start), hi = _bpOrdered.indexOf(end);
+    for (let k = Math.min(lo, hi); k <= Math.max(lo, hi); k++) span.add(_bpOrdered[k]);
+  }
+
+  document.querySelectorAll('.bp-box').forEach(box => {
+    const n = box.dataset.name;
+    box.classList.toggle('endpoint', _bpSelected.includes(n));
+    box.classList.toggle('inspan', span.has(n) && !_bpSelected.includes(n));
+  });
+
+  // Write into the fields execute() reads — this is the whole integration.
+  document.getElementById('f-period-start').value = start || '';
+  document.getElementById('f-period-end').value   = end   || '';
+
+  const ro = document.getElementById('picker-readout');
+  if (!start)              ro.innerHTML = '';
+  else if (start === end)  ro.innerHTML = `Selected <b>${start}</b>`;
+  else                     ro.innerHTML = `<b>${start}</b> &rarr; <b>${end}</b> · ${span.size} periods`;
+}
 
 function selectEndpoint(key, el) {
   currentEndpoint = key;
@@ -648,7 +807,7 @@ async function execute() {
       document.getElementById('table-head').innerHTML =
         '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
       document.getElementById('table-body').innerHTML =
-        rows.slice(0,5000).map(row =>
+        rows.slice(0,20000).map(row =>
           '<tr>' + cols.map(col => {
             const v   = row[col];
             const num = typeof v === 'number';
@@ -664,8 +823,8 @@ async function execute() {
 
       document.getElementById('results-panel').style.display = '';
       document.getElementById('results-desc').textContent = `${rows.length.toLocaleString()} rows`;
-      document.getElementById('row-count').textContent = rows.length > 5000
-        ? `Showing first 5,000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
+      document.getElementById('row-count').textContent = rows.length > 20000
+        ? `Showing first 20000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
         : `${rows.length.toLocaleString()} rows`;
     }
 
