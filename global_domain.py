@@ -521,9 +521,15 @@ def mark_bond_accruals(portfolio, investment, mark_date,
         raise ValueError(f"Unknown accrual posting policy '{policy}' "
                          f"for portfolio {portfolio}")
 
+
     # ── ENTITLEMENT: PRE-SETTLEMENT AF STATE ──────────────────────
     positions = af.entitled_position(portfolio=portfolio,
                                      investment=investment)
+
+    # (B) at the TOP of mark_bond_accruals, right after entitled_position is read,
+    #     the first time it fires in Feb:
+    print(f"[ACCRUAL-GATE] {investment} {mark_date:%Y-%m-%d} positions={positions}")
+
     if not positions:
         print(f"Bond accruals: {portfolio}/{investment} "
               f"{mark_date:%Y-%m-%d} policy={policy} -- no AF "
@@ -580,6 +586,153 @@ def mark_bond_accruals(portfolio, investment, mark_date,
               f"{mark_date:%Y-%m-%d} policy={policy} -- entitled "
               f"positions all zero, nothing posted.")
 
+
+def bond_coupon(portfolio, investment, space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                payment_currency, per_share, af, fx_ex):
+    """
+    Coupon ex-date posting. No NEW income beyond one day -- income
+    was recognized daily by the accrual engine through ex-1. This
+    rule:
+
+      1. Relieves the accrued claim at its READ book cost (what the
+         daily accrual actually carried it at -- historical rates).
+      2. Recognizes the FINAL day (ex-date) as income, at the
+         ex-date rate. That day = coupon_local - accrued_local.
+      3. Collects the coupon: cash today if ex == pay (same-day),
+         else opens a due claim (InterestReceivable) booked at the
+         ex-date rate, to be washed at pay date.
+      4. Books FXGainAccrued for the residual: coupon at ex-rate vs
+         (accrued at historical book + ex-day at ex-rate). Zero for
+         base currency; realized FX on income across a moving rate
+         otherwise.
+
+    Sign convention: debits +, credits -. Direction follows signed
+    entitled qty -- long relieves a Receivable and earns Income;
+    short relieves a Payable and books Expense; cash_payment_same_day
+    takes +local for a receipt, -local for a payment.
+
+    Relief is posted at the READ balance plus the constructed
+    ex-day, so the accrued account zeroes by construction. A gap
+    beyond one day surfaces in the eps check (and Pillar 7), never
+    silently absorbed.
+    """
+    ibor_date = tradedate
+    repo = space.asset_liability_repository
+    import currency_domain
+
+    positions = af.entitled_position(portfolio=portfolio,
+                                     investment=investment)
+
+    # ── READ accrued balances at book cost, per (location, ls) ───
+    accrued_bal = {}  # (location, ls) -> [local, book]
+    subspace = repo.get_position_space(investment)
+    if subspace is not None:
+        for key, (qty, local, book, notional, oface) in subspace.entries.items():
+            (_, inv, lotid, tax_date, ls_k, loc_k, fa) = key
+            if fa in ("AccruedInterestReceivable", "AccruedInterestPayable"):
+                k = (loc_k, ls_k)
+                if k not in accrued_bal:
+                    accrued_bal[k] = [0.0, 0.0]
+                accrued_bal[k][0] += local
+                accrued_bal[k][1] += book
+
+    for (location, ls), entitled_qty in positions.items():
+        if entitled_qty == 0:
+            continue
+        # Missing location => structural default, made VISIBLE (not
+        # silently inferred). Users may add semantic validation
+        # (e.g. "must be one of our desks") on top.
+        if not location:
+            location = "Default"
+
+        coupon_local = entitled_qty * per_share / 100
+        coupon_book = coupon_local * fx_ex
+
+        # Account names follow position direction (debit+/credit-).
+        if coupon_local >= 0:
+            faal_accr = "AccruedInterestReceivable"
+            faal_inc = "InterestIncome"
+            faal_due = "InterestReceivable"
+        else:
+            faal_accr = "AccruedInterestPayable"
+            faal_inc = "InterestExpense"
+            faal_due = "InterestPayable"
+
+        bal_local, bal_book = accrued_bal.get((location, ls), [0.0, 0.0])
+
+        # The read accrued carries through ex-1; the ex-date day is
+        # the missing piece, by construction the coupon/accrued gap.
+        exday_local = coupon_local - bal_local
+        exday_book = exday_local * fx_ex
+
+        # 1. Relieve accrued at READ book cost (historical rates).
+        #    coupon_local >= 0 (long): accrued was a debit balance,
+        #    relief is a credit -> -bal. Mirror for short.
+        relief = Journals(portfolio, investment, 0, 0,
+                          ls, location, faal_accr,
+                          -bal_local, -bal_local, -bal_book,
+                          None, None, tranid,
+                          "Coupon", tradedate, settledate,
+                          kdbegin, kdend, ibor_date, "Asset/Liability")
+        space.post_journal_entry(relief)
+
+        # 2. Ex-date day recognized as income at the ex-date rate.
+        #    Income is a credit (long) -> -exday. Expense a debit
+        #    (short) -> faal_inc flips and the sign mirrors naturally
+        #    since exday_local is negative for short.
+        if exday_local != 0:
+            income = Journals(portfolio, investment, 0, 0,
+                              ls, location, faal_inc,
+                              0, -exday_local, -exday_book,
+                              None, None, tranid,
+                              "Coupon", tradedate, settledate,
+                              kdbegin, kdend, ibor_date,
+                              "Revenue/Expense/Capital")
+            space.post_journal_entry(income)
+
+        # 3. Collect: cash today if same-day, else open due claim.
+        if tradedate == settledate:
+            # cash_payment_same_day: +local receipt (long coupon),
+            # -local payment (short coupon). coupon_local already
+            # carries the right sign; book at ex-date rate.
+            currency_domain.cash_payment_same_day(
+                portfolio, payment_currency, location, 0,
+                coupon_local, coupon_book, space, tranid, "Coupon",
+                tradedate, settledate, kdbegin, kdend)
+        else:
+            # Due claim at the ex-date rate, washed at pay date.
+            due = Journals(portfolio, payment_currency, tranid, 0,
+                           ls, location, faal_due,
+                           coupon_local, coupon_local, coupon_book,
+                           None, None, tranid,
+                           "Coupon", tradedate, settledate,
+                           kdbegin, kdend, ibor_date, "Asset/Liability")
+            space.post_journal_entry(due)
+
+        # 4. FXGainAccrued: coupon at ex-rate vs accrued (historical
+        #    book) + ex-day (ex-rate). Zero for base by construction.
+        fxgl = coupon_book - (bal_book + exday_book)
+        if fxgl != 0:
+            fxje = Journals(portfolio, payment_currency, 0, 0,
+                            ls, location, "FXGainAccrued",
+                            0, 0, -fxgl, None, None,
+                            tranid, "Coupon", tradedate, settledate,
+                            kdbegin, kdend, ibor_date,
+                            "Revenue/Expense/Capital")
+            space.post_journal_entry(fxje)
+
+        # Local sanity: relief + ex-day must equal the coupon. A
+        # residual beyond one day's rounding is an upstream accrual
+        # defect -- surfaced, never absorbed.
+        eps = coupon_local - (bal_local + exday_local)
+        if abs(eps) > 0.02:
+            print(f"COUPON WARNING: {portfolio}/{investment} "
+                  f"{location}/{ls} coupon {coupon_local:.2f} vs "
+                  f"accrued+exday {(bal_local + exday_local):.2f} "
+                  f"(eps={eps:.2f}) -- upstream mismatch, Pillar 7 "
+                  f"will report.")
+
+    return
 
 def allocate(portfolio,  investment, location, quantity, local, book, fund_structures_space_journal_entries,
             tranid, transaction, tradedate, settledate, kdbegin, kdend, period_start,

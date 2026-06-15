@@ -467,107 +467,106 @@ def cover_bond(portfolio, investment, location, quantity, local, book, closing_m
 
     return
 
-
-def bond_coupon(portfolio, investment, space, tranid,
-                transaction, tradedate, settledate, kdbegin, kdend,
-                payment_currency, per_share, af, fx_ex):
-    """
-    Coupon ex-date posting. No income -- income was recognized
-    daily by the accrual engine. This converts the accumulated
-    claim into a collectible:
-
-      DR  InterestReceivable        coupon_local @ fx_ex (NEW rate)
-      CR  AccruedInterestReceivable at BOOK COST (what daily
-                                    accrual + reclass actually
-                                    carried it at)
-      FX G/L = the difference      (realized FX on income earned
-                                    across a moving rate)
-
-    Direction follows signed entitled qty: long relieves a
-    Receivable, short relieves a Payable, the economic-direction
-    rule shared with mark_bond_accruals.
-
-    The relief is posted at the READ balance, not a recomputation
-    -- the account zeroes by construction, and any upstream
-    mis-accrual surfaces as a local-column residual here (and in
-    Pillar 7) rather than being silently absorbed.
-    """
-    ibor_date = tradedate
-    repo = space.asset_liability_repository
-
-    positions = af.entitled_position(portfolio=portfolio,
-                                     investment=investment)
-
-    # ── READ accrued balances at book cost, per (location, ls) ───
-    # Pattern per mark_prices: subspace.entries keyed
-    # (portfolio, inv, lotid, tax_date, ls, loc, fa) -> (qty, local, book, ...)
-    accrued_bal = {}  # (location, ls) -> [local, book]
-    subspace = repo.get_position_space(investment)
-    if subspace is not None:
-        for key, (qty, local, book, notional, oface) in subspace.entries.items():
-            (_, inv, lotid, tax_date, ls_k, loc_k, fa) = key
-            if fa in ("AccruedInterestReceivable", "AccruedInterestPayable"):
-                k = (loc_k, ls_k)
-                if k not in accrued_bal:
-                    accrued_bal[k] = [0.0, 0.0]
-                accrued_bal[k][0] += local
-                accrued_bal[k][1] += book
-
-    for (location, ls), entitled_qty in positions.items():
-        if entitled_qty == 0:
-            continue
-
-        coupon_local = entitled_qty * per_share / 100
-        due_book = coupon_local * fx_ex
-
-        if coupon_local > 0:
-            faal_due = "InterestReceivable"
-            faal_accr = "AccruedInterestReceivable"
-        else:
-            faal_due = "InterestPayable"
-            faal_accr = "AccruedInterestPayable"
-
-        bal_local, bal_book = accrued_bal.get((location, ls), [0.0, 0.0])
-
-        # 1. Due claim at the ex-date rate (the NEW rate).
-        due = Journals(portfolio, payment_currency, 0, 0,
-                       ls, location, faal_due,
-                       coupon_local, coupon_local, due_book,
-                       None, None, tranid,
-                       "Coupon", tradedate, settledate,
-                       kdbegin, kdend, ibor_date, "Asset/Liability")
-        space.post_journal_entry(due)
-
-        # 2. Relief of accrued at BOOK COST -- the full read
-        #    balance, so the account zeroes by construction.
-        relief = Journals(portfolio, investment, 0, 0,
-                          ls, location, faal_accr,
-                          -bal_local, -bal_local, -bal_book,
-                          None, None, tranid,
-                          "Coupon", tradedate, settledate,
-                          kdbegin, kdend, ibor_date, "Asset/Liability")
-        space.post_journal_entry(relief)
-
-        # 3. FX G/L: due at new rate vs accrued at book cost.
-        fxgl = due_book - bal_book
-        if fxgl != 0:
-            fxje = Journals(portfolio, payment_currency, 0, 0,
-                            ls, location, "FXGainAccrued",
-                            0, 0, -fxgl, None, None,
-                            tranid, "Coupon", tradedate, settledate,
-                            kdbegin, kdend, ibor_date,
-                            "Revenue/Expense/Capital")
-            space.post_journal_entry(fxje)
-
-        # Local-column sanity: coupon vs accrued local should agree
-        # to the penny. A residual here is an upstream accrual
-        # defect -- surface it, never absorb it.
-        eps = coupon_local - bal_local
-        if abs(eps) > 0.02:
-            print(f"COUPON WARNING: {portfolio}/{investment} "
-                  f"{location}/{ls} accrued local {bal_local:.2f} vs "
-                  f"coupon {coupon_local:.2f} (eps={eps:.2f}) -- "
-                  f"upstream accrual mismatch, Pillar 7 will report.")
-
-    return
-
+#
+# def bond_coupon(portfolio, investment, space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+#                 payment_currency, per_share, af, fx_ex):
+#     """
+#     Coupon ex-date posting. No income -- income was recognized
+#     daily by the accrual engine. This converts the accumulated
+#     claim into a collectible:
+#
+#       DR  InterestReceivable        coupon_local @ fx_ex (NEW rate)
+#       CR  AccruedInterestReceivable at BOOK COST (what daily
+#                                     accrual + reclass actually
+#                                     carried it at)
+#       FX G/L = the difference      (realized FX on income earned
+#                                     across a moving rate)
+#
+#     Direction follows signed entitled qty: long relieves a
+#     Receivable, short relieves a Payable, the economic-direction
+#     rule shared with mark_bond_accruals.
+#
+#     The relief is posted at the READ balance, not a recomputation
+#     -- the account zeroes by construction, and any upstream
+#     mis-accrual surfaces as a local-column residual here (and in
+#     Pillar 7) rather than being silently absorbed.
+#     """
+#     ibor_date = tradedate
+#     repo = space.asset_liability_repository
+#
+#     positions = af.entitled_position(portfolio=portfolio,
+#                                      investment=investment)
+#
+#     # ── READ accrued balances at book cost, per (location, ls) ───
+#     # Pattern per mark_prices: subspace.entries keyed
+#     # (portfolio, inv, lotid, tax_date, ls, loc, fa) -> (qty, local, book, ...)
+#     accrued_bal = {}  # (location, ls) -> [local, book]
+#     subspace = repo.get_position_space(investment)
+#     if subspace is not None:
+#         for key, (qty, local, book, notional, oface) in subspace.entries.items():
+#             (_, inv, lotid, tax_date, ls_k, loc_k, fa) = key
+#             if fa in ("AccruedInterestReceivable", "AccruedInterestPayable"):
+#                 k = (loc_k, ls_k)
+#                 if k not in accrued_bal:
+#                     accrued_bal[k] = [0.0, 0.0]
+#                 accrued_bal[k][0] += local
+#                 accrued_bal[k][1] += book
+#
+#     for (location, ls), entitled_qty in positions.items():
+#         if entitled_qty == 0:
+#             continue
+#
+#         coupon_local = entitled_qty * per_share / 100
+#         due_book = coupon_local * fx_ex
+#
+#         if coupon_local > 0:
+#             faal_due = "InterestReceivable"
+#             faal_accr = "AccruedInterestReceivable"
+#         else:
+#             faal_due = "InterestPayable"
+#             faal_accr = "AccruedInterestPayable"
+#
+#         bal_local, bal_book = accrued_bal.get((location, ls), [0.0, 0.0])
+#
+#         # 1. Due claim at the ex-date rate (the NEW rate).
+#         due = Journals(portfolio, payment_currency, tranid, 0,
+#                        ls, location, faal_due,
+#                        coupon_local, coupon_local, due_book,
+#                        None, None, tranid,
+#                        "Coupon", tradedate, settledate,
+#                        kdbegin, kdend, ibor_date, "Asset/Liability")
+#         space.post_journal_entry(due)
+#
+#         # 2. Relief of accrued at BOOK COST -- the full read
+#         #    balance, so the account zeroes by construction.
+#         relief = Journals(portfolio, investment, 0, 0,
+#                           ls, location, faal_accr,
+#                           -bal_local, -bal_local, -bal_book,
+#                           None, None, tranid,
+#                           "Coupon", tradedate, settledate,
+#                           kdbegin, kdend, ibor_date, "Asset/Liability")
+#         space.post_journal_entry(relief)
+#
+#         # 3. FX G/L: due at new rate vs accrued at book cost.
+#         fxgl = due_book - bal_book
+#         if fxgl != 0:
+#             fxje = Journals(portfolio, payment_currency, 0, 0,
+#                             ls, location, "FXGainAccrued",
+#                             0, 0, -fxgl, None, None,
+#                             tranid, "Coupon", tradedate, settledate,
+#                             kdbegin, kdend, ibor_date,
+#                             "Revenue/Expense/Capital")
+#             space.post_journal_entry(fxje)
+#
+#         # Local-column sanity: coupon vs accrued local should agree
+#         # to the penny. A residual here is an upstream accrual
+#         # defect -- surface it, never absorb it.
+#         eps = coupon_local - bal_local
+#         if abs(eps) > 0.02:
+#             print(f"COUPON WARNING: {portfolio}/{investment} "
+#                   f"{location}/{ls} accrued local {bal_local:.2f} vs "
+#                   f"coupon {coupon_local:.2f} (eps={eps:.2f}) -- "
+#                   f"upstream accrual mismatch, Pillar 7 will report.")
+#
+#     return
+#

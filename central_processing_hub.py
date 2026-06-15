@@ -180,13 +180,13 @@ def prepare_space_for_replay(space, interpretation_ctx):
     assert "asset_liability_repository" in snap_state
     assert "revenue_expense_repository" in snap_state
     assert "stat_repo" in snap_state
-    assert "chores" in snap_state
+    assert "admin_facility" in snap_state
 
     # 🔑 APPLY SNAPSHOT STATE
     space.asset_liability_repository = snap_state["asset_liability_repository"]
     space.revenue_expense_repository = snap_state["revenue_expense_repository"]
     space.stat_repo                  = snap_state["stat_repo"]
-    space.chores                     = snap_state["chores"]
+    space.admin_facility                     = snap_state["admin_facility"]
 
     # Journals must be empty for replay
     space.journal_entries.clear()
@@ -642,7 +642,7 @@ def cph_run_and_materialize(
     # MATERIALIZE
     # ============================================================
     from bookkeeping import precedence_fingerprint as _pfp
-    space.chores = af
+    space.admin_facility = af
     mark("t_materialize_start")
     from bookkeeping import precedence_fingerprint
 

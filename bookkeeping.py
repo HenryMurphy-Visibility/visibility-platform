@@ -125,8 +125,101 @@ def precedence_fingerprint(registry: dict) -> str:
     canonical = ";".join(f"{k}={v}" for k, v in sorted(registry.items()))
     return hashlib.sha256(canonical.encode()).hexdigest()[:16]
 
+
+# ── PRECEDENCE REGISTRY (module-level: declared data, not
+#    scheduler-owned state). v1 = tied original; v2 = the
+#    de-tied banded registry of 2026-06. The scheduler
+#    references these; the proof engine reads them without
+#    constructing a scheduler. ──────────────────────────────
+PRECEDENCE_VERSION = "v2"
+
+EVENT_TYPE_PRECEDENCE = {
+
+    # ═══════════════════════════════════════════════════════════
+    # BEGINNING OF DAY — income recognition & claim maturation
+    # Runs against YESTERDAY's settled state: accrual reads the
+    # AF before anything settles today (through-settle-inclusive
+    # ownership depends on this), and the coupon converts
+    # accrued -> due before the settlement band can wash it.
+    # ═══════════════════════════════════════════════════════════
+    'mark_bond_accruals': 1040,  # daily accrual, policy-aware
+    'schedule_mark_settled': 1045,  # AF lifecycle flip: today's settles become entitled
+    'bond_coupon': 1049,  # ex-date: accrued -> due claim (no income; income was daily)
+
+    # ═══════════════════════════════════════════════════════════
+    # SETTLEMENT — booked claims wash to cash
+    # Settles what was BOOKED, never recomputes. Relief runs
+    # last in the band: it reads post-settlement AF state.
+    # ═══════════════════════════════════════════════════════════
+    'settle_bond_flows_in': 1050,
+    'settle_single_flow_in': 1051,
+    'settle_bond_flows_out': 1053,
+    'settle_single_flow_out': 1054,
+    'settle_multiple_flows_in_out': 1055,
+    'settle_pay_rec_by_tranid': 1056,
+    'relieve_accrued_on_close_settle': 1058,  # post-settlement: proportional accrued relief on closes
+
+    # ═══════════════════════════════════════════════════════════
+    # CORPORATE ACTIONS — pre-trade position transformations
+    # ═══════════════════════════════════════════════════════════
+    'split_equity': 1065,
+    'dividend_equity': 1068,
+
+    # ═══════════════════════════════════════════════════════════
+    # TRADING — today's events book; claims open
+    # Opens first (buys/shorts), then closes (sells/covers),
+    # then FX events, then option lifecycle.
+    # ═══════════════════════════════════════════════════════════
+    'open_payable': 1073,
+    'open_receivable': 1074,
+    'buy_equity': 1075,
+    'buy_bond': 1076,
+    'buy_future': 1077,
+    'open_swap': 1078,
+    'short_equity': 1080,
+    'short_bond': 1081,
+    'short_future': 1082,
+    'sell_equity': 1111,
+    'cover_equity': 1112,
+    'sell_bond': 1113,
+    'cover_bond': 1114,
+    'sell_future': 1115,
+    'cover_future': 1116,
+    'reset_swap': 1117,
+    'spot_fx': 1118,
+    'forward_fx': 1119,
+    'write_option': 1120,
+    'assign_call_long': 1121,
+    'assign_put_short': 1122,
+
+    # ═══════════════════════════════════════════════════════════
+    # CASH OPERATIONS — capital movements & same-day money
+    # ═══════════════════════════════════════════════════════════
+    'deposit_currency': 1130,
+    'withdraw_currency': 1131,
+    'cash_payment_same_day': 1132,
+
+    # ═══════════════════════════════════════════════════════════
+    # END OF DAY — valuation & allocation
+    # Everything economic has happened; now measure it.
+    # ═══════════════════════════════════════════════════════════
+    'mark_prices': 9000,
+    'perf_mark': 9001,
+    'allocate': 9500,
+}
+
+# Precedence must be total: every event a unique slot. A tie
+# is an undeclared ordering convention -- forbidden. Fires at
+# import time: a tied registry cannot even load.
+if len(set(EVENT_TYPE_PRECEDENCE.values())) != len(EVENT_TYPE_PRECEDENCE):
+    from collections import Counter
+    _dupes = [v for v, n in Counter(EVENT_TYPE_PRECEDENCE.values()).items() if n > 1]
+    raise ValueError(f"event_type_precedence contains tied slots: "
+                     f"{sorted(_dupes)} -- every event must have a "
+                     f"unique precedence.")
 # In EventScheduler class
 from collections import OrderedDict
+
 
 class EventScheduler:
     def __init__(self, ctx):
@@ -137,100 +230,19 @@ class EventScheduler:
         self.ctx = ctx
         self.events = OrderedDict()
 
+        self.deferred_events = []  # carried-forward out-of-window events
+        self._defer_af = None
+        self._defer_space = None
+        self._defer_fxdata = None
+
+        # Registry is module-level declared data; the scheduler
+        # carries references so existing call sites
+        # (scheduler.event_type_precedence etc.) work unchanged.
+        self.precedence_version = PRECEDENCE_VERSION
+        self.event_type_precedence = EVENT_TYPE_PRECEDENCE
+
         self._sorted = False
         self._executed = False
-
-        # ── PRECEDENCE REGISTRY IDENTITY ──────────────────────────
-        # The registry is a convention: declared, versioned, stamped
-        # onto every period it builds. v1 = tied original; v2 = the
-        # de-tied banded registry of 2026-06.
-        self.precedence_version = "v2"
-        self.event_type_precedence = {
-
-
-            # ═══════════════════════════════════════════════════════════
-            # BEGINNING OF DAY — income recognition & claim maturation
-            # Runs against YESTERDAY's settled state: accrual reads the
-            # AF before anything settles today (through-settle-inclusive
-            # ownership depends on this), and the coupon converts
-            # accrued -> due before the settlement band can wash it.
-            # ═══════════════════════════════════════════════════════════
-            'mark_bond_accruals': 1040,  # daily accrual, policy-aware
-            'schedule_mark_settled': 1045,  # AF lifecycle flip: today's settles become entitled
-            'bond_coupon': 1049,  # ex-date: accrued -> due claim (no income; income was daily)
-
-            # ═══════════════════════════════════════════════════════════
-            # SETTLEMENT — booked claims wash to cash
-            # Settles what was BOOKED, never recomputes. Relief runs
-            # last in the band: it reads post-settlement AF state.
-            # ═══════════════════════════════════════════════════════════
-            'settle_bond_flows_in': 1050,
-            'settle_single_flow_in': 1051,
-            'settle_bond_flows_out': 1053,
-            'settle_single_flow_out': 1054,
-            'settle_multiple_flows_in_out': 1055,
-            'settle_pay_rec_by_tranid': 1056,
-            'relieve_accrued_on_close_settle': 1058,  # post-settlement: proportional accrued relief on closes
-
-            # ═══════════════════════════════════════════════════════════
-            # CORPORATE ACTIONS — pre-trade position transformations
-            # ═══════════════════════════════════════════════════════════
-            'split_equity': 1065,
-            'dividend_equity': 1068,
-
-            # ═══════════════════════════════════════════════════════════
-            # TRADING — today's events book; claims open
-            # Opens first (buys/shorts), then closes (sells/covers),
-            # then FX events, then option lifecycle.
-            # ═══════════════════════════════════════════════════════════
-            'open_payable': 1073,
-            'open_receivable': 1074,
-            'buy_equity': 1075,
-            'buy_bond': 1076,
-            'buy_future': 1077,
-            'open_swap': 1078,
-            'short_equity': 1080,
-            'short_bond': 1081,
-            'short_future': 1082,
-            'sell_equity': 1111,
-            'cover_equity': 1112,
-            'sell_bond': 1113,
-            'cover_bond': 1114,
-            'sell_future': 1115,
-            'cover_future': 1116,
-            'reset_swap': 1117,
-            'spot_fx': 1118,
-            'forward_fx': 1119,
-            'write_option': 1120,
-            'assign_call_long': 1121,
-            'assign_put_short': 1122,
-
-            # ═══════════════════════════════════════════════════════════
-            # CASH OPERATIONS — capital movements & same-day money
-            # ═══════════════════════════════════════════════════════════
-            'deposit_currency': 1130,
-            'withdraw_currency': 1131,
-            'cash_payment_same_day': 1132,
-
-            # ═══════════════════════════════════════════════════════════
-            # END OF DAY — valuation & allocation
-            # Everything economic has happened; now measure it.
-            # ═══════════════════════════════════════════════════════════
-            'mark_prices': 9000,
-            'perf_mark': 9001,
-            'allocate': 9500,
-        }
-
-        # Precedence must be total: every event a unique slot. A tie
-        # is an undeclared ordering convention -- forbidden.
-        _prec = self.event_type_precedence
-        if len(set(_prec.values())) != len(_prec):
-            from collections import Counter
-            dupes = [v for v, n in Counter(_prec.values()).items() if n > 1]
-            raise ValueError(f"event_type_precedence contains tied slots: "
-                             f"{sorted(dupes)} -- every event must have a "
-                             f"unique precedence.")
-
 
     def schedule_event(self, tradedate, event_function, *args):
 
@@ -318,82 +330,96 @@ class EventScheduler:
         func(*args)
         return 1
 
-def accrue_interest(space, af, portfolio, investment, current_date, fx_rates_df):
-    investment_cache = {}
+    def defer_event(self, fire_date, event_function, *args):
+        """
+        Carry an out-of-window event forward. The dispatch has already
+        determined fire_date > this period's cutoff; rather than drop
+        the event (which silently breaks any settlement whose date
+        spans a period boundary), stash it as data so the next period
+        re-offers it through the normal schedule_event intake, where
+        sort_events interleaves it by date with native events.
 
-    # Cache investment types and subspaces to minimize redundant accesses
-    for investment in space.asset_liability_repository.investment_spaces_library.keys():
-        if investment not in investment_cache:
-            subspace = space.asset_liability_repository.get_position_space(investment)
-            investment_type = subspace.get_attribute_field("AIF", "investment_type")
-            if investment_type:
-                investment_type = investment_type.strip()
-                investment_cache[investment] = (investment_type, subspace)
+        Live objects in args (af, space, fx_data) cannot survive a
+        snapshot round-trip as references -- they are replaced with
+        sentinels here and re-bound to the live objects on re-offer.
+
+        ASSUMPTION (revisit in cleanup sweep): af, space, and fx_data
+        are the ONLY live objects in any deferred event's args. If a
+        future event function carries another live object, it must be
+        added to the sentinel set here AND the rebind in
+        reoffer_deferred_events, or it will fire next period with a
+        stale snapshot copy.
+        """
+        sanitized = []
+        for a in args:
+            if a is self._defer_af:
+                sanitized.append("__AF__")
+            elif a is self._defer_space:
+                sanitized.append("__SPACE__")
+            elif a is self._defer_fxdata:
+                sanitized.append("__FXDATA__")
             else:
-                #print(f"Investment type for {investment} is None, skipping this investment.")
-                continue
+                sanitized.append(a)
 
-    # Process only BOND investments
-    for investment, (investment_type, subspace) in investment_cache.items():
-        if investment_type == "BOND":
-            print(f"Processing BOND investment: {investment}")
+        self._defer_space.deferred_events.append({
+            "fire_date": fire_date,
+            "fn_name": event_function.__name__,
+            "args": tuple(sanitized),
+        })
 
-            net_positions = af.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
-            print(f"Net Positions for {investment}: {net_positions}")
 
-            for location, positions in net_positions.items():
-                for position_type, qty in positions.items():
-                    ls = 'l' if 'long' in position_type else 's'
-                    if ls == 's':
-                        qty = -qty
+    def reoffer_deferred_events(self, *, cutoff, af, space, fx_data):
+        """
+        Re-offer carried events whose fire_date now falls within this
+        period's window. Rebinds sentinels to the live objects. Events
+        still beyond the cutoff stay deferred (carry again).
 
-                    issue_date_str = subspace.get_attribute_field('AIF', 'issue_date')
-                    first_coupon_date_str = subspace.get_attribute_field('AIF', 'first_coupon_date')
-                    next_to_last_coupon_date_str = subspace.get_attribute_field('AIF', 'next_to_last_coupon_date')
-                    maturity_date_str = subspace.get_attribute_field('AIF', 'maturity_date')
-                    coupon_rate = float(subspace.get_attribute_field('AIF', 'coupon_rate'))
-                    day_count_convention = 'actual/365'
-                    payment_frequency = 'semi-annual'
-                    semi_split = "C"
+        Also registers this period's live objects so defer_event can
+        sentinel-swap any NEW out-of-window events scheduled this pass.
+        """
+        # Register live handles for this period (used by defer_event).
+        self._defer_af = af
+        self._defer_space = space
+        self._defer_fxdata = fx_data
 
-                    issue_date = datetime.strptime(issue_date_str, '%m/%d/%Y')
-                    first_coupon_date = datetime.strptime(first_coupon_date_str, '%m/%d/%Y')
-                    next_to_last_coupon_date = datetime.strptime(next_to_last_coupon_date_str, '%m/%d/%Y')
-                    maturity_date = datetime.strptime(maturity_date_str, '%m/%d/%Y')
-                    valuation_date = current_date
+        if not hasattr(space, "deferred_events"):
+            space.deferred_events = []
 
-                    accrued_interest, days_in_period, days_of_accrual = bond_calc.calculate_accrued_interest(
-                        issue_date, first_coupon_date, day_count_convention, payment_frequency,
-                        next_to_last_coupon_date, maturity_date, valuation_date, coupon_rate, semi_split
-                    )
+        # Resolve function names back to callables.
+        import currency_domain, bond_domain, equity_domain
 
-                    coupon = qty * accrued_interest
+        fn_table = {}
+        for mod in (currency_domain, bond_domain, equity_domain):
+            for name in dir(mod):
+                obj = getattr(mod, name)
+                if callable(obj):
+                    fn_table[name] = obj
 
-                    if coupon > 0:
-                        faal = "InterestReceivable"
-                        faie = "InterestReceipt"
+        still_deferred = []
+        for d in space.deferred_events:
+            if d["fire_date"] <= cutoff:
+                rebound = []
+                for a in d["args"]:
+                    if a == "__AF__":
+                        rebound.append(af)
+                    elif a == "__SPACE__":
+                        rebound.append(space)
+                    elif a == "__FXDATA__":
+                        rebound.append(fx_data)
                     else:
-                        faal = "InterestPayable"
-                        faie = "InterestExpense"
-
-                    payment_currency = subspace.get_attribute_field('AIF', 'payment_currency')
-                    fx_rate = 1  # Example placeholder
-                    coupon_in_book_terms = coupon * fx_rate
-
-                    bcoup = Journals(portfolio, payment_currency, 0, ls, location, faal, coupon_in_book_terms,
-                                     coupon_in_book_terms, coupon_in_book_terms, 0,
-                                     "Accrual", valuation_date, valuation_date, valuation_date,
-                                     valuation_date, valuation_date, "Asset/Liability")
-                    space.post_journal_entry(bcoup)
-
-                    bcoupRE = Journals(portfolio, investment, 0, ls, location, faie, 0, -coupon_in_book_terms,
-                                       -coupon_in_book_terms, 0,
-                                       "Accrual", valuation_date, valuation_date, valuation_date, valuation_date,
-                                       valuation_date,
-                                       "Revenue/Expense/Capital")
-                    space.post_journal_entry(bcoupRE)
-        else:
-            print(f"Skipping non-BOND investment: {investment}, Type: {investment_type}")
+                        rebound.append(a)
+                fn = fn_table.get(d["fn_name"])
+                if fn is None:
+                    print(f"[DEFER] WARNING: cannot resolve deferred "
+                          f"function {d['fn_name']!r}; event dropped. "
+                          f"Add its module to reoffer_deferred_events.")
+                    continue
+                print(f"[REOFFER] fn={d['fn_name']} stored_args_len={len(d['args'])} "
+                      f"rebound_len={len(rebound)} stored={d['args']} rebound={rebound}")
+                self.schedule_event(d["fire_date"], fn, *rebound)
+            else:
+                still_deferred.append(d)  # not yet -- carry again
+        space.deferred_events = still_deferred
 
 class Event:
     def __init__(self, transaction=None, method=None, tradedate=None, settledate=None,
@@ -1564,7 +1590,7 @@ class BookkeepingSpace:
         self.asset_liability_repository.reset()
         self.revenue_expense_repository.reset()
         self.stat_repo.reset()
-        self.chores.reset()
+        self.admin_facility.reset()
 
     """
     BOOKKEEPING SPACE (CONDUCTOR)
@@ -1641,8 +1667,8 @@ class BookkeepingSpace:
             "revenue_expense_repository": copy.deepcopy(
                 self.revenue_expense_repository
             ),
-            "settlement_chores": copy.deepcopy(
-                self.settlement_chores
+            "settlement_admin_facility": copy.deepcopy(
+                self.settlement_admin_facility
             ),
             "sequence_counter": self.sequence_counter,
         }
@@ -1693,10 +1719,10 @@ class BookkeepingSpace:
         ]
 
         # --------------------------------------------------
-        # Restore settlement chores
+        # Restore settlement admin_facility
         # --------------------------------------------------
-        self.settlement_chores = snapshot_state.get(
-            "settlement_chores",
+        self.settlement_admin_facility = snapshot_state.get(
+            "settlement_admin_facility",
             AdministrativeFacility()
         )
 
@@ -1734,7 +1760,7 @@ class BookkeepingSpace:
         # self.asset_liability_repository = AssetLiabilityRepository()
         # self.statistical_repository = StatisticalRepository()
         # self.revenue_expense_repository = RevenueExpenseCapitalRepository()
-        # self.settlement_chores = AdministrativeFacility()
+        # self.settlement_admin_facility = AdministrativeFacility()
 
         self.sequence_counter = 0
 
@@ -1813,9 +1839,9 @@ class BookkeepingSpace:
         if not isinstance(je.ibor_date, datetime):
             raise TypeError("Journal entry IBOR date must be datetime")
 
-        # 2️⃣ Business-day adjustment
-        if is_non_business_day(je.ibor_date):
-            je.ibor_date = get_next_business_day(je.ibor_date)
+        # 2️⃣ Business-day adjustment= important! leaving here but not needed now with accrual?
+        # if is_non_business_day(je.ibor_date):
+        #     je.ibor_date = get_next_business_day(je.ibor_date)
 
         # 3️⃣ Assign canonical creation sequence (ONCE)
         if je.sequence_number is None:
@@ -1972,6 +1998,7 @@ class AssetLiabilityRepository:
     def __init__(self):
         self.investment_attributes = {}
         self.investment_positions = {}
+        self.pending_settlements = []  # carried-forward out-of-window settles
 
 
         print("🔥 AssetLiabilityRepository CONSTRUCTED")

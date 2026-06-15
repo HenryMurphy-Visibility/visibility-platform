@@ -408,9 +408,16 @@ def create_portfolio_marks(
     - No period semantics
     - Append only — never rebuilds existing rows
     - Schema matches main events file exactly
-    - Two separate event rows per business day for bond investments:
+    - Up to THREE separate event rows per business day for bond
+      investments:
         1. mark_prices        — price and FX for all investments
         2. mark_bond_accruals — accrual per 100 FV for bonds only
+        3. bond_coupon        — coupon event, bonds only, on coupon
+                                dates only. Term-derived fact,
+                                materialized like marks/accruals.
+                                The RULE owns position-dependence:
+                                it fires, asks the AF who is
+                                entitled, posts or skips.
     """
 
     import os
@@ -512,6 +519,35 @@ def create_portfolio_marks(
         window_start = max(first_open, history_start)
         bond_info = bond_info_lookup.get(investment)
         is_bond = bond_info is not None
+
+        # ══ NEW: COUPON SCHEDULE FOR THIS BOND (computed once) ══
+        # ROW 3 below writes a coupon event row on each coupon
+        # date in the window. bond_calc rate convention: REAL
+        # percentage (5 = 5%). Per-period coupon per 100 face =
+        # rate/100/freq * 100 (= semi_annual_coupon for fv=100).
+        # Ex = pay (same-day) until bond_info carries a pay-lag
+        # field.
+        coupon_date_set = set()
+        coupon_per_100 = 0.0
+        if is_bond:
+            try:
+                _sched = bond_calc.generate_coupon_dates(
+                    bond_info.get("issue_date", ""),
+                    bond_info.get("first_coupon_date", ""),
+                    bond_info.get("maturity_date", ""),
+                    bond_info.get("payment_frequency", "SEMI_ANNUAL"),
+                )
+                coupon_date_set = set(_sched)
+                _freq = {"ANNUAL": 1, "SEMI_ANNUAL": 2,
+                         "QUARTERLY": 4, "MONTHLY": 12}[
+                    str(bond_info.get("payment_frequency",
+                                      "SEMI_ANNUAL")).upper()]
+                coupon_per_100 = (float(bond_info.get("coupon_rate", 0))
+                                  / 100.0 / _freq) * 100.0
+            except Exception as e:
+                print(f"    Marks: coupon schedule failed for "
+                      f"{investment}: {e}")
+        # ══ END NEW ══════════════════════════════════════════════
 
         for trade_dt in business_days:
             if trade_dt < window_start:
@@ -636,6 +672,54 @@ def create_portfolio_marks(
                         "per_100FV_amort": "",
                         "closing_method": "",
                     })
+
+            # ══ NEW: ROW 3 — COUPON EVENT (bonds, coupon dates only) ══
+            if is_bond and trade_dt in coupon_date_set:
+                tranid += 1
+                rows.append({
+                    "portfolio": portfolio,
+                    "method": "bond_coupon",
+                    "source": "mark",
+                    "tradedate": trade_dt,
+                    "settledate": trade_dt,
+                    "kdbegin": trade_dt,
+                    "kdend": datetime(2099, 12, 31),
+                    "investment": investment,
+                    "payment_currency": price["currency"],
+                    "tdate_fx": 0,
+                    "location": "",
+                    "strategy": "",
+                    "quantity": 0,
+                    "price": "",
+                    "notional": 0,
+                    "original_face": 0,
+                    "total_amount": 0,
+                    "total_amount_base": 0,
+                    "tranid": tranid,
+                    "transaction": "Bond Coupon",
+                    "accrued_local": 0,
+                    "accrued_book": 0,
+                    "new_shares": 0,
+                    "old_shares": 0,
+                    "per_share": coupon_per_100,
+                    "legin": "",
+                    "legout": "",
+                    "allocation_entities": "",
+                    "allocation_percents": "",
+                    "financial_account": "",
+                    "buy_currency": "",
+                    "sell_currency": "",
+                    "buy_amt": 0,
+                    "sell_amt": 0,
+                    "feeder": "",
+                    "put_call": "",
+                    "mark_price": "",
+                    "mark_fx": fx,
+                    "per_100FV_accrue": "",
+                    "per_100FV_amort": "",
+                    "closing_method": "",
+                })
+            # ══ END NEW ══════════════════════════════════════════
 
     # ==================================================
     # WRITE ONCE

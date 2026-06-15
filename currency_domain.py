@@ -85,6 +85,7 @@ def currency_iterator_by_location_and_flow(investment, space,
 
     lots = []
     for entry in bs_entries.items():
+        print(f"[ITER CHECK] key={entry[0]} vals={entry[1]}")
         entry_data = entry[0]
         if entry_data[1] == investment and entry_data[5] in [financial_account_in, financial_account_out] and entry_data[2] == tranid:
             lots.append((entry_data[3], entry_data[5], entry_data[4], entry[1][1],

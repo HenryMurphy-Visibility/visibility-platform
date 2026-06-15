@@ -296,7 +296,6 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
             sub_ledger.post_journal_entry(fx_journal)
 
             # Record the settlement information to SMF
-            # Record the settlement information to SMF
             af.add_record(tranid=tranid, portfolio=portfolio, investment=investment, position='long',
                            position_effect='close', location=location,
                            currency=payment_currency, qty=quantity, currency_amount=local, status='Unsettled')

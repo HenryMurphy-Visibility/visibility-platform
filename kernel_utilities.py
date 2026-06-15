@@ -794,7 +794,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 
-
 def select_best_qualifying_snapshot(
     *,
     portfolio,
@@ -902,19 +901,17 @@ def load_snapshot_into_space(space, snapshot_path):
 
     space.asset_liability_repository = state["asset_liability_repository"]
     space.stat_repo = state["stat_repo"]
-    space.chores = state["chores"]
+    space.admin_facility = state["admin_facility"]
+    space.deferred_events = state.get("deferred_events", [])
 
     # Revenue/Expense: STATE ONLY (no entries)
     space.revenue_expense_repository = state["revenue_expense_repository"]
-
 
 # ============================================================
 # KERNEL UTILITIES — CADENCE MATERIALIZATION
 # ============================================================
 
-
 from datetime import datetime
-
 
 def materialize_period_outputs(
         *,
@@ -1026,9 +1023,9 @@ def materialize_period_outputs(
             "state": {
                 "asset_liability_repository": space.asset_liability_repository,
                 "stat_repo": space.stat_repo,
-                "chores": space.chores,
+                "admin_facility": space.admin_facility,
                 "revenue_expense_repository": space.revenue_expense_repository,
-                "admin_facility": af,
+                "deferred_events": getattr(space, "deferred_events", []),
             },
         }
 
@@ -1042,8 +1039,6 @@ def materialize_period_outputs(
         for k, v in xom_space["entries"].items():
             if k[6] == "PriceGainInvestment":
                 print(k, v)
-
-
 
     snapshot_path = snapshots_dir / f"{artifact}.pkl"
     meta_path = snapshots_dir / f"{artifact}.json"

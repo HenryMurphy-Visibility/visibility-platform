@@ -549,6 +549,14 @@ def run_period(
     else:
         af = AdministrativeFacility()
 
+        # (A) in run_period, right after af is recovered from the snapshot, BEFORE cph runs:
+        for tr, rec in af.records.items():
+            if rec['investment'] == 'BND000':
+                print(f"[FEB-LOADED-FROM-SNAPSHOT] tranid={tr} "
+                      f"settled_qty={rec['settled_qty']}/{rec['trade_qty']} "
+                      f"status={rec.get('status')} settle={rec.get('expected_settle_date')}")
+
+
     metrics = cph_run_and_materialize(
         portfolio=portfolio,
         calendar=calendar,

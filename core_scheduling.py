@@ -5,7 +5,7 @@ import bond_domain
 import futures_domain
 import global_domain
 import schedule_activities
-from global_domain import mark_prices, mark_bond_accruals
+from global_domain import mark_prices, mark_bond_accruals, bond_coupon
 
 from bookkeeping import EventScheduler, Event
 import currency_domain
@@ -107,73 +107,6 @@ def generate_coupon_dates(first_coupon_date, maturity_date, payment_frequency,
 
     return cds
 
-
-# ── SCHEDULE BOND COUPONS ─────────────────────────────────────────────
-def schedule_bond_coupons(
-        scheduler, bond_candidates, portfolio, investment,
-        space, tranid, transaction,
-        tradedate, settledate, period_start, period_end,
-        payment_currency, per_share, af
-):
-    """
-    Schedule bond coupon events for the current period.
-    Reads AIF data from space — time series aware, handles floaters.
-    """
-    if not bond_candidates:
-        return
-
-    repo = space.asset_liability_repository
-    sub = repo.investment_attributes.get(investment)
-    if not sub:
-        return
-
-    attributes = sub.investment_attributes.get("AIF", {})
-
-    issue_date_str = attributes.get("issue_date")
-    first_coupon_date_str = attributes.get("first_coupon_date")
-    maturity_date_str = attributes.get("maturity_date")
-    freq = attributes.get("payment_frequency")
-    coupon_rate = float(attributes.get("coupon_rate", 0))
-
-    if not all([issue_date_str, first_coupon_date_str, maturity_date_str, freq]):
-        print(f"    schedule_bond_coupons: missing AIF data for {investment} — skipping")
-        return
-
-    from datetime import datetime
-    def _parse(d):
-        for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%Y:%H:%M:%S", "%Y-%m-%d:%H:%M:%S"):
-            try:
-                return datetime.strptime(d.strip(), fmt)
-            except:
-                continue
-        raise ValueError(f"Cannot parse date: {d}")
-
-    first_coupon_date = _parse(first_coupon_date_str)
-    maturity_date = _parse(maturity_date_str)
-
-    # Periodic coupon amount
-    freq_divisor = {
-        "annual": 1, "ANNUAL": 1,
-        "semi-annual": 2, "SEMI_ANNUAL": 2,
-        "quarterly": 4, "QUARTERLY": 4,
-        "monthly": 12, "MONTHLY": 12,
-    }
-    divisor = freq_divisor.get(freq, 2)
-    per_share = coupon_rate / divisor
-
-    coupon_dates = generate_coupon_dates(
-        first_coupon_date, maturity_date, freq, period_start, period_end
-    )
-
-    for cd in coupon_dates:
-        scheduler.schedule_event(
-            cd, bond_domain.bond_coupon,
-            portfolio, investment,
-            space, tranid, "BondCoupon",
-            cd, settledate, period_start, period_end,
-            payment_currency, per_share, af
-        )
-
 def core_schedule_events(
     interpretation_ctx,
     qualifying_events,
@@ -198,6 +131,18 @@ def core_schedule_events(
     _t0 = time.perf_counter()
     last_report = _t0
     REPORT_EVERY = 10000  # adjust if needed
+
+    # ── RE-OFFER events deferred from prior periods ──────────────
+    # Carried-forward out-of-window events (settles spanning a period
+    # boundary) re-enter through the SAME schedule_event intake as
+    # native events, so sort_events interleaves them by date. Sentinels
+    # are rebound to THIS period's live af / space / fx_data -- never a
+    # stale snapshot copy.
+
+    scheduler.reoffer_deferred_events(
+        cutoff=interpretation_ctx["trade_window_cutoff"],
+        af=af, space=space, fx_data=fx_data,
+    )
 
     total = len(qualifying_events)
 
@@ -401,7 +346,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_payable(),
+                    currency_domain.open_payable,
                     portfolio, payment_currency,
                     location, local, book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -427,7 +372,7 @@ def core_schedule_events(
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, af, fx_data)
 
-        if method == "buy_future":
+        elif method == "buy_future":
             scheduler.schedule_event(tradedate, futures_domain.buy_future, portfolio, investment,
                                      location, quantity, local, book, space, tranid,
                                      transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
@@ -448,7 +393,7 @@ def core_schedule_events(
                                          payment_currency, investment, location, quantity, local, book,
                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                          kdend, fx_data)
-        if method == "buy_bond":
+        elif method == "buy_bond":
             scheduler.schedule_event(tradedate, bond_domain.buy_bond, portfolio,
                                      investment,
                                      location, quantity, local, book, space, tranid,
@@ -482,15 +427,29 @@ def core_schedule_events(
                     "Payable"
                 )
 
+                # Settlement posting and AF settled-marking are ONE act: the
+                # books and the entitlement state move together or not at all.
+                # Both are gated on the settle actually falling within the
+                # processable window. Marking the AF settled while the
+                # settlement JE is withheld would flip entitlement (starting
+                # accrual) with no settlement on the books -- a state/ledger
+                # divergence, and accrual before settledate.
                 if settledate <= interpretation_ctx["trade_window_cutoff"]:
                     scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                              portfolio, payment_currency, investment, location, quantity, local, book,
                                              space, tranid, "Settlement", tradedate, settledate, kdbegin,
                                              kdend, af, accrued_local, accrued_book, fx_data, "l")
 
-                # Schedule another event to updateAF record status*
-                scheduler.schedule_event(settledate, bond_domain.schedule_mark_settled,
-                                         af, tranid, settledate)
+                    scheduler.schedule_event(settledate, bond_domain.schedule_mark_settled,
+                                             af, tranid, settledate)
+                else:
+                    scheduler.defer_event(settledate, currency_domain.settle_bond_flows_out,
+                                          portfolio, payment_currency, investment, location, quantity, local, book,
+                                          space, tranid, "Settlement", tradedate, settledate, kdbegin,
+                                          kdend, af, accrued_local, accrued_book, fx_data, "l")
+
+                    scheduler.defer_event(settledate, bond_domain.schedule_mark_settled,
+                                          af, tranid, settledate)
 
         elif method == "sell_bond":
             closing_method = "FIFO"
@@ -524,7 +483,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_receivable(),
+                    currency_domain.open_receivable,
                     portfolio, payment_currency,
                     location, local + accrued_local, book + accrued_book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -545,7 +504,7 @@ def core_schedule_events(
                                          tranid, portfolio, investment, location, "l",
                                          settledate, payment_currency, space, af)
 
-        if method == "short_bond":
+        elif method == "short_bond":
             scheduler.schedule_event(tradedate, bond_domain.short_bond, portfolio,
                                      investment,
                                      location, quantity, local, book, space, tranid,
@@ -569,7 +528,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_receivable(),
+                    currency_domain.open_receivable,
                     portfolio, payment_currency,
                     location, local + accrued_local, book + accrued_book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -618,7 +577,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_payable(),
+                    currency_domain.open_payable,
                     portfolio, payment_currency,
                     location, local + accrued_local, book + accrued_book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -704,24 +663,6 @@ def core_schedule_events(
                     space, tranid, "FuturesSettlement", tradedate, settledate, kdbegin,
                     kdend, payment_currency, af, fx_data)
 
-
-
-
-        elif method == "bond_coupon":
-            from utilities import get_fx_rate
-            fx_ex = get_fx_rate(payment_currency, tradedate, fx_data)
-
-            scheduler.schedule_event(tradedate, bond_domain.bond_coupon, portfolio, investment,
-            space, tranid, transaction, tradedate, settledate, kdbegin, kdend,payment_currency, per_share, af, fx_ex)
-
-            if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
-                financial_account_in = "InterestReceivable"
-                financial_account_out = "InterestPayable"
-                scheduler.schedule_event(settledate, currency_domain.settle_multiple_flows_in_out, portfolio,
-                                         payment_currency, investment, financial_account_in, financial_account_out,
-                                         space, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, af, fx_data)
-
         elif method == "split_equity":
             scheduler.schedule_event(tradedate, equity_domain.split_equity, portfolio, investment,
                                      space, tranid, transaction, tradedate, settledate,
@@ -746,7 +687,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_receivable(),
+                    currency_domain.open_receivable,
                     portfolio, payment_currency,
                     location, local, book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -780,7 +721,7 @@ def core_schedule_events(
             else:
                 scheduler.schedule_event(
                     tradedate,
-                    currency_domain.open_payable(),
+                    currency_domain.open_payable,
                     portfolio, payment_currency,
                     location, local, book, space,
                     tranid, transaction, tradedate, settledate, kdbegin, kdend,
@@ -967,32 +908,26 @@ def core_schedule_events(
                     af
                 )
 
-        # ── BOND COUPONS — per period, derived from AIF state ─────
-        # Builds bond candidates from qualifying events for this period
-        # Uses AIF data from space (loaded from snapshot or bootstrap)
-        # Handles floaters correctly — coupon rate from AIF is time series aware
-    bond_candidates = build_bond_candidates(
-        qualifying_events,
-        interpretation_ctx["trade_window_cutoff"],
-        space
-    )
-
-    if bond_candidates:
-        schedule_bond_coupons(
-            scheduler,
-            bond_candidates,
-            portfolio,
-            investment,
-            space,
-            tranid,
-            transaction,
-            tradedate,
-            settledate,
-            interpretation_ctx["replay_start"],
-            interpretation_ctx["trade_window_cutoff"],
-            payment_currency,
-            per_share,
-            af
-        )
+        elif method == "bond_coupon":
+            # ── BOND COUPON — self-guards for non-BOND investments ──
+            #  checks investment_type == BOND internally
+            # returns immediately for equities, currencies, futures
+                scheduler.schedule_event(
+                    tradedate,
+                    bond_coupon,
+                    portfolio,
+                    investment,
+                    space,
+                    tranid,
+                    transaction,
+                    tradedate,
+                    settledate,
+                    kdbegin,
+                    kdend,
+                    payment_currency,
+                    per_share,
+                    af,
+                    mark_fx,
+                )
 
     return scheduler

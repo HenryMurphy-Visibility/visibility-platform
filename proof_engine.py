@@ -149,6 +149,24 @@ class ProofItem:
     investment: str = ""
 
 
+def _resolve_factor(raw, default=1.0):
+    """
+    Resolve a declared multiplicative factor.
+      - genuinely absent (None or "") -> default (factor not declared)
+      - present but unparseable        -> raise (declared garbage is
+                                          an error, never a silent 1)
+    This is the difference between 'no factor applies' and 'the
+    factor is broken' -- the second must never masquerade as the
+    first.
+    """
+    if raw is None or str(raw).strip() == "":
+        return default
+    val = _safe_float(raw)
+    if val is None:
+        raise ValueError(f"pricing factor present but unparseable: {raw!r}")
+    return val
+
+
 def _print_summary_grid(results: list):
     """
     Verdict grid — one line per pillar. The default view.
@@ -1065,29 +1083,54 @@ def pillar_data(events: list, jes_by_period: dict = None,
     elif d008 > 5:
         result.critical(f"D-008 zero/neg prices — {d008} total (showing first 5)")
 
+
+
     # ── D-009 total_amount = qty x price (instrument-aware) ──────
     # Equities: expected = qty * price. Bonds quote per-100 face:
     # expected = qty * price / 100 * pf.
     # TODO(register): replace this branch with a universal formula
     # driven entirely by instrument data (quotation basis declared
     # in the IM) once per-100 lives there, not here.
+    d009_no_im = 0
     d009 = 0
     for e in events:
         method = str(e.get('method', '')).lower()
         if 'buy' not in method and 'sell' not in method:
             continue
         try:
-            qty      = float(str(e.get('quantity', 0)).strip() or 0)
-            price    = float(str(e.get('price', 0)).strip() or 0)
-            total    = float(str(e.get('total_amount', 0)).strip() or 0)
-            inv      = str(e.get('investment', '') or '')
-            inv_type = ""
-            pf       = 1.0
-            cs       = 1.0
-            if im and inv in im:
-                inv_type = str(im[inv].get('investment_type', '') or '').upper()
-                pf       = _safe_float(im[inv].get('pricing_factor')) or 1.0
-                cs       = _safe_float(im[inv].get('contract_size')) or 1.0
+            qty = float(str(e.get('quantity', 0)).strip() or 0)
+            price = float(str(e.get('price', 0)).strip() or 0)
+            total = float(str(e.get('total_amount', 0)).strip() or 0)
+            inv = str(e.get('investment', '') or '')
+
+            # Q1: can we even SEE the inputs? A check that cannot load
+            # the IM cannot validate a calc that depends on it. Missing
+            # IM is the ENGINE's failure to report, not a data mismatch
+            # and not a pass. Surface it as its own distinct finding.
+            if im is None:
+                d009_no_im += 1
+                if d009_no_im <= 5:
+                    result.critical(
+                        f"D-009 cannot run: investment master not loaded "
+                        f"(inv={inv}). Inputs unavailable -- calc unverifiable.",
+                        investment=inv)
+                continue
+            if inv not in im:
+                d009_no_im += 1
+                if d009_no_im <= 5:
+                    result.critical(
+                        f"D-009 cannot run: {inv} absent from investment "
+                        f"master. Inputs unavailable -- calc unverifiable.",
+                        investment=inv)
+                continue
+
+            # Q2/Q3: inputs are present -- resolve the declared factors.
+            # No silent 'or 1.0' default: a factor that is PRESENT but
+            # unparseable is itself an error, not a 1. Only a genuinely
+            # absent (None/blank) optional factor defaults to 1.
+            inv_type = str(im[inv].get('investment_type', '') or '').upper()
+            pf = _resolve_factor(im[inv].get('pricing_factor'), default=1.0)
+            cs = _resolve_factor(im[inv].get('contract_size'), default=1.0)
 
             # Universal: quotation convention lives in the IM's
             # pricing_factor (bond rows carry 0.01 = per-100).
@@ -1729,12 +1772,15 @@ def run_proof(portfolio: str, calendar: str,
     # Current registry identity, for stamped-vs-current comparison.
     # If the scheduler can't be constructed in this context, Pillar 9
     # still runs its internal-consistency checks and says so.
+    # Current registry identity, for stamped-vs-current comparison.
+    # Read directly from module-level constants -- no scheduler
+    # construction needed.
     try:
-        from bookkeeping import precedence_fingerprint as _pfp
-        from bookkeeping import EventScheduler as _ES
-        _sched = _ES()
-        current_version = _sched.precedence_version
-        current_fingerprint = _pfp(_sched.event_type_precedence)
+        from bookkeeping import (precedence_fingerprint as _pfp,
+                                 PRECEDENCE_VERSION,
+                                 EVENT_TYPE_PRECEDENCE)
+        current_version = PRECEDENCE_VERSION
+        current_fingerprint = _pfp(EVENT_TYPE_PRECEDENCE)
     except Exception as _e:
         print(f"  (current registry unavailable to proof engine: {_e})")
         current_version = None

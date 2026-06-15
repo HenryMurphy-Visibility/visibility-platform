@@ -3126,7 +3126,7 @@ class GWIUnified(QMainWindow):
         - Saves:
             - bk_space.pkl
             - stat_repo.pkl
-            - settle_chores.pkl
+            - settle_admin_facility.pkl
             - derive_metadata.json
             - Operational.txt (single-line JSONL with same metadata)
         - Overwrites any prior Operational snapshot (only one Operational snapshot exists).
@@ -3197,9 +3197,9 @@ class GWIUnified(QMainWindow):
         with open(os.path.join(snapshot_dir, "stat_repo.pkl"), "wb") as f:
             pickle.dump(space.statistical_repository, f)
 
-        # BookkeepingSpace already has settle_chores; derive should persist it too
-        with open(os.path.join(snapshot_dir, "settle_chores.pkl"), "wb") as f:
-            pickle.dump(space.settle_chores, f)
+        # BookkeepingSpace already has settle_admin_facility; derive should persist it too
+        with open(os.path.join(snapshot_dir, "settle_admin_facility.pkl"), "wb") as f:
+            pickle.dump(space.settle_admin_facility, f)
 
         # ------------------------------------------------------------------
         # Metadata: this is what AI / future validation will key off of
@@ -3291,14 +3291,14 @@ class GWIUnified(QMainWindow):
         # Load spaces from processing engine (the space was saved somewhere upstream)
         bk_space = load_bk_space_after_processing()  # uses your existing method
         stat_repo = bk_space.statistical_repository
-        chores = bk_space.settle_chores
+        admin_facility = bk_space.settle_admin_facility
 
         with open(f"{snap_dir}/bk_space.pkl", "wb") as f:
             pickle.dump(bk_space, f)
         with open(f"{snap_dir}/stat_repo.pkl", "wb") as f:
             pickle.dump(stat_repo, f)
-        with open(f"{snap_dir}/settle_chores.pkl", "wb") as f:
-            pickle.dump(chores, f)
+        with open(f"{snap_dir}/settle_admin_facility.pkl", "wb") as f:
+            pickle.dump(admin_facility, f)
 
         # ------------------------------------------------------------
         # Mark period as closed + create new open period
