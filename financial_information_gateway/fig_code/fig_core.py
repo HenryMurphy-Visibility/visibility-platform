@@ -22,6 +22,13 @@ import pandas as pd
 from v_config import FUNDS_PATH
 from financial_information_gateway.fig_code.compute_result import ComputeResult
 
+import re
+
+_THREE_DECIMAL_COLS = re.compile(r"(qty|quantity|notional)", re.IGNORECASE)
+
+def _round_for_column(col, val):
+    return round(val, 3) if _THREE_DECIMAL_COLS.search(col) else round(val, 2)
+
 
 def _parse_period_to_cutoff(period_key: str, end_of_period: bool = True) -> datetime:
     """
@@ -387,12 +394,12 @@ def _render_api(result: ComputeResult, options: dict):
         for _, row in page_df.iterrows():
             record = {}
             for col, val in row.items():
-                if isinstance(val, float) and val != val:
+                if pd.isna(val):
                     record[col] = None
                 elif hasattr(val, "isoformat"):
-                    record[col] = val.isoformat()
+                    record[col] = val.isoformat(sep=":")
                 elif isinstance(val, float):
-                    record[col] = round(val, 6)
+                    record[col] = _round_for_column(col, val)
                 else:
                     record[col] = val
             records.append(record)

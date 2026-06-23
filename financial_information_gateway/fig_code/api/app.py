@@ -34,6 +34,13 @@ from financial_information_gateway.fig_code.compute_appraisal import (
 from financial_information_gateway.fig_code.compute_position_ledger import (
     compute_position_ledger,
 )
+
+from financial_information_gateway.fig_code.compute_cash_trade_date import (
+    compute_cash_trade_date,
+)
+from financial_information_gateway.fig_code.compute_cash_settle_date import (
+    compute_cash_settle_date,
+)
 from financial_information_gateway.fig_code.fig_core import (
     prep_state,
     prep_state_cached,
@@ -45,6 +52,7 @@ from financial_information_gateway.fig_code.compute_performance import (
     compute_performance,
     clear_performance_cache,
 )
+
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.api.app_routes import router
 
@@ -404,39 +412,38 @@ def landing():
 
     <div class="welcome">
 
-        <div class="exclusive">Invitation Only</div>
+        <div class="exclusive">A Glimpse of What's Coming Next </div>
 
-        <p class="lead">
-            What you are seeing is a live, working financial information system
-            unlike anything currently available.
-        </p>
+    <p>Visibility represents thirty-seven years of building and using investment
+    accounting systems — and the rare chance to set all of that experience
+    against a blank page. Not to rebuild what exists, but to build what the
+    work always needed: a system designed from the ground up around how the
+    street actually moves, delivering institutional-strength accounting on an
+    architecture that simply did not exist thirty years ago. </p>
+    
 
-        <p>
-            Built on a temporal, event-driven architecture, Visibility redefines
-            what investment accounting software can be — not as an incremental
-            improvement on legacy platforms, but as a different foundation entirely.
-        </p>
+<p> What makes that possible now is a convergence — deep domain knowledge,
+    artificial intelligence, and modern languages and architecture arriving
+    at the same moment. Three years ago it became clear that this convergence
+    opened a singular opportunity: to deliver something the industry has long
+    reached for but could never quite grasp, because the means to build it had
+    not yet arrived.</p>
 
-        <p>
-            This is not a demo environment. This is the system in active
-            development — processing real data, generating real journal entries,
-            in real time. No database. No reconciliation layer. No compromises
-            made in the name of convention.
-        </p>
 
-        <p>
-            Few possessed the cross between Silicon Valley and Wall Street experience to see what was missing — and fewer still recognized, three years ago, that the convergence of domain expertise, artificial intelligence, and modern architecture created a singular opportunity to build something entirely new from the ground up. Visibility is the result of that vision
-        </p>
+<p>
+    And it is more than accounting. Visibility is a platform — a way for a firm
+    to build its own workflows into the system, rather than bending its
+    operations to the workflows embedded in legacy software. The system adapts
+    to the firm; the firm is no longer forced to adapt to the system.</p>
 
-        <p>
-            Access to this environment is by invitation only.
-            You are among the first to see it.
-        </p>
+<p> You are seeing this early — which means seeing the dynamics creating this
+    opportunity before the demand for systems built this way becomes obvious to
+    everyone. Access to this environment is by invitation only, and you are
+    among the first to see it.</p>
+   
 
-        <p class="closing">Thank you for your interest.</p>
-
-    </div>
-
+<p class="closing">Thank you for your interest.</p>
+        
     <div class="consoles">
         <a href="/ops" class="console-btn primary">
             <span class="console-label">OPS</span>
@@ -756,6 +763,140 @@ def compute_position_ledger_csv(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+# ── EDIT 2: add after compute_position_ledger_csv, before COMPUTE PERFORMANCE ──
+
+# ============================================================
+# COMPUTE CASH TRADE DATE
+# ============================================================
+
+@app.get("/api/v1/cash-trade-date")
+def compute_cash_trade_date_endpoint(
+    portfolio:               str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:                str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+    period_start:            str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
+    period_end:              str           = Query(...,  description="Period end key — same format as period_start."),
+    investment:              Optional[str] = Query(None, description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
+    near_cash_horizon_days:  int           = Query(5,    description="Receivable/Payable postings settling beyond this many business days from the as-of date are excluded from ACTIVITY (still reflected in OPENING/CLOSING balances)."),
+    page:                    int           = Query(1,    ge=1),
+    page_size:               int           = Query(1000, ge=1, le=10000),
+):
+    try:
+        uber_filter   = {"investment": investment} if investment else None
+        ppa_ibor_date = _parse_period_start(period_start)
+        result        = compute_cash_trade_date(
+            portfolio=portfolio, calendar=calendar,
+            period_start=period_start, period_end=period_end,
+            uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
+            near_cash_horizon_days=near_cash_horizon_days,
+        )
+        return render(result, target="api", options={"page": page, "page_size": page_size})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/cash-trade-date/csv")
+def compute_cash_trade_date_csv(
+    portfolio:               str           = Query(...),
+    calendar:                str           = Query(...),
+    period_start:            str           = Query(...),
+    period_end:              str           = Query(...),
+    investment:              Optional[str] = Query(None),
+    near_cash_horizon_days:  int           = Query(5),
+):
+    try:
+        uber_filter   = {"investment": investment} if investment else None
+        ppa_ibor_date = _parse_period_start(period_start)
+        result        = compute_cash_trade_date(
+            portfolio=portfolio, calendar=calendar,
+            period_start=period_start, period_end=period_end,
+            uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
+            near_cash_horizon_days=near_cash_horizon_days,
+        )
+        df = result.data
+        if df is None or df.empty:
+            raise HTTPException(status_code=404, detail="No data returned")
+        buffer = io.StringIO()
+        df.to_csv(buffer, index=False)
+        buffer.seek(0)
+        inv_part = f"_{investment}" if investment else "_portfolio"
+        filename = f"visibility_cash_trade_date{inv_part}_{portfolio}_{calendar}_{period_end}.csv"
+        return StreamingResponse(
+            iter([buffer.getvalue()]), media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ============================================================
+# COMPUTE CASH SETTLE DATE
+# ============================================================
+
+@app.get("/api/v1/cash-settle-date")
+def compute_cash_settle_date_endpoint(
+    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query(...,  description="Period end key — same format as period_start."),
+    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
+    page:         int           = Query(1,    ge=1),
+    page_size:    int           = Query(1000, ge=1, le=10000),
+):
+    try:
+        uber_filter   = {"investment": investment} if investment else None
+        ppa_ibor_date = _parse_period_start(period_start)
+        result        = compute_cash_settle_date(
+            portfolio=portfolio, calendar=calendar,
+            period_start=period_start, period_end=period_end,
+            uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
+        )
+        return render(result, target="api", options={"page": page, "page_size": page_size})
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/v1/cash-settle-date/csv")
+def compute_cash_settle_date_csv(
+    portfolio:    str           = Query(...),
+    calendar:     str           = Query(...),
+    period_start: str           = Query(...),
+    period_end:   str           = Query(...),
+    investment:   Optional[str] = Query(None),
+):
+    try:
+        uber_filter   = {"investment": investment} if investment else None
+        ppa_ibor_date = _parse_period_start(period_start)
+        result        = compute_cash_settle_date(
+            portfolio=portfolio, calendar=calendar,
+            period_start=period_start, period_end=period_end,
+            uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
+        )
+        df = result.data
+        if df is None or df.empty:
+            raise HTTPException(status_code=404, detail="No data returned")
+        buffer = io.StringIO()
+        df.to_csv(buffer, index=False)
+        buffer.seek(0)
+        inv_part = f"_{investment}" if investment else "_portfolio"
+        filename = f"visibility_cash_settle_date{inv_part}_{portfolio}_{calendar}_{period_end}.csv"
+        return StreamingResponse(
+            iter([buffer.getvalue()]), media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={filename}"}
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================
 # COMPUTE PERFORMANCE

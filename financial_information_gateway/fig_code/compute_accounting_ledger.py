@@ -34,6 +34,13 @@ from financial_information_gateway.fig_code.compute_result import ComputeResult
 TOLERANCE = 1e-6
 
 
+UNREALIZED_ACCOUNTS = {
+    "UnrealizedGainLoss",
+    "UnrealizedFX",
+    "UnrealizedGainLossLocal",
+    "UnrealizedFXLocal",
+}
+
 # ============================================================
 # EXTRACT STRUCTURAL
 # ============================================================
@@ -586,3 +593,4 @@ def compute_accounting_ledger(
         errors=[str(f) for f in failures],
         metadata=metadata,
     )
+

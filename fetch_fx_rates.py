@@ -204,22 +204,150 @@
 # print("JPY ISO form :", lookup("JPY", "2026-01-02T00:00:00"))
 # print("USD passthru :", lookup("USD", "2026-01-02"))
 # # expected JPY ~0.00638
+#
+# import pickle, glob
+#
+# def g(je, f):
+#     return je.get(f) if isinstance(je, dict) else getattr(je, f, None)
+#
+# for p in sorted(glob.glob('funds/B/Calendars/Monthly/Journals/*regular.pkl')):
+#     d = pickle.load(open(p, 'rb'))
+#     for je in d.get('journals', []):
+#         fa = str(g(je, 'financial_account') or '')
+#         if fa != 'AccruedInterestReceivable':
+#             continue
+#         td = str(g(je, 'tradedate'))[:10]
+#         ib = str(g(je, 'ibor_date'))[:10]
+#         if ib == '2026-01-20' or td in ('2026-01-17', '2026-01-18',
+#                                         '2026-01-19', '2026-01-20'):
+#             print(d.get('period_name'), '| txn=', g(je, 'transaction'),
+#                   '| trade=', td, '| ibor=', ib,
+#                   '| local=', g(je, 'local'))from proof_engine import load_jes_from_journals, _je_val
+#
+# jes_by_period, _ = load_jes_from_journals("Portfolio1", "Monthly", "<your funds path>")
+# all_jan4 = []
+# for period_name, jes in jes_by_period.items():
+#     for je in jes:
+#         if str(_je_val(je, "investment")) == "USD" and "2021-01-04" in str(_je_val(je, "ibor_date")):
+#             all_jan4.append((period_name, je))
+#
+# print(f"Total USD lines on 2021-01-04 across all periods: {len(all_jan4)}")
+# for period_name, je in all_jan4:
+#     print(period_name, {f: _je_val(je, f) for f in
+#           ["investment","ibor_date","tradedate","transaction","financial_account",
+#            "quantity","local","book","tax_date"]})
+#
+# from proof_engine import load_jes_from_journals, _je_val
+#
+# jes_by_period, _ = load_jes_from_journals("Portfolio1", "Monthly", "<your funds path>")
+# all_jan4 = []
+# for period_name, jes in jes_by_period.items():
+#     for je in jes:
+#         if str(_je_val(je, "investment")) == "USD" and "2021-01-04" in str(_je_val(je, "ibor_date")):
+#             all_jan4.append((period_name, je))
+#
+# print(f"Total USD lines on 2021-01-04 across all periods: {len(all_jan4)}")
+# for period_name, je in all_jan4:
+#     print(period_name, {f: _je_val(je, f) for f in
+#           ["investment","ibor_date","tradedate","transaction","financial_account",
+#            "quantity","local","book","tax_date"]})
 
-import pickle, glob
+"""
+test_cash_ledgers_real.py
+Quick manual test of compute_cash_trade_date / compute_cash_settle_date
+against REAL Portfolio1 data. Run from wherever you normally run other
+FIG scripts (so the financial_information_gateway.* imports resolve).
 
-def g(je, f):
-    return je.get(f) if isinstance(je, dict) else getattr(je, f, None)
+Adjust portfolio / calendar / period below if needed, then:
 
-for p in sorted(glob.glob('funds/B/Calendars/Monthly/Journals/*regular.pkl')):
-    d = pickle.load(open(p, 'rb'))
-    for je in d.get('journals', []):
-        fa = str(g(je, 'financial_account') or '')
-        if fa != 'AccruedInterestReceivable':
-            continue
-        td = str(g(je, 'tradedate'))[:10]
-        ib = str(g(je, 'ibor_date'))[:10]
-        if ib == '2026-01-20' or td in ('2026-01-17', '2026-01-18',
-                                        '2026-01-19', '2026-01-20'):
-            print(d.get('period_name'), '| txn=', g(je, 'transaction'),
-                  '| trade=', td, '| ibor=', ib,
-                  '| local=', g(je, 'local'))
+    python test_cash_ledgers_real.py
+
+What to look for, in order:
+  1. Does it run without errors at all? (import paths, IM bridge path)
+  2. metadata['investment_master_source'] should say
+     'TEMPORARY_BRIDGE_disk_csv' -- confirms it's reading the IM.
+  3. Row count > 0. If 0, the IM bridge probably isn't finding
+     investment_master.csv -- check the funds_path print message.
+  4. Spot-check a few rows: are the investments shown actually
+     currencies (USD, EUR, etc.), not equities/bonds?
+  5. Trade-date ledger: does running_local look sane (a plausible
+     cash commitment number, not way off)?
+  6. Settle-date ledger: does running_book reconcile sensibly --
+     i.e. does it look like a real cash balance, not wildly
+     different from running_local?
+  7. The open question from the build: trade-date ledger currently
+     shows BOTH the trade-date Payable posting AND its settle-date
+     relief entry for the same tranid. Look at a real multi-leg
+     trade and tell me whether that's the picture you want, or
+     whether it should be trade-date-only.
+"""
+#
+# from financial_information_gateway.fig_code.compute_cash_trade_date import compute_cash_trade_date
+# from financial_information_gateway.fig_code.compute_cash_settle_date import compute_cash_settle_date
+#
+# PORTFOLIO = "Portfolio1"
+# CALENDAR = "Monthly"
+# PERIOD_START = "2021-01"
+# PERIOD_END = "2021-01"   # start small -- one month -- before running full history
+#
+# print("=" * 70)
+# print("TRADE DATE CASH LEDGER")
+# print("=" * 70)
+# result = compute_cash_trade_date(PORTFOLIO, CALENDAR, PERIOD_START, PERIOD_END)
+# print(f"\nrows: {len(result.data)}")
+# print(f"metadata: {result.metadata}")
+# if not result.data.empty:
+#     print("\nFirst 20 rows:")
+#     print(result.data.head(20).to_string(index=False))
+# else:
+#     print("\n*** ZERO ROWS -- check the funds_path / IM bridge message above ***")
+#
+# print()
+# print("=" * 70)
+# print("SETTLE DATE CASH LEDGER")
+# print("=" * 70)
+# result2 = compute_cash_settle_date(PORTFOLIO, CALENDAR, PERIOD_START, PERIOD_END)
+# print(f"\nrows: {len(result2.data)}")
+# print(f"metadata: {result2.metadata}")
+# if not result2.data.empty:
+#     print("\nFirst 20 rows:")
+#     print(result2.data.head(20).to_string(index=False))
+# else:
+#     print("\n*** ZERO ROWS -- check the funds_path / IM bridge message above ***")
+#
+# from financial_information_gateway.fig_code.fig_core import prep_state_cached as prep_state
+#
+# prep = prep_state("Portfolio1", "Monthly", "2021-01", "2021-01")
+# settle_by_tranid = {}
+# for je in prep["journal_entries"]:
+#     tranid = getattr(je, "tranid", None)
+#     if tranid is not None:
+#         settle_by_tranid[tranid] = getattr(je, "settledate", None)
+#
+# # Sample a few early-month tranids vs late-month ones
+# sample = list(settle_by_tranid.items())[:10]
+# for tranid, sd in sample:
+#     print(tranid, sd)
+from financial_information_gateway.fig_code.compute_accounting_ledger import compute_accounting_ledger
+from financial_information_gateway.fig_code.compute_accounting_ledger import compute_accounting_ledger
+
+ledger = compute_accounting_ledger("Portfolio1", "Monthly", "2021-01", "2021-01")
+df = ledger.data
+
+print("Step 0 -- ALL rows in ledger.data:", len(df))
+
+step1 = df[df["financial_account"] == "Payable"]
+print("Step 1 -- financial_account == 'Payable' (ANY investment, ANY event_type):", len(step1))
+
+step2 = step1[step1["investment"] == "USD"]
+print("Step 2 -- + investment == 'USD':", len(step2))
+
+step3 = step2[step2["event_type"] == "ACTIVITY"]
+print("Step 3 -- + event_type == 'ACTIVITY':", len(step3))
+
+step4 = step3[step3["transaction"] != "Settlement"]
+print("Step 4 -- + transaction != 'Settlement':", len(step4))
+
+print()
+print("All distinct investments with financial_account == 'Payable':")
+print(step1["investment"].value_counts())

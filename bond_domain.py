@@ -353,9 +353,9 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
         investment=investment,
         location=location,
         ls="l",
-        position_effect="close",
-        qty=quantity,
-        currency_amount=local,
+        position_effect="open",
+        qty=-quantity, # quantity and local are "leaving"
+        currency_amount=-local,
         trade_date=tradedate,
         expected_settle_date=settledate,
         currency=payment_currency,
@@ -364,51 +364,60 @@ def sell_bond(portfolio, investment, location, quantity, local, book, closing_me
     return
 
 
-def short_bond(portfolio, investment, location, quantity, local, book, space, tranid,
-               transaction, tradedate, settledate, kdbegin, kdend, payment_currency, af,
-               accrued_local, accrued_book, entry_type="Asset/Liability"):
+def short_bond(portfolio, investment, location, quantity, local, book, space, tranid, transaction,
+             tradedate, settledate, kdbegin, kdend, payment_currency, af,
+             accrued_local, accrued_book, entry_type):
+    # Create a new je Open IBM
+
     ls = "s"
+    financial_account = "Cost"
     ibor_date = tradedate
 
-    # ── SHORT COST — opens short position ────────────────────
-    je = Journals(portfolio, investment, tranid, tradedate, ls, location, "Cost",
-                  -quantity, -local, -book,
-                  None, None, tranid, transaction,
-                  tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
+    je = Journals(portfolio, investment, tranid, tradedate, ls, location, financial_account, -quantity, -local, -book,
+                  None, None, tranid,
+                  transaction, tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
     space.post_journal_entry(je)
 
-    # ── SOLD INTEREST — accrued interest on short side ───────
     if accrued_local is not None and accrued_local != 0:
-        je = Journals(portfolio, investment, tranid, tranid, ls, location, "SoldInterest",
-                      -accrued_local, -accrued_local, -accrued_book,
-                      None, None, tranid, transaction,
-                      tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
+        financial_account = "SoldInterest"  # use tranid for payable receivable to close
+        je = Journals(portfolio, investment, tranid, tradedate, "s", location, financial_account, -accrued_local,
+                      -accrued_local, -accrued_book, None, None, tranid,
+                      transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
 
-    # ── SMF — one record per trade ────────────────────────────
-    af.add_record(tranid=tranid, portfolio=portfolio, investment=investment,
-                   position='short', position_effect='open', location=location,
-                   currency=payment_currency, qty=quantity, currency_amount=local,
-                   status='Unsettled')
+    # Record the settlement information to SMF
+    af.add_record(
+        tranid=tranid,
+        portfolio=portfolio,
+        investment=investment,
+        location=location,
+        ls="s",
+        position_effect="open",
+        qty=-quantity,
+        currency_amount=-local,
+        trade_date=tradedate,
+        expected_settle_date=settledate,
+        currency=payment_currency,
+    )
 
     return
 
 
 def cover_bond(portfolio, investment, location, quantity, local, book, closing_method,
-               space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-               payment_currency, af, accrued_local, accrued_book):
+              space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
+              af, accrued_local, accrued_book):
     ibor_date = tradedate
     ls = "s"
 
-    # ── PURCHASED INTEREST — accrued interest on cover side ──
+    # ── PURCHASED INTEREST — accrued interest  for all fin accts ──────────
     if accrued_local is not None and accrued_local != 0:
-        je = Journals(portfolio, investment, tranid, tradedate, "l", location, "PurchasedInterest",
+        je = Journals(portfolio, investment, tranid,tradedate, ls, location, "PurchasedInterest",
                       accrued_local, accrued_local, accrued_book,
                       None, None, tranid, transaction,
                       tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
 
-    # ── CLOSE SHORT COST LOTS ─────────────────────────────────
+    # ── CLOSE COST LOTS ──────────────────────────────────────────
     lots_returned = close_bond_lots(investment, location, quantity, local, book,
                                     closing_method, "", space, "s", tranid)
 
@@ -416,10 +425,10 @@ def cover_bond(portfolio, investment, location, quantity, local, book, closing_m
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lot
 
         fxrate = book / local if local != 0 else 0
-        pgain_local = closed_local - closed_proceeds  # reversed — gain when price falls
+        pgain_local = closed_proceeds - closed_local
         pgain_book = pgain_local * fxrate
         glbook = closed_proceeds * fxrate - closed_book - pgain_book
-        realized_gl = (closed_local - closed_proceeds) * fxrate
+        realized_gl = (closed_proceeds - closed_local) * fxrate * -1
 
         # Cost lot closure
         space.post_journal_entry(Journals(
@@ -459,11 +468,22 @@ def cover_bond(portfolio, investment, location, quantity, local, book, closing_m
                 entry_type="Revenue/Expense/Capital"
             ))
 
-    # ── SMF — one record per trade, outside lot loop ──────────
-    af.add_record(tranid=tranid, portfolio=portfolio, investment=investment,
-                   position='short', position_effect='close', location=location,
-                   currency=payment_currency, qty=quantity, currency_amount=local,
-                   status='Unsettled')
+    # ── SMF — one record per trade, outside lot loop ─────────────
+    af.add_record(
+        tranid=tranid,
+        portfolio=portfolio,
+        investment=investment,
+        location=location,
+        ls="s",
+
+
+        position_effect="open",
+        qty=quantity,#quantity and local are "leaving"
+        currency_amount=local,
+        trade_date=tradedate,
+        expected_settle_date=settledate,
+        currency=payment_currency,
+    )
 
     return
 

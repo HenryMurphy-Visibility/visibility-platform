@@ -26,25 +26,25 @@ ops_router = APIRouter(prefix="/api/v1/ops", tags=["Operations"])
 # Module level -- above the class, alongside CALENDAR_PRESETS
 ACCRUAL_METHODS = {"single_day_factor", "multiday_preceding", "multiday_following"}
 
+
 class PortfolioConfig(BaseModel):
-    portfolio_id:     str
-    base_currency:    str             = "USD"
-    domicile_country: str             = "US"
+    portfolio_id: str
+    base_currency: str = "USD"
+    domicile_country: str = "US"
     primary_benchmark: str = "SPX"
-    inception_date:   str
-    managers:         List[str]       = []
-    description:      Optional[str]   = None
-    closing_method:   str             = "FIFO"
-    accrual_method:   str             = "accrue_eod"
-    amort_method:     str             = "straight_line"
-    calendars:        List[str]       = ["Monthly"]
-    calendar_preset:  Optional[str]   = None
-    accrual_method: str = "single_day_factor"
-
-    class PortfolioConfig(BaseModel):
-        # ... existing fields ...
-        accrual_method: str = "single_day_factor"
-
+    inception_date: str
+    managers: List[str] = []
+    description: Optional[str] = None
+    closing_method: str = "FIFO"
+    accrual_method: str = "accrue_eod"
+    amort_method: str = "straight_line"
+    calendars: List[str] = ["Monthly"]
+    calendar_preset: Optional[str] = None
+    # NEW -- explicit boundary for "what came before the first period."
+    # Full date+time, user-settable. If omitted at creation, falls back
+    # to inception_date with implied 00:00:00 (see get_start_period_boundary
+    # below) -- not silently invented elsewhere downstream.
+    start_period_boundary: Optional[str] = None
 
 class InvestmentRecord(BaseModel):
     investment:       str
@@ -215,6 +215,10 @@ def create_portfolio(config: PortfolioConfig):
             "base_currency": config.base_currency,
             "domicile_country": config.domicile_country,
             "inception_date": config.inception_date,
+            "start_period_boundary": (
+                    config.start_period_boundary
+                    or f"{config.inception_date}T00:00:00"
+            ),
             "primary_benchmark": config.primary_benchmark,
             "managers": config.managers,
             "description": config.description,
@@ -290,6 +294,28 @@ def get_portfolio(portfolio_id: str):
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
+
+def get_start_period_boundary(portfolio_config: dict) -> Optional[str]:
+    """
+    Return the explicit start_period_boundary for a portfolio, with the
+    confirmed fallback for portfolios created before this field existed:
+    inception_date + implied 00:00:00.
+
+    Returns None only if even inception_date is missing (should not
+    happen for any valid portfolio.json).
+
+    This is a READ-time fallback, not a write-time one -- existing
+    portfolios are not silently rewritten; every read of an old
+    portfolio.json computes the same fallback consistently, until/unless
+    the portfolio is explicitly updated with a real value.
+    """
+    explicit = portfolio_config.get("start_period_boundary")
+    if explicit:
+        return explicit
+    inception = portfolio_config.get("inception_date")
+    if not inception:
+        return None
+    return f"{inception}T00:00:00"
 
 @ops_router.get("/portfolios")
 def list_portfolios():
@@ -955,45 +981,56 @@ def _normalize_fx_date(val: str) -> str:
 
 @ops_router.post("/portfolio/{portfolio_id}/proof")
 def run_proof_endpoint(
-    portfolio_id: str,
-    calendar:     str           = Query("Monthly"),
-    period:       Optional[str] = Query(None),
-    investment:   Optional[str] = Query(None),
-    tranid:       Optional[int] = Query(None),
-    pillar:       Optional[str] = Query(None),
-    verbose:      bool          = Query(False),
+        portfolio_id: str,
+        calendar: str = Query("Monthly"),
+        period: Optional[str] = Query(None),
+        investment: Optional[str] = Query(None),
+        tranid: Optional[int] = Query(None),
+        pillar: Optional[str] = Query(None),
+        verbose: bool = Query(False),
 ):
     try:
         from proof_engine import (
             load_events, load_investment_master, load_price_index,
             load_fx_index, load_jes_from_journals, load_calendar_records,
+            load_prior_accumulation, load_portfolio_config,
             pillar_availability, pillar_balance, pillar_settle_fx,
             pillar_marks, pillar_chart_of_accounts, pillar_data,
-            _safe_float,
+            _safe_float, BASE_CURRENCY,
         )
         from v_config import FUNDS_PATH, REFDATA_PATH
 
-        funds_path   = str(FUNDS_PATH)
+        funds_path = str(FUNDS_PATH)
         refdata_path = str(REFDATA_PATH)
 
-        events           = load_events(portfolio_id, funds_path)
-        im               = load_investment_master(portfolio_id, funds_path)
-        price_index      = load_price_index(refdata_path)
-        fx_index         = load_fx_index(refdata_path)
-        jes_by_period, _ = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
+        events = load_events(portfolio_id, funds_path)
+        im = load_investment_master(portfolio_id, funds_path)
+        price_index = load_price_index(refdata_path)
+        fx_index = load_fx_index(refdata_path)
+        jes_by_period, period_meta = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
         calendar_records = load_calendar_records(portfolio_id, calendar, funds_path)
+
+        portfolio_config = load_portfolio_config(portfolio_id, funds_path)
+        base_currency = (portfolio_config or {}).get("base_currency") or BASE_CURRENCY
 
         if period:
             calendar_records = [r for r in calendar_records
-                               if r.get("period_name") == period]
+                                if r.get("period_name") == period]
 
         if investment:
             inv_upper = investment.upper()
             events = [e for e in events
-                     if e.get("investment", "").upper() == inv_upper]
+                      if e.get("investment", "").upper() == inv_upper]
         if tranid:
             events = [e for e in events
-                     if int(_safe_float(e.get("tranid")) or 0) == tranid]
+                      if int(_safe_float(e.get("tranid")) or 0) == tranid]
+
+        # Build prior_accumulation for carry-forward
+        prior_accumulation = None
+        if period:
+            prior_accumulation = load_prior_accumulation(
+                portfolio_id, calendar, funds_path, period
+            )
 
         run_all = pillar is None
 
@@ -1011,7 +1048,6 @@ def run_proof_endpoint(
                 "skipped": [i.message for i in r.skipped] if verbose else [],
             }
 
-
         results = {}
 
         if run_all or pillar == "availability":
@@ -1028,7 +1064,8 @@ def run_proof_endpoint(
 
         if run_all or pillar == "marks":
             results["marks"] = _serialize(
-                pillar_marks(events, im, calendar_records, jes_by_period, price_index, fx_index))
+                pillar_marks(events, im, calendar_records, jes_by_period,
+                             price_index, fx_index, prior_accumulation))
 
         if run_all or pillar == "chart_of_accounts":
             results["chart_of_accounts"] = _serialize(
@@ -1036,31 +1073,30 @@ def run_proof_endpoint(
 
         if run_all or pillar == "data":
             results["data"] = _serialize(
-                pillar_data(events, jes_by_period))
+                pillar_data(events, jes_by_period, im, base_currency))
 
-        total_pass = sum(v["passes"]   for v in results.values())
+        total_pass = sum(v["passes"] for v in results.values())
         total_warn = sum(v["warnings"] for v in results.values())
         total_fail = sum(v["failures"] for v in results.values())
-        all_clear  = all(v["all_clear"] for v in results.values())
+        all_clear = all(v["all_clear"] for v in results.values())
 
         return {
-            "portfolio":        portfolio_id,
-            "calendar":         calendar,
-            "period":           period or "ALL",
-            "investment":       investment,
-            "total_pass":       total_pass,
-            "total_warn":       total_warn,
-            "total_fail":       total_fail,
-            "all_clear":        all_clear,
-            "events_loaded":    len(events),
-            "periods_checked":  len(jes_by_period),
-            "pillars":          results,
+            "portfolio": portfolio_id,
+            "calendar": calendar,
+            "period": period or "ALL",
+            "investment": investment,
+            "total_pass": total_pass,
+            "total_warn": total_warn,
+            "total_fail": total_fail,
+            "all_clear": all_clear,
+            "events_loaded": len(events),
+            "periods_checked": len(jes_by_period),
+            "pillars": results,
         }
 
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
-
 
 # ============================================================
 # REVERSE EVENT

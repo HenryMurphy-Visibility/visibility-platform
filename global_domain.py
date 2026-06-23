@@ -551,7 +551,7 @@ def mark_bond_accruals(portfolio, investment, mark_date,
             al_account, re_account, ls = ("AccruedInterestPayable",
                                           "InterestExpense", "s")
 
-        daily_local = abs(entitled_qty * rate * pf)
+        daily_local = entitled_qty * rate * pf
 
         for posting_date, n_days, txn in postings:
             accrued_local = daily_local * n_days

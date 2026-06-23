@@ -102,11 +102,14 @@
   }
   .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
   .nav-item.active {
-    color: #fff;
-    border-left-color: var(--accent);
-    background: rgba(46,95,163,0.12);
-  }
-
+    color: #00ff88 ;
+    border-left-color: #00ff88 ;
+    background: rgba(80,200,120,0.12);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(80,200,120,0.4);
+}
+ 
   main {
     padding: 32px 36px;
     overflow-y: auto;
@@ -312,22 +315,23 @@
 </header>
 
 <nav>
-  <div class="nav-section">Reports</div>
+  <div class="nav-section">Operations</div>
+  <div class="nav-item" onclick="selectEndpoint('cash-trade-date', this)">Cash Ledger — Trade Date</div>
+  <div class="nav-item" onclick="selectEndpoint('cash-settle-date', this)">Cash Ledger — Settle Date</div>
   <div class="nav-item active" onclick="selectEndpoint('appraisal', this)">Appraisal</div>
   <div class="nav-item" onclick="selectEndpoint('ledger', this)">Accounting Ledger</div>
   <div class="nav-item" onclick="selectEndpoint('position-ledger', this)">Position Ledger</div>
 
-  <div class="nav-section" style="margin-top:12px">Performance</div>
-  <div class="nav-item" onclick="selectEndpoint('performance', this)">Performance</div>
-  <div class="nav-item" onclick="selectEndpoint('performance-summary', this)">Performance Summary</div>
-
-
-  <div class="nav-section" style="margin-top:12px">Balance Sheet Constituents</div>
+  <div class="nav-section" style="margin-top:12px">Fund Accounting</div>
   <div class="nav-item" onclick="selectEndpoint('cost-basis', this)">Cost Basis</div>
   <div class="nav-item" onclick="selectEndpoint('income', this)">Income</div>
   <div class="nav-item" onclick="selectEndpoint('realized', this)">Realized Gains</div>
   <div class="nav-item" onclick="selectEndpoint('unrealized', this)">Unrealized</div>
   <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
+
+  <div class="nav-section" style="margin-top:12px">Firm Analytics</div>
+  <div class="nav-item" onclick="selectEndpoint('performance', this)">Detailed TWR Performance</div>
+  <div class="nav-item" onclick="selectEndpoint('performance-summary', this)">Summarized TWR Performance</div>
 
   <div class="nav-section" style="margin-top:12px">Reconciliation</div>
   <div class="nav-item" onclick="selectEndpoint('recon', this)">Master Recon</div>
@@ -474,6 +478,20 @@
 const BASE = '';
 
 const ENDPOINTS = {
+  'cash-trade-date': {
+    title: 'Cash — Trade Date',
+    desc: 'Operational tradeable cash on currency investments',
+    path: '/api/v1/cash-trade-date',
+    csvPath: '/api/v1/cash-trade-date/csv',
+    extras: [],
+  },
+  'cash-settle-date': {
+    title: 'Cash — Settle Date',
+    desc: 'Custodian-recon cash on currency investments',
+    path: '/api/v1/cash-settle-date',
+    csvPath: '/api/v1/cash-settle-date/csv',
+    extras: [],
+  },
   'appraisal': {
     title: 'Appraisal',
     desc: 'Point-in-time portfolio appraisal at tax lot level',
@@ -508,7 +526,7 @@ const ENDPOINTS = {
     path: '/api/v1/performance/summary',
     csvPath: '/api/v1/performance/summary/csv',
     extras: ['level'],
-},
+  },
   'cost-basis': {
     title: 'Cost Basis',
     desc: 'Opening · Activity · Closing for every cost basis account',

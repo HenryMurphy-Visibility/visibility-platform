@@ -64,7 +64,23 @@
     transition: all 0.15s; user-select: none;
   }
   .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
-  .nav-item.active { color: #fff; border-left-color: var(--accent); background: rgba(46,95,163,0.12); }
+  .nav-item.active {
+    color: #00ff88;
+    border-left-color: #00ff88;
+    background: rgba(80,200,120,0.12);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(80,200,120,0.4);
+    animation: nav-pulse 2s ease-in-out infinite;
+}
+  .nav-item.active {
+    color: #50c878;
+    border-left-color: #50c878;
+    background: rgba(80,200,120,0.12);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(80,200,120,0.4);
+}
   .nav-item.stub { color: #3a4060; cursor: default; font-style: italic; }
   .nav-item.stub:hover { color: #3a4060; background: none; }
   .nav-stub-badge { font-size: 0.7em; color: #2a3050; margin-left: 6px; letter-spacing: 0; font-style: normal; }

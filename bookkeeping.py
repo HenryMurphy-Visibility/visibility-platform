@@ -1277,26 +1277,19 @@ class AdministrativeFacility:
         # Aggregate: (location, ls) -> qty
         result = {}
         for record in self.records.values():
-            if record["portfolio"]  != portfolio:  continue
+            if record["portfolio"] != portfolio:  continue
             if record["investment"] != investment: continue
             if location is not None and record["location"] != location:
                 continue
             if ls_filter is not None and record["ls"] != ls_filter:
                 continue
 
-            # Open adds settled qty toward entitlement; close subtracts
-            effect = record["position_effect"]
-            if effect == "open":
-                contrib = record["settled_qty"]
-            elif effect == "close":
-                contrib = -record["settled_qty"]
-            else:
-                # Unknown effect -- skip with warning; shouldn't happen
-                # if add_record validation worked
-                print(f"AF WARNING: tranid {record['tranid']} has "
-                      f"position_effect={effect!r}; skipped in "
-                      f"entitled_position.")
-                continue
+            # A trade's contribution to entitlement IS its signed settled
+            # quantity. Buy/cover are positive, sell/short negative -- the
+            # sign is stored in the record, exactly as the accounting
+            # journals express it. No open/close concept: a trade is a
+            # trade, and only the SETTLED portion counts.
+            contrib = record["settled_qty"]
 
             key = (record["location"], record["ls"])
             result[key] = result.get(key, 0.0) + contrib
@@ -1307,23 +1300,14 @@ class AdministrativeFacility:
     def entitled_position_total(self, portfolio, investment,
                                 location=None, ls=None):
         """
-        Convenience wrapper: returns a single signed number instead of
-        the dict. Long contributions stay positive, short contributions
-        flipped negative (so a flat net-long-and-short-equal position
-        returns zero).
-
-        Useful for accrual rules that want one number and don't care
-        about location breakdown.
+        Single signed number instead of the dict. Signs are already
+        carried in each record's settled_qty (buy/cover +, sell/short -),
+        so this is a straight sum -- a flat long-and-short book nets to
+        zero on its own.
         """
         positions = self.entitled_position(portfolio, investment,
                                            location, ls)
-        total = 0.0
-        for (loc, side), qty in positions.items():
-            if side == "l":
-                total += qty
-            elif side == "s":
-                total -= qty
-        return total
+        return sum(positions.values())
 
     # ------------------------------------------------------------------
     # Decision-support query -- would this settlement close net to zero?
@@ -1357,41 +1341,28 @@ class AdministrativeFacility:
         if record is None:
             return False
 
-        # What would settle if this call goes through?
+        # What would settle if this call goes through? (signed)
         if hypothetical_qty is None:
             settling_qty = record["trade_qty"] - record["settled_qty"]
         else:
             settling_qty = float(hypothetical_qty)
 
-        # What's the contribution sign for THIS record?
-        if record["position_effect"] == "open":
-            this_contrib = settling_qty
-        elif record["position_effect"] == "close":
-            this_contrib = -settling_qty
-        else:
-            return False
+        this_contrib = settling_qty  # already signed
 
-        # What's the current net for this bucket BEFORE this settlement?
+        # Current net for this bucket BEFORE this settlement (signed sum)
         current_net = 0.0
         for r in self.records.values():
-            if r["portfolio"]      != record["portfolio"]:  continue
-            if r["investment"]     != record["investment"]: continue
-            if r["location"]       != record["location"]:   continue
-            if r["ls"]             != record["ls"]:         continue
-
-            effect = r["position_effect"]
-            if effect == "open":
-                current_net += r["settled_qty"]
-            elif effect == "close":
-                current_net -= r["settled_qty"]
+            if r["portfolio"] != record["portfolio"]:  continue
+            if r["investment"] != record["investment"]: continue
+            if r["location"] != record["location"]:   continue
+            if r["ls"] != record["ls"]:         continue
+            current_net += r["settled_qty"]
 
         projected_net = current_net + this_contrib
 
         TOL = 1e-9
-        # Full close means: was non-zero before, would be zero after
-        return (abs(current_net)   >  TOL and
+        return (abs(current_net) > TOL and
                 abs(projected_net) <= TOL)
-
     # ------------------------------------------------------------------
     # Subscription queries -- for proof, recon, ops, reporting
     # ------------------------------------------------------------------

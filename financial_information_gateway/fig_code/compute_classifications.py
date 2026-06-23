@@ -164,6 +164,8 @@ def _accounts_for(*categories: str) -> frozenset[str]:
     )
 
 
+
+
 # ── FIVE REPORTING CATEGORIES ─────────────────────────────────────────────────
 
 COST_BASIS_ACCOUNTS = _accounts_for(
@@ -191,6 +193,24 @@ UNREALIZED_ACCOUNTS = _accounts_for(
 CAPITAL_ACCOUNTS = _accounts_for(
     Category.CAPITAL,
 )
+# Single authoritative definition of trade-date cash financial accounts.
+# Import this wherever trade-date cash scope is needed -- compute_cash_trade_date,
+# valuation reports, any future subtotal view that wants to group
+# is_currency investments by these accounts.
+
+TRADE_DATE_CASH_ACCOUNTS = frozenset({
+    "Cost",
+    "Receivable",
+    "DividendsReceivable",
+    "SpotFxReceivable",
+    "InterestReceivable",
+    "Expenses_Receivable",
+    "Payable",
+    "DividendsPayable",
+    "SpotFxPayable",
+    "InterestPayable",
+    "ExpensesPayable",
+})
 
 # ── COMBINED SETS ─────────────────────────────────────────────────────────────
 
