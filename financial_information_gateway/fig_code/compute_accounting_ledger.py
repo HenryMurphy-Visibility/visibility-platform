@@ -237,6 +237,7 @@ def _materialize(prep, uber_filter=None, ppa_ibor_date=None):
     #   (original trade ibor_date is wrong for adjusting
     #    entries — it references a closed period)
     # --------------------------------------------------
+    # In _materialize, in the ATTACH JOURNALS section
     for je in prep["journal_entries"]:
 
         # Filter by investment if requested
@@ -254,6 +255,17 @@ def _materialize(prep, uber_filter=None, ppa_ibor_date=None):
             je_ibor = getattr(je, "ibor_date", None)
             if not je_ibor:
                 continue
+
+            # ── DATE FILTER ──────────────────────────────────
+            # Explicitly exclude anything outside the period window.
+            # prior_cutoff is None only for inception period.
+            if prior_cutoff is not None:
+                if je_ibor <= prior_cutoff:
+                    continue
+            if je_ibor > current_cutoff:
+                continue
+            # ─────────────────────────────────────────────────
+
             if prior_cutoff is None:
                 if je_ibor > current_cutoff:
                     continue

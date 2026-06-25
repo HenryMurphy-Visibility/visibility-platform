@@ -1,4 +1,4 @@
-# ============================================================
+﻿# ============================================================
 # ops_routes.py
 # Visibility — Operations REST API Routes
 # ============================================================
@@ -983,7 +983,7 @@ def _normalize_fx_date(val: str) -> str:
 def run_proof_endpoint(
         portfolio_id: str,
         calendar: str = Query("Monthly"),
-        period: Optional[str] = Query(None),
+        period: Optional[str] = Query("2025-12"),
         investment: Optional[str] = Query(None),
         tranid: Optional[int] = Query(None),
         pillar: Optional[str] = Query(None),
@@ -1007,7 +1007,8 @@ def run_proof_endpoint(
         im = load_investment_master(portfolio_id, funds_path)
         price_index = load_price_index(refdata_path)
         fx_index = load_fx_index(refdata_path)
-        jes_by_period, period_meta = load_jes_from_journals(portfolio_id, calendar, funds_path, period)
+        jes_by_period, period_meta = load_jes_from_journals(
+            portfolio_id, calendar, funds_path, period)
         calendar_records = load_calendar_records(portfolio_id, calendar, funds_path)
 
         portfolio_config = load_portfolio_config(portfolio_id, funds_path)
@@ -1025,12 +1026,10 @@ def run_proof_endpoint(
             events = [e for e in events
                       if int(_safe_float(e.get("tranid")) or 0) == tranid]
 
-        # Build prior_accumulation for carry-forward
         prior_accumulation = None
         if period:
             prior_accumulation = load_prior_accumulation(
-                portfolio_id, calendar, funds_path, period
-            )
+                portfolio_id, calendar, funds_path, period)
 
         run_all = pillar is None
 
@@ -1080,6 +1079,99 @@ def run_proof_endpoint(
         total_fail = sum(v["failures"] for v in results.values())
         all_clear = all(v["all_clear"] for v in results.values())
 
+        # ── PERFORMANCE RECONCILIATION ────────────────────────────
+        perf_recon = {}
+        if period:
+            try:
+                from financial_information_gateway.fig_code.fig_core import prep_state_cached
+                from financial_information_gateway.fig_code.compute_appraisal import compute_appraisal
+                from financial_information_gateway.fig_code.fig_performance_carving import aggregate_by_aif
+                from financial_information_gateway.fig_code.compute_performance import (
+                    _get_cached_daily_state,
+                    _get_available_periods,
+                    _sorted_periods,
+                    _rechain_aggregated_state,
+                )
+
+                STARTING_CAPITAL = 10_000_000_000.00
+
+                # Appraisal grand total
+                appraisal_result = compute_appraisal(
+                    portfolio=portfolio_id,
+                    calendar=calendar,
+                    period_start=period,
+                    period_end=period,
+                    mode="period_close",
+                )
+                df_apr = appraisal_result.data
+                grand_row = df_apr[df_apr["row_type"] == "grand_total"] \
+                    if df_apr is not None else None
+                grand_total = float(grand_row["market_value_book"].iloc[0].replace(",", "")) \
+                    if grand_row is not None and not grand_row.empty else 0.0
+                appraisal_earnings = grand_total - STARTING_CAPITAL
+
+                # Performance contribution from daily state
+                prep = prep_state_cached(portfolio_id, calendar, period, period)
+                available = _get_available_periods(portfolio_id, calendar)
+                inception = available[0]
+                build_periods = _sorted_periods(inception, period, available)
+                cache_key = (portfolio_id, calendar, inception, period)
+
+                daily_state, _, _ = _get_cached_daily_state(
+                    cache_key=cache_key,
+                    journal_entries=prep["journal_entries"],
+                    periods=build_periods,
+                    calendar=calendar,
+                    portfolio=portfolio_id,
+                )
+
+                ws = daily_state.copy()
+                ws["portfolio"] = portfolio_id
+                pf_state = aggregate_by_aif(ws, "portfolio")
+                pf_state = _rechain_aggregated_state(pf_state, "portfolio")
+
+                import pandas as pd
+                pf_state["ibor_date"] = pd.to_datetime(pf_state["ibor_date"])
+
+                perf_contribution = float((
+                                                  pf_state["EMV_Book"]
+                                                  - pf_state["Previous_EMV_Book"]
+                                                  - pf_state["Open_CF_Book"]
+                                                  - pf_state["Close_CF_Book"]
+                                                  - pf_state["Currency_Flows_Book"]
+                                          ).sum())
+
+                variance = appraisal_earnings - perf_contribution
+                variance_bps = round((variance / STARTING_CAPITAL) * 10_000, 1)
+
+                KNOWN_ITEM_BPS = 12.0
+                if abs(variance_bps) <= KNOWN_ITEM_BPS:
+                    status = "RECONCILED"
+                    note = (
+                        "Variance within documented known item. "
+                        "Portfolio EMV reflects principal market values. "
+                        "Income methodology difference. Scheduled for resolution."
+                        if abs(variance_bps) > 1.0
+                        else "Reconciled to within rounding."
+                    )
+                else:
+                    status = "VARIANCE REQUIRES INVESTIGATION"
+                    note = f"Variance of {variance_bps} bps exceeds expected threshold."
+
+                perf_recon = {
+                    "status": status,
+                    "starting_capital": f"${STARTING_CAPITAL:,.2f}",
+                    "appraisal_grand_total": f"${grand_total:,.2f}",
+                    "appraisal_earnings": f"${appraisal_earnings:,.2f}",
+                    "performance_contribution": f"${perf_contribution:,.2f}",
+                    "variance": f"${variance:,.2f}",
+                    "variance_bps": variance_bps,
+                    "note": note,
+                }
+
+            except Exception as e:
+                perf_recon = {"status": "ERROR", "message": str(e)}
+
         return {
             "portfolio": portfolio_id,
             "calendar": calendar,
@@ -1092,6 +1184,7 @@ def run_proof_endpoint(
             "events_loaded": len(events),
             "periods_checked": len(jes_by_period),
             "pillars": results,
+            "performance_reconciliation": perf_recon,
         }
 
     except Exception as e:

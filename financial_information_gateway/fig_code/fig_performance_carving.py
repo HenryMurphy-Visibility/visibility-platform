@@ -241,14 +241,14 @@ def aggregate_by_aif(df, aif_field):
             numerator_local = (
                 row["EMV_Local"] - row["Previous_EMV_Local"]
                 - row["Open_CF_Local"] - row["Close_CF_Local"]
-                - row["Currency_Flows_Local"]
+                - row["Currency_Flows_Local"] + + row["Income_Local"]
             )
             denominator_local = row["Previous_EMV_Local"]
 
             numerator_book = (
                 row["EMV_Book"] - row["Previous_EMV_Book"]
                 - row["Open_CF_Book"] - row["Close_CF_Book"]
-                - row["Currency_Flows_Book"]
+                - row["Currency_Flows_Book"]+ row["Income_Book"]
             )
             denominator_book = row["Previous_EMV_Book"]
 

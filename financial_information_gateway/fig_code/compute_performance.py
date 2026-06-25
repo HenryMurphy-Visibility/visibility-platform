@@ -524,6 +524,8 @@ def compute_daily_twr(journal_entries, period_start, period_end, agg_level, leve
     #                  income in numerator.
     #   Portfolio:     denominator = Previous_EMV only, no income term.
     def calculate_twr(row):
+        if row[level] == 'portfolio':
+            print("at portfolio level")
         if row[level] != 'portfolio':
             same_sign_local = (row['Previous_EMV_Local'] >= 0) == (row['Currency_Flows_Local'] >= 0)
             same_sign_book = (row['Previous_EMV_Book'] >= 0) == (row['Currency_Flows_Book'] >= 0)
@@ -542,12 +544,12 @@ def compute_daily_twr(journal_entries, period_start, period_end, agg_level, leve
         else:  # Portfolio Level Calculation
             numerator_local = (
                     row['EMV_Local'] - row['Previous_EMV_Local'] - row['Open_CF_Local'] - row['Close_CF_Local'] -
-                    row['Currency_Flows_Local'])
+                    row['Currency_Flows_Local']+ row['Income_Local'])
             denominator_local = row['Previous_EMV_Local']
 
             numerator_book = (
                     row['EMV_Book'] - row['Previous_EMV_Book'] - row['Open_CF_Book'] - row['Close_CF_Book'] - row[
-                'Currency_Flows_Book'])
+                'Currency_Flows_Book']+ row['Income_Book'])
             denominator_book = row['Previous_EMV_Book']
 
         twr_local = None if denominator_local == 0 else numerator_local / denominator_local

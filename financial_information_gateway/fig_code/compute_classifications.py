@@ -163,9 +163,6 @@ def _accounts_for(*categories: str) -> frozenset[str]:
         if cat in categories
     )
 
-
-
-
 # ── FIVE REPORTING CATEGORIES ─────────────────────────────────────────────────
 
 COST_BASIS_ACCOUNTS = _accounts_for(
@@ -432,7 +429,8 @@ def add_summary_rows(df):
     if df is None or df.empty:
         return df
 
-    closing = df[df["event_type"] == "CLOSING"]
+    closing = df[df["event_type"] == "ACTIVITY"]
+
     if closing.empty:
         return df
 

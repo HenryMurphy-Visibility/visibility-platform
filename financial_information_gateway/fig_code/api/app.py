@@ -994,7 +994,6 @@ def compute_performance_csv(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-
 # ============================================================
 # COMPUTE RECON
 # ============================================================
