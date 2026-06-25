@@ -121,6 +121,7 @@ async def lifespan(app):
 
 app = FastAPI(
     title="Visibility — Financial Information Gateway",
+    swagger_ui_parameters={"requestTimeout": 300000},
     description=(
         "Institutional-grade investment accounting API. "
         "Every compute function available as a REST endpoint. "
