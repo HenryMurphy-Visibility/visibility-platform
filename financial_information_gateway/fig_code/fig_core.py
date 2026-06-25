@@ -474,3 +474,4 @@ def _render_api(result: ComputeResult, options: dict):
         "data": records,
         "performance": performance,
     }
+quit()
