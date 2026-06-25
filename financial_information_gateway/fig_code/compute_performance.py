@@ -400,13 +400,13 @@ def compute_income(investment_master, je_data, level):
 # ══════════════════════════════════════════════════════════════════════════════
 
 def compute_daily_twr(journal_entries, period_start, period_end, agg_level, level, include_local_currency=True):
-    import os
     import pandas as pd
 
-    # ✅ Load reference data
-    coa_je_data = pd.read_csv("C:/Users/hjmne/PycharmProjects/chest/refdata/chart_of_accounts.csv", encoding="cp1252")
-    investment_master = pd.read_csv("C:/Users/hjmne/PycharmProjects/chest/refdata/investment_master.csv",
-                                    encoding="cp1252")
+    import os
+    from v_config import REFDATA_PATH
+
+    coa_je_data = pd.read_csv(os.path.join(REFDATA_PATH, "chart_of_accounts.csv"), encoding="cp1252")
+    investment_master = pd.read_csv(os.path.join(REFDATA_PATH, "investment_master.csv"), encoding="cp1252")
 
     # ✅ Normalize journal entries
     def normalize_journal_entries(journal_entries):
