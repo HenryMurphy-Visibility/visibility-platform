@@ -22,11 +22,15 @@ PUBLIC_PATHS = {
     "/api/v1/auth/login",
     "/api/v1/auth/logout",
     "/favicon.ico",
+    "/api/v1/docs",
+    "/api/v1/redoc",
+    "/api/v1/openapi.json",
 }
 
 # Path prefixes that never require auth (static assets etc)
 PUBLIC_PREFIXES = (
     "/static/",
+    "/api/v1/",
 )
 
 
