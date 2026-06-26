@@ -2,7 +2,7 @@
 auth_middleware.py
 Visibility Platform — Authentication Middleware
 
-Runs on every request. Checks session token, validates IP,
+Runs on every request. Checks session token OR API key, validates IP,
 redirects to /login if not authenticated.
 
 Add to main FastAPI app:
@@ -43,43 +43,53 @@ class AuthMiddleware(BaseHTTPMiddleware):
         if path in PUBLIC_PATHS or path.startswith(PUBLIC_PREFIXES):
             return await call_next(request)
 
-        # Check IP whitelist first — blocks before even checking session
+        # Check IP whitelist first
         if not auth_manager.check_ip(ip):
-            # API request — return 403
             if path.startswith("/api/"):
                 return JSONResponse(
                     status_code=403,
                     content={"detail": f"IP {ip} not permitted"}
                 )
-            # Browser request — redirect to login with message
             return RedirectResponse(url="/login?blocked=1", status_code=302)
 
-        # Get session token from cookie
-        token = request.cookies.get("visibility_session")
+        # Try API key first (from header)
+        api_key = request.headers.get("X-API-Key")
+        if api_key:
+            user = auth_manager.validate_api_key(api_key)
+            if user:
+                request.state.user     = user
+                request.state.username = user["username"]
+                request.state.role     = user["role"]
+                request.state.ip       = ip
+                if not _is_noisy(path):
+                    auth_manager.log_request(user["username"], ip, path)
+                return await call_next(request)
+            else:
+                return JSONResponse(
+                    status_code=401,
+                    content={"detail": "Invalid API key"}
+                )
 
-        # Validate session
-        user = auth_manager.validate_session(token, ip) if token else None
+        # Fall back to session cookie
+        token = request.cookies.get("visibility_session")
+        user  = auth_manager.validate_session(token, ip) if token else None
 
         if not user:
-            # API request — return 401
             if path.startswith("/api/"):
                 return JSONResponse(
                     status_code=401,
-                    content={"detail": "Not authenticated"}
+                    content={"detail": "Not authenticated. Use X-API-Key header or log in at /login"}
                 )
-            # Browser request — redirect to login
             return RedirectResponse(
                 url=f"/login?next={path}",
                 status_code=302
             )
 
-        # Attach user to request state so routes can access it
         request.state.user     = user
         request.state.username = user["username"]
         request.state.role     = user["role"]
         request.state.ip       = ip
 
-        # Log the request (skip high-frequency polling endpoints)
         if not _is_noisy(path):
             auth_manager.log_request(user["username"], ip, path)
 

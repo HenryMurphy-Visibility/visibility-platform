@@ -155,13 +155,14 @@ def custom_openapi():
     )
     openapi_schema["components"] = openapi_schema.get("components", {})
     openapi_schema["components"]["securitySchemes"] = {
-        "cookieAuth": {
+        "ApiKeyAuth": {
             "type": "apiKey",
-            "in": "cookie",
-            "name": "visibility_session"
+            "in": "header",
+            "name": "X-API-Key",
+            "description": "Enter your API key. Request one from the administrator."
         }
     }
-    openapi_schema["security"] = [{"cookieAuth": []}]
+    openapi_schema["security"] = [{"ApiKeyAuth": []}]
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
