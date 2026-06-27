@@ -534,8 +534,6 @@ def settle_multiple_flows_in_out(portfolio, payment_currency,investment, financi
                                    "Revenue/Expense/Capital")
             space.post_journal_entry(currglx)
 
-
-
         # Call open_close_cash
         bookflow = local * fx_rate
 

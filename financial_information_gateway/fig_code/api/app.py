@@ -118,7 +118,9 @@ app = FastAPI(
     swagger_ui_parameters={
         "requestTimeout": 300000,
         "withCredentials": True,
+        "persistAuthorization": True,
     },
+
     description=(
         "Institutional-grade investment accounting API. "
         "Every compute function available as a REST endpoint. "
@@ -156,10 +158,9 @@ def custom_openapi():
     openapi_schema["components"] = openapi_schema.get("components", {})
     openapi_schema["components"]["securitySchemes"] = {
         "ApiKeyAuth": {
-            "type": "apiKey",
-            "in": "header",
-            "name": "X-API-Key",
-            "description": "Enter your API key. Request one from the administrator."
+            "type": "http",
+            "scheme": "bearer",
+            "description": "Paste your API key here and click Authorize. It will be sent with every request."
         }
     }
     openapi_schema["security"] = [{"ApiKeyAuth": []}]

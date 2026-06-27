@@ -5,6 +5,10 @@ Visibility Platform — Authentication Middleware
 Runs on every request. Checks session token OR API key, validates IP,
 redirects to /login if not authenticated.
 
+API key can be supplied two ways:
+  - Authorization: Bearer <key>      (used by Swagger Authorize button)
+  - X-API-Key: <key>                 (used by direct API callers)
+
 Add to main FastAPI app:
     from auth_middleware import AuthMiddleware
     app.add_middleware(AuthMiddleware)
@@ -52,8 +56,14 @@ class AuthMiddleware(BaseHTTPMiddleware):
                 )
             return RedirectResponse(url="/login?blocked=1", status_code=302)
 
-        # Try API key first (from header)
-        api_key = request.headers.get("X-API-Key")
+        # ── API KEY — check both Bearer token and X-API-Key header ──
+        api_key = None
+        auth_header = request.headers.get("Authorization", "")
+        if auth_header.startswith("Bearer "):
+            api_key = auth_header[7:].strip()
+        if not api_key:
+            api_key = request.headers.get("X-API-Key")
+
         if api_key:
             user = auth_manager.validate_api_key(api_key)
             if user:
@@ -70,7 +80,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
                     content={"detail": "Invalid API key"}
                 )
 
-        # Fall back to session cookie
+        # ── SESSION COOKIE — fallback for browser/UI users ──
         token = request.cookies.get("visibility_session")
         user  = auth_manager.validate_session(token, ip) if token else None
 
@@ -78,7 +88,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
             if path.startswith("/api/"):
                 return JSONResponse(
                     status_code=401,
-                    content={"detail": "Not authenticated. Use X-API-Key header or log in at /login"}
+                    content={"detail": "Not authenticated. Use the Authorize button with your API key, or log in at /login"}
                 )
             return RedirectResponse(
                 url=f"/login?next={path}",

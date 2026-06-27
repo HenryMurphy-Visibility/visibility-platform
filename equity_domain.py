@@ -348,33 +348,37 @@ def cover_equity(portfolio, investment, location, quantity, local, book, closing
 
 def dividend_equity(portfolio, investment, space, tranid,
                     transaction, tradedate, settledate, kdbegin, kdend,
-                    payment_currency, per_share):
+                    payment_currency, per_share, fx_data):
+    from utilities import get_fx_rate
     ibor_date = tradedate
 
     for location, total_quantity in lot_iterator_by_location(investment, space):
 
         divloc = total_quantity * per_share
 
+        fx_rate = get_fx_rate(payment_currency, tradedate, fx_data)
+        divbook = divloc * fx_rate
+
         if divloc > 0:
             faal = "DividendsReceivable"
             faie = "DividendReceipt"
-            ls   = "l"
+            ls = "l"
         else:
             faal = "DividendsPayable"
             faie = "DividendExpense"
-            ls   = "s"
-
-        space.post_journal_entry(Journals(
-            portfolio, payment_currency, tranid, tradedate, ls, location, faal,
-            divloc, divloc, divloc, 0, 0, tranid, transaction,
-            tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability"
-        ))
+            ls = "s"
 
         space.post_journal_entry(Journals(
             portfolio, investment, tranid, tradedate, ls, location, faie,
-            0, -divloc, -divloc, 0, 0, tranid, transaction,
+            0, -divloc, -divbook, 0, 0, tranid, transaction,
             tradedate, settledate, kdbegin, kdend, ibor_date, "Revenue/Expense/Capital"
         ))
+        if(tradedate != settledate):
+            space.post_journal_entry(Journals(
+                portfolio, payment_currency, tranid, tradedate, ls, location, faal,
+                divloc, divloc, divbook, 0, 0, tranid, transaction,
+                tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability"
+            ))
 
     return
 

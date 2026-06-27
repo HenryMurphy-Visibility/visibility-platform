@@ -362,7 +362,7 @@ def core_schedule_events(
         elif method == "dividend_equity":
             scheduler.schedule_event(tradedate, equity_domain.dividend_equity, portfolio, investment,
                                      space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, per_share)
+                                     payment_currency, per_share, fx_data)
 
             if tradedate != settledate and settledate <= interpretation_ctx["trade_window_cutoff"]:
                 financial_account_in = "DividendsReceivable"
