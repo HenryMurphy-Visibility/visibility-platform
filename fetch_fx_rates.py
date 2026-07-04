@@ -351,12 +351,286 @@
 # print()
 # print("All distinct investments with financial_account == 'Payable':")
 # print(step1["investment"].value_counts())
+#
+# from proof_engine import run_proof
+# results = run_proof(
+#     portfolio="Portfolio1",
+#     calendar="Monthly",
+#     period="2025-12",
+#     verbose=False,
+# )
+# print(results)
+#
+#
+# #!/usr/bin/env python3
+# """
+# ACN Daily-calendar divergence locator.
+#
+# True trade-date net position of ACN at each year-end, computed from the
+# full 167-event history. Compare these to the ACN qty shown in the DAILY
+# appraisal at each corresponding year-end to find the FIRST year the Daily
+# build diverges from truth. That narrows ~1,254 daily periods to one year.
+#
+# Usage:
+#   1. Pull the Daily appraisal for ACN at each year-end (2021-12-31,
+#      2022-12-31, 2023-12-31, 2024-12-31, 2025-12-31).
+#   2. Enter the ACN qty each one shows in DAILY_OBSERVED below.
+#   3. Run: python3 acn_daily_divergence.py
+# """
+#
+# # ── True net from all 167 trade-date events (buy +, sell -) ──────────────
+# EVENTS = [
+# ("buy",724,"2021-01-06"),("buy",1302,"2021-01-07"),("buy",2252,"2021-02-10"),("buy",2922,"2021-02-10"),
+# ("buy",3175,"2021-03-01"),("sell",3412,"2021-03-08"),("buy",2985,"2021-03-17"),("buy",2178,"2021-03-22"),
+# ("sell",554,"2021-03-23"),("buy",3344,"2021-03-26"),("buy",2685,"2021-04-01"),("sell",4412,"2021-04-16"),
+# ("buy",1575,"2021-04-16"),("sell",3037,"2021-04-22"),("buy",1179,"2021-05-03"),("sell",3889,"2021-05-06"),
+# ("buy",3400,"2021-06-02"),("buy",3222,"2021-06-04"),("buy",702,"2021-06-08"),("sell",1140,"2021-06-28"),
+# ("buy",2540,"2021-06-29"),("sell",1938,"2021-07-26"),("buy",3043,"2021-08-11"),("sell",4403,"2021-08-23"),
+# ("buy",1112,"2021-08-24"),("sell",3834,"2021-08-30"),("buy",4283,"2021-09-07"),("sell",820,"2021-09-08"),
+# ("buy",915,"2021-09-10"),("buy",974,"2021-09-28"),("buy",3881,"2021-10-01"),("buy",1278,"2021-10-18"),
+# ("sell",4287,"2021-10-27"),("buy",3538,"2021-11-05"),("sell",2586,"2021-11-16"),("buy",3221,"2021-11-26"),
+# ("buy",2963,"2021-11-26"),("buy",1051,"2021-11-29"),("buy",4405,"2021-12-06"),("buy",4731,"2021-12-09"),
+# ("buy",4209,"2021-12-16"),("sell",4679,"2022-01-11"),("buy",3654,"2022-01-18"),("sell",3728,"2022-01-31"),
+# ("buy",1292,"2022-01-31"),("buy",2988,"2022-02-03"),("buy",4859,"2022-02-08"),("buy",3709,"2022-02-23"),
+# ("buy",1704,"2022-03-14"),("sell",4324,"2022-03-15"),("buy",4613,"2022-03-22"),("buy",3397,"2022-03-28"),
+# ("sell",3949,"2022-04-11"),("buy",4148,"2022-04-22"),("buy",3966,"2022-05-09"),("buy",2947,"2022-05-10"),
+# ("sell",3284,"2022-05-20"),("buy",1372,"2022-06-13"),("buy",1551,"2022-07-01"),("sell",2335,"2022-07-05"),
+# ("buy",3377,"2022-07-13"),("buy",646,"2022-07-20"),("sell",4857,"2022-09-01"),("buy",1696,"2022-09-21"),
+# ("buy",4973,"2022-09-22"),("sell",4147,"2022-09-30"),("buy",3584,"2022-10-07"),("buy",2375,"2022-10-18"),
+# ("sell",1039,"2022-10-19"),("sell",2716,"2022-11-07"),("buy",539,"2022-11-15"),("buy",3668,"2022-12-08"),
+# ("buy",1511,"2022-12-21"),("sell",832,"2023-01-12"),("buy",4204,"2023-01-17"),("sell",3625,"2023-02-01"),
+# ("sell",2307,"2023-02-17"),("sell",2183,"2023-02-28"),("buy",1546,"2023-02-28"),("buy",2723,"2023-03-07"),
+# ("buy",4328,"2023-03-09"),("buy",4863,"2023-03-22"),("sell",4398,"2023-03-23"),("buy",4695,"2023-03-27"),
+# ("sell",3696,"2023-03-29"),("sell",4438,"2023-03-29"),("buy",4675,"2023-04-04"),("buy",2959,"2023-05-04"),
+# ("sell",3854,"2023-05-10"),("buy",3561,"2023-05-12"),("buy",4874,"2023-05-15"),("buy",3935,"2023-05-30"),
+# ("buy",1896,"2023-06-23"),("sell",813,"2023-06-23"),("buy",4873,"2023-07-12"),("buy",4580,"2023-07-14"),
+# ("buy",2561,"2023-07-24"),("sell",935,"2023-07-31"),("sell",518,"2023-07-31"),("buy",3529,"2023-08-01"),
+# ("sell",2130,"2023-08-14"),("buy",2740,"2023-09-06"),("sell",598,"2023-10-06"),("buy",953,"2023-12-11"),
+# ("sell",2650,"2023-12-18"),("buy",752,"2023-12-26"),("sell",2715,"2024-01-04"),("sell",2843,"2024-01-17"),
+# ("sell",1099,"2024-01-23"),("sell",3642,"2024-01-24"),("sell",4214,"2024-01-29"),("buy",2774,"2024-01-30"),
+# ("buy",4427,"2024-02-15"),("sell",2654,"2024-03-13"),("buy",4221,"2024-03-14"),("sell",2705,"2024-03-27"),
+# ("buy",3821,"2024-04-01"),("buy",4362,"2024-04-15"),("sell",3344,"2024-04-22"),("sell",2684,"2024-04-26"),
+# ("buy",1943,"2024-05-13"),("sell",3306,"2024-07-05"),("buy",4695,"2024-07-05"),("buy",1268,"2024-07-10"),
+# ("sell",2810,"2024-08-07"),("buy",2542,"2024-08-09"),("buy",4803,"2024-08-28"),("buy",540,"2024-09-09"),
+# ("buy",2846,"2024-09-09"),("sell",1056,"2024-09-18"),("sell",4658,"2024-11-20"),("sell",3477,"2024-12-02"),
+# ("sell",916,"2024-12-06"),("sell",883,"2024-12-11"),("buy",3826,"2024-12-16"),("sell",1270,"2025-01-03"),
+# ("buy",2251,"2025-02-18"),("sell",1548,"2025-03-10"),("sell",4113,"2025-03-17"),("sell",1376,"2025-03-26"),
+# ("buy",823,"2025-04-04"),("buy",4385,"2025-04-08"),("sell",4371,"2025-04-11"),("buy",2827,"2025-05-08"),
+# ("buy",1742,"2025-05-27"),("buy",1783,"2025-05-28"),("sell",3020,"2025-06-06"),("buy",1340,"2025-06-11"),
+# ("sell",1318,"2025-06-20"),("buy",2375,"2025-06-20"),("sell",928,"2025-07-01"),("buy",3596,"2025-07-16"),
+# ("sell",3662,"2025-07-23"),("buy",3497,"2025-08-04"),("buy",2604,"2025-08-05"),("buy",3508,"2025-08-08"),
+# ("sell",4666,"2025-08-22"),("sell",2925,"2025-09-10"),("sell",3231,"2025-09-12"),("buy",3716,"2025-09-24"),
+# ("sell",841,"2025-10-01"),("sell",4797,"2025-10-07"),("buy",2634,"2025-10-28"),("buy",4125,"2025-11-04"),
+# ("buy",3816,"2025-11-21"),("buy",1768,"2025-12-10"),("buy",1982,"2025-12-22"),
+# ]
+#
+# YEAR_ENDS = ["2021-12-31","2022-12-31","2023-12-31","2024-12-31","2025-12-31"]
+#
+# def true_net_asof(date_iso):
+#     n=0
+#     for side,qty,d in EVENTS:
+#         if d <= date_iso:
+#             n += qty if side=="buy" else -qty
+#     return n
+#
+# # ── PASTE the ACN qty the DAILY appraisal shows at each year-end here ──────
+# # Leave as None until you pull it; 2025-12-31 is already known (103,422).
+# DAILY_OBSERVED = {
+#     "2021-12-31": None,
+#     "2022-12-31": None,
+#     "2023-12-31": None,
+#     "2024-12-31": None,
+#     "2025-12-31": 103422,
+# }
+#
+# print("ACN — Daily calendar divergence check")
+# print("="*64)
+# print(f"{'year-end':<12}{'true net':>12}{'daily obs':>12}{'diff':>10}  verdict")
+# print("-"*64)
+# first_bad=None
+# for ye in YEAR_ENDS:
+#     tn = true_net_asof(ye)
+#     obs = DAILY_OBSERVED.get(ye)
+#     if obs is None:
+#         print(f"{ye:<12}{tn:>12,}{'—':>12}{'—':>10}  (pull Daily appraisal)")
+#         continue
 
-from proof_engine import run_proof
-results = run_proof(
-    portfolio="Portfolio1",
-    calendar="Monthly",
-    period="2025-12",
-    verbose=False,
-)
-print(results)
+
+"""
+test_perf_persist.py
+--------------------
+Proves whether a computed performance object can be dropped to disk "as is"
+and reloaded identical -- the foundation stone for stored performance results.
+
+It does NOT modify the engine. It:
+  1. runs compute_performance for a SMALL range (structure is identical at any
+     size, so a couple of months is enough and fast),
+  2. reaches into the performance cache and grabs the exact cached object,
+  3. pickles it to disk,
+  4. reloads it,
+  5. diffs reload vs original and prints MATCH / MISMATCH + on-disk size.
+
+Adjust the three CONFIG values and the two import lines marked TODO to match
+your module paths, then run:  python test_perf_persist.py
+"""
+
+import pickle
+import time
+from pathlib import Path
+
+import pandas as pd
+
+# ── TODO: point these at your actual modules ─────────────────────────────────
+# compute_performance and prep_state, plus the cache object that
+# _get_cached_daily_state reads/writes. The cache is almost certainly a
+# module-level dict in compute_performance.py — import it directly so we can
+# inspect what was actually stored.
+from financial_information_gateway.fig_code.compute_performance import compute_performance
+from financial_information_gateway.fig_code.fig_core import prep_state_cached as prep_state
+# The daily-state cache dict. If it has a different name, fix this import.
+# Common names: _DAILY_STATE_CACHE, _CACHE, _daily_state_cache.
+try:
+    from financial_information_gateway.fig_code.compute_performance import _DAILY_STATE_CACHE as PERF_CACHE
+    _CACHE_IMPORTED = True
+except Exception:
+    PERF_CACHE = None
+    _CACHE_IMPORTED = False
+
+# ── CONFIG: a small, fast range ──────────────────────────────────────────────
+PORTFOLIO    = "Portfolio1"
+CALENDAR     = "Monthly"
+PERIOD_START = "2021-01"
+PERIOD_END   = "2021-03"     # small on purpose; structure is size-independent
+OUT_PATH     = Path("perf_persist_test.pkl")
+
+
+def _summarize(obj, label):
+    print(f"\n--- {label} ---")
+    print(f"type: {type(obj)}")
+    if isinstance(obj, pd.DataFrame):
+        print(f"shape: {obj.shape}")
+        print(f"columns: {list(obj.columns)[:12]}{' ...' if len(obj.columns) > 12 else ''}")
+    elif isinstance(obj, (tuple, list)):
+        print(f"len: {len(obj)}")
+        for i, part in enumerate(obj):
+            print(f"  [{i}] type={type(part)}"
+                  + (f" shape={part.shape}" if isinstance(part, pd.DataFrame) else ""))
+    elif isinstance(obj, dict):
+        print(f"keys: {list(obj.keys())[:12]}")
+
+
+def _equal(a, b):
+    """Structural equality for the kinds of objects the cache might hold."""
+    if isinstance(a, pd.DataFrame) and isinstance(b, pd.DataFrame):
+        try:
+            pd.testing.assert_frame_equal(a, b, check_like=False)
+            return True
+        except AssertionError as e:
+            print(f"  DataFrame diff: {str(e)[:300]}")
+            return False
+    if isinstance(a, (tuple, list)) and isinstance(b, (tuple, list)):
+        if len(a) != len(b):
+            return False
+        return all(_equal(x, y) for x, y in zip(a, b))
+    if isinstance(a, dict) and isinstance(b, dict):
+        if a.keys() != b.keys():
+            return False
+        return all(_equal(a[k], b[k]) for k in a)
+    return a == b
+
+
+def main():
+    print("=" * 64)
+    print("PERFORMANCE PERSIST TEST")
+    print("=" * 64)
+
+    # 1. prep + run performance for the small range (builds + caches)
+    prep = prep_state(PORTFOLIO, CALENDAR, PERIOD_START, PERIOD_END)
+    t0 = time.perf_counter()
+    result = compute_performance(
+        portfolio=PORTFOLIO, calendar=CALENDAR,
+        period_start=PERIOD_START, period_end=PERIOD_END,
+        level="investment", cadence=None, prep=prep,
+    )
+    print(f"\ncompute_performance ran in {(time.perf_counter()-t0)*1000:.0f}ms, "
+          f"valid={result.valid}, output_rows={len(result.data)}")
+
+    # 2. grab the cached object
+    if not _CACHE_IMPORTED or PERF_CACHE is None:
+        print("\n!! Could not import the perf cache dict. Fix the import named "
+              "PERF_CACHE at the top (find the module-level cache that "
+              "_get_cached_daily_state uses). Falling back to testing "
+              "result.data (the output DataFrame) instead, which still proves "
+              "DataFrame pickling works but is NOT the cached chained state.")
+        cached_obj = result.data
+        cache_desc = "result.data (FALLBACK — not the cache)"
+    else:
+        # inception is available_periods[0]; the cache key uses it. We don't
+        # know inception here, so just grab whatever single entry the run
+        # just created (small cache in a fresh process).
+        if len(PERF_CACHE) == 1:
+            key = next(iter(PERF_CACHE))
+            cached_obj = PERF_CACHE[key]
+            cache_desc = f"PERF_CACHE[{key}]"
+        else:
+            # multiple entries — pick the one matching our portfolio/calendar/end
+            match = [k for k in PERF_CACHE
+                     if isinstance(k, tuple) and PORTFOLIO in k and CALENDAR in k
+                     and PERIOD_END in k]
+            if match:
+                key = match[0]
+                cached_obj = PERF_CACHE[key]
+                cache_desc = f"PERF_CACHE[{key}]"
+            else:
+                key = next(iter(PERF_CACHE))
+                cached_obj = PERF_CACHE[key]
+                cache_desc = f"PERF_CACHE[{key}] (first of {len(PERF_CACHE)})"
+
+    _summarize(cached_obj, f"CACHED OBJECT: {cache_desc}")
+
+    # 3. pickle to disk
+    t1 = time.perf_counter()
+    try:
+        with open(OUT_PATH, "wb") as f:
+            pickle.dump(cached_obj, f)
+    except Exception as e:
+        print(f"\n!! PICKLE FAILED: {e}")
+        print("   -> the cached object holds something that won't serialize "
+              "(likely a live reference). This is the 'big job in disguise' "
+              "signal. Stop here.")
+        return
+    size_mb = OUT_PATH.stat().st_size / (1024 * 1024)
+    print(f"\npickled OK in {(time.perf_counter()-t1)*1000:.0f}ms "
+          f"-> {OUT_PATH} ({size_mb:.2f} MB)")
+
+    # 4. reload
+    with open(OUT_PATH, "rb") as f:
+        reloaded = pickle.load(f)
+    _summarize(reloaded, "RELOADED OBJECT")
+
+    # 5. diff
+    print("\n--- DIFF ---")
+    if _equal(cached_obj, reloaded):
+        print("RESULT: MATCH  — object round-trips identically as-is.")
+        print("=> 'drop it in as-is' is viable. This is the cheap foundation "
+              "stone for stored performance results.")
+    else:
+        print("RESULT: MISMATCH — reload differs from original. Inspect the "
+              "diff above before relying on persistence.")
+    print("=" * 64)
+
+
+if __name__ == "__main__":
+    main()
+
+#     diff = obs - tn
+#     verdict = "OK" if diff==0 else f"OFF by {diff:+,}"
+#     if diff!=0 and first_bad is None: first_bad=ye
+#     print(f"{ye:<12}{tn:>12,}{obs:>12,}{diff:>10,}  {verdict}")
+# print("-"*64)
+# if first_bad:
+#     print(f"\nFIRST year Daily diverges: {first_bad}")
+#     print("→ Next: pull MONTHLY ACN qty for the same year-ends to confirm Monthly")
+#     print("  stays correct, then drill that year's daily periods month by month.")
+# else:
+#     print("\nFill in DAILY_OBSERVED to locate the divergence year.")

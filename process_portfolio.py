@@ -429,7 +429,6 @@ def _find_inv_col(row: dict) -> Optional[str]:
             return col
     return None
 
-
 # ============================================================
 # RUN PERIOD — process a single period
 # ============================================================
@@ -451,6 +450,13 @@ def run_period(
       - tradedate > replay_start             (exclusive — already processed)
       - First period: replay_start shifted back 1 day so inception-day
         trades pass the > filter.
+
+    Snapshot selection rule:
+      - A carried snapshot may only come from the PAST. Its knowledge date
+        must be strictly before this period's own start (current_period_start).
+        Without this floor, a non-trading gap (e.g. an exchange holiday like
+        Good Friday) could let selection pick a FUTURE snapshot, corrupting
+        the carried position for every period after it.
     """
 
     from central_processing_hub import cph_run_and_materialize
@@ -491,6 +497,10 @@ def run_period(
     selected_snapshot_kd   = None
 
     if earliest_trade_date and snapshots_dir.exists():
+        # A snapshot may only be carried FORWARD. It must be strictly before
+        # the current period's own start — never at/after it. This guard is
+        # what stops a holiday/weekend gap from selecting a FUTURE snapshot.
+        period_floor = per_period_ctx["current_period_start"]
         for fn in snapshots_dir.iterdir():
             if fn.suffix != ".pkl":
                 continue
@@ -498,6 +508,8 @@ def run_period(
                 snapshot_kd = datetime.strptime(fn.stem, "%Y-%m-%dT%H-%M-%S")
             except Exception:
                 continue
+            if snapshot_kd >= period_floor:
+                continue  # never select a snapshot at/after this period's start
             if snapshot_kd < earliest_trade_date:
                 if selected_snapshot_kd is None or snapshot_kd > selected_snapshot_kd:
                     selected_snapshot_kd   = snapshot_kd
@@ -517,6 +529,7 @@ def run_period(
     if is_first:
         replay_start = replay_start - timedelta(days=1)
 
+
     # Boundary rule: ties are INCLUSIVE on knowledge and cutoff.
     # replay_start is the only exclusive boundary — already processed.
     event_pool = [
@@ -528,6 +541,13 @@ def run_period(
         )
     ]
 
+    print(f"[SNAP] {period_name} | earliest_trade={earliest_trade_date} | "
+          f"replay_start={replay_start} | snapshot={selected_snapshot_path} | "
+          f"pool={len(event_pool)}", flush=True)
+
+    with open("snap_trace.log", "a") as _f:
+        _f.write(
+            f"{period_name}\treplay_start={replay_start}\tsnapshot={selected_snapshot_path}\tpool={len(event_pool)}\n")
     print(
         f"\n>>> RUN PERIOD | {portfolio} | {period_name} | "
         f"{len(event_pool)} events | "
@@ -569,8 +589,6 @@ def run_period(
     )
 
     return metrics
-
-
 # ============================================================
 # RUN ALL PERIODS — process all periods for a calendar
 # ============================================================

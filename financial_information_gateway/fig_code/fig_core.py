@@ -259,9 +259,9 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
                 j.is_adjustment = is_adj_flag
 
             # Print ONCE per file
-            print(f">>> TAGGED {len(batch)} entries as "
-                  f"{'adjusting' if is_adj_flag else 'regular'} "
-                  f"from {fpath.name}")
+            # print(f">>> TAGGED {len(batch)} entries as "
+            #       f"{'adjusting' if is_adj_flag else 'regular'} "
+            #       f"from {fpath.name}")
 
             journals.extend(batch)
 

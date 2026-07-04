@@ -620,8 +620,6 @@ def core_schedule_events(
                                          space, tranid, "FuturesSettlement", tradedate, settledate, kdbegin,
                                          kdend, payment_currency, af, fx_data)
 
-
-
         elif method == "cover_future":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, futures_domain.cover_future, portfolio, investment,
@@ -667,8 +665,6 @@ def core_schedule_events(
             scheduler.schedule_event(tradedate, equity_domain.split_equity, portfolio, investment,
                                      space, tranid, transaction, tradedate, settledate,
                                      kdbegin, kdend, new_shares, old_shares)
-
-
 
         elif method == "deposit_currency":
             scheduler.schedule_event(tradedate, currency_domain.deposit_currency, portfolio,

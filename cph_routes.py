@@ -10,9 +10,19 @@
 # FIG reads state. CPH writes state.
 # These are different operations and belong in different layers.
 #
-# Henry J. Murphy — Chest Financial Systems
+# PHASE-2 WRITE GATE
+# ------------------
+# Processing/build endpoints (bootstrap, process, cache clear) call
+# _gate_writes() as their first line. The gate is OFF unless the machine
+# sets VISIBILITY_WRITES_ENABLED=1 in its environment:
+#   - Dev box: set VISIBILITY_WRITES_ENABLED=1 → processing works.
+#   - Cloud:   never set it → processing returns the Phase-2 message; the
+#              read-only status endpoint stays open.
+# Same env var as ops_routes, so data entry and processing move together.
+# Same code on both machines — nothing to edit per-deploy, survives git pull.
 # ============================================================
 
+import os
 from fastapi import APIRouter, Query, HTTPException
 from typing import Optional
 import traceback
@@ -20,6 +30,29 @@ import traceback
 from process_portfolio import bootstrap_portfolio, run_all_periods
 
 cph_router = APIRouter(prefix="/api/v1/cph", tags=["Processing"])
+
+
+# ============================================================
+# PHASE-2 WRITE GATE
+# ============================================================
+
+WRITES_ENABLED = os.getenv("VISIBILITY_WRITES_ENABLED", "0") == "0"
+
+_GATE_MESSAGE = (
+    "Processing and data entry are enabled in Phase 2 evaluation, "
+    "available to firms advancing to early-adoption assessment."
+)
+
+
+def _gate_writes():
+    """Raise 403 with the Phase-2 message when writes are disabled.
+
+    First line of every processing/build endpoint. The console's existing
+    error display surfaces this verbatim, so a gated call reads as a
+    deliberate access tier rather than a crash.
+    """
+    if not WRITES_ENABLED:
+        raise HTTPException(status_code=403, detail=_GATE_MESSAGE)
 
 
 # ============================================================
@@ -44,6 +77,7 @@ def bootstrap_endpoint(
 
     Safe to call repeatedly — skips if already built unless force=True.
     """
+    _gate_writes()
     try:
         result = bootstrap_portfolio(portfolio, force=force)
         return {
@@ -88,6 +122,7 @@ def process_endpoint(
     Note: Processing time shown is V-side CPH time only.
     Event loading time is not included in per-period metrics.
     """
+    _gate_writes()
     try:
         # Bootstrap if needed or forced
         bootstrap_portfolio(portfolio, force=bootstrap)
@@ -132,7 +167,7 @@ def process_endpoint(
 
 
 # ============================================================
-# STATUS — portfolio processing status
+# STATUS — portfolio processing status  (read-only — OPEN)
 # ============================================================
 
 @cph_router.get("/status/{portfolio}")
@@ -196,6 +231,7 @@ def clear_cache_endpoint(
     Call this when new events arrive and you want to force a fresh load.
     Watchdog will call this automatically when new event files are detected.
     """
+    _gate_writes()
     clear_event_cache(portfolio)
     return {
         "status":    "cleared",

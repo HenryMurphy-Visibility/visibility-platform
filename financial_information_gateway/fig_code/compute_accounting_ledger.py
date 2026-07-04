@@ -20,7 +20,7 @@ from datetime import datetime
 
 # At top of file — change import
 from financial_information_gateway.fig_code.fig_core import (
-    prep_state_cached as prep_state,
+    prep_state,
     render
 )
 

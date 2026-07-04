@@ -32,21 +32,32 @@ def performance_carving_periods(
     df = df.sort_values([level, "ibor_date"])
 
     # --------------------------------------------------
-    # STEP 3: HANDLE NO CADENCE (FULL RANGE)
+    # STEP 3: AGG SPEC — flow/income totals only when the columns exist.
+    # The built daily state carries Cum_Open_CF_Local etc., not
+    # CumCF_Local/CumInc_Local (those come from performance_carve_aggregate).
+    # Referencing a missing column in .agg raises KeyError, which would
+    # crash any cadence selection against the built frame.
+    # --------------------------------------------------
+    agg_spec = dict(
+        start_index=("Index_Local", "first"),
+        end_index=("Index_Local", "last"),
+        start_date=("ibor_date", "first"),
+        end_date=("ibor_date", "last"),
+    )
+    if "CumCF_Local" in df.columns:
+        agg_spec["total_cf"] = ("CumCF_Local", lambda x: x.iloc[-1] - x.iloc[0])
+    if "CumInc_Local" in df.columns:
+        agg_spec["total_income"] = ("CumInc_Local", lambda x: x.iloc[-1] - x.iloc[0])
+
+    # --------------------------------------------------
+    # STEP 4: HANDLE NO CADENCE (FULL RANGE)
     # --------------------------------------------------
     if cadence is None:
 
         result = (
             df
             .groupby(level)
-            .agg(
-                start_index=("Index_Local", "first"),
-                end_index=("Index_Local", "last"),
-                start_date=("ibor_date", "first"),
-                end_date=("ibor_date", "last"),
-                total_cf=("CumCF_Local", lambda x: x.iloc[-1] - x.iloc[0]),
-                total_income=("CumInc_Local", lambda x: x.iloc[-1] - x.iloc[0]),
-            )
+            .agg(**agg_spec)
         )
 
         result["return"] = result["end_index"] / result["start_index"] - 1
@@ -54,29 +65,22 @@ def performance_carving_periods(
         return result.reset_index()
 
     # --------------------------------------------------
-    # STEP 4: DERIVE PERIODS FROM DATA (KEY DESIGN)
+    # STEP 5: DERIVE PERIODS FROM DATA (KEY DESIGN)
     # --------------------------------------------------
     df["period"] = df["ibor_date"].dt.to_period(cadence)
 
     # --------------------------------------------------
-    # STEP 5: GROUP INTO PERIODS
+    # STEP 6: GROUP INTO PERIODS
     # --------------------------------------------------
     result = (
         df
         .groupby([level, "period"])
-        .agg(
-            start_index=("Index_Local", "first"),
-            end_index=("Index_Local", "last"),
-            start_date=("ibor_date", "first"),
-            end_date=("ibor_date", "last"),
-            total_cf=("CumCF_Local", lambda x: x.iloc[-1] - x.iloc[0]),
-            total_income=("CumInc_Local", lambda x: x.iloc[-1] - x.iloc[0]),
-        )
+        .agg(**agg_spec)
         .reset_index()
     )
 
     # --------------------------------------------------
-    # STEP 6: COMPUTE RETURNS
+    # STEP 7: COMPUTE RETURNS
     # --------------------------------------------------
     result["return"] = result["end_index"] / result["start_index"] - 1
 
@@ -141,7 +145,6 @@ def performance_carve_aggregate(
         .cumprod()
     )
 
-    # 🔥 ADD THIS
     agg["CumCF_Local"] = agg.groupby(to_level)["CF_Local"].cumsum()
     agg["CumInc_Local"] = 0.0
 
@@ -161,12 +164,17 @@ def aggregate_by_aif(df, aif_field):
 
       'portfolio' ONLY:
         denominator = Previous_EMV
-        numerator   = EMV - Previous_EMV - Open_CF - Close_CF - Currency
-        (no income in numerator, no flows in denominator —
-         only external capital affects total portfolio)
+        numerator   = EMV - Previous_EMV - Open_CF - Close_CF - Currency + Income
+        (no flows in denominator — only external capital affects
+         total portfolio)
 
     The three flow types (Open_CF, Close_CF, Currency_Flows) are kept
     SEPARATE so a performance analyst can validate every TWR by hand.
+
+    TWR is computed vectorized (numpy) — identical arithmetic to the
+    prior row-wise apply, including the same-sign rule and the portfolio
+    branch. A zero denominator yields NaN (the apply version returned
+    None, which pandas stored as NaN — same downstream behavior).
     """
     import numpy as np
     import pandas as pd
@@ -208,55 +216,40 @@ def aggregate_by_aif(df, aif_field):
     agg["Previous_EMV_Local"] = agg["BMV_Local"]
     agg["Previous_EMV_Book"]  = agg["BMV_Book"]
 
-    # ── TWR — SAME LOGIC AS compute_daily_twr ─────────────────────────────────
+    # ── TWR — SAME LOGIC AS compute_daily_twr, vectorized ─────────────────────
     is_portfolio = (aif_field == "portfolio")
 
-    def calculate_twr(row):
-        if not is_portfolio:
-            # ── LEVEL FORMULA (investment, sector, analyst, etc.) ────────────
-            same_sign_local = (row["Previous_EMV_Local"] >= 0) == (row["Currency_Flows_Local"] >= 0)
-            same_sign_book  = (row["Previous_EMV_Book"]  >= 0) == (row["Currency_Flows_Book"]  >= 0)
+    prev_l  = agg["Previous_EMV_Local"].to_numpy(dtype=float)
+    prev_b  = agg["Previous_EMV_Book"].to_numpy(dtype=float)
+    emv_l   = agg["EMV_Local"].to_numpy(dtype=float)
+    emv_b   = agg["EMV_Book"].to_numpy(dtype=float)
+    open_l  = agg["Open_CF_Local"].to_numpy(dtype=float)
+    open_b  = agg["Open_CF_Book"].to_numpy(dtype=float)
+    close_l = agg["Close_CF_Local"].to_numpy(dtype=float)
+    close_b = agg["Close_CF_Book"].to_numpy(dtype=float)
+    ccy_l   = agg["Currency_Flows_Local"].to_numpy(dtype=float)
+    ccy_b   = agg["Currency_Flows_Book"].to_numpy(dtype=float)
+    inc_l   = agg["Income_Local"].to_numpy(dtype=float)
+    inc_b   = agg["Income_Book"].to_numpy(dtype=float)
 
-            denominator_local = (
-                row["Previous_EMV_Local"] + row["Open_CF_Local"]
-                + (row["Currency_Flows_Local"] if same_sign_local else 0)
-            )
-            denominator_book = (
-                row["Previous_EMV_Book"] + row["Open_CF_Book"]
-                + (row["Currency_Flows_Book"] if same_sign_book else 0)
-            )
+    num_l = emv_l - prev_l - open_l - close_l - ccy_l + inc_l
+    num_b = emv_b - prev_b - open_b - close_b - ccy_b + inc_b
 
-            numerator_local = (
-                row["EMV_Local"] - row["Previous_EMV_Local"]
-                - row["Open_CF_Local"] - row["Close_CF_Local"]
-                - row["Currency_Flows_Local"] + row["Income_Local"]
-            )
-            numerator_book = (
-                row["EMV_Book"] - row["Previous_EMV_Book"]
-                - row["Open_CF_Book"] - row["Close_CF_Book"]
-                - row["Currency_Flows_Book"] + row["Income_Book"]
-            )
-        else:
-            # ── PORTFOLIO FORMULA — only external capital, no income term ────
-            numerator_local = (
-                row["EMV_Local"] - row["Previous_EMV_Local"]
-                - row["Open_CF_Local"] - row["Close_CF_Local"]
-                - row["Currency_Flows_Local"] + + row["Income_Local"]
-            )
-            denominator_local = row["Previous_EMV_Local"]
+    if not is_portfolio:
+        same_sign_l = (prev_l >= 0) == (ccy_l >= 0)
+        same_sign_b = (prev_b >= 0) == (ccy_b >= 0)
+        den_l = prev_l + open_l + np.where(same_sign_l, ccy_l, 0.0)
+        den_b = prev_b + open_b + np.where(same_sign_b, ccy_b, 0.0)
+    else:
+        den_l = prev_l
+        den_b = prev_b
 
-            numerator_book = (
-                row["EMV_Book"] - row["Previous_EMV_Book"]
-                - row["Open_CF_Book"] - row["Close_CF_Book"]
-                - row["Currency_Flows_Book"]+ row["Income_Book"]
-            )
-            denominator_book = row["Previous_EMV_Book"]
-
-        twr_local = None if denominator_local == 0 else numerator_local / denominator_local
-        twr_book  = None if denominator_book  == 0 else numerator_book  / denominator_book
-        return pd.Series([twr_local, twr_book], index=["TWR_Local", "TWR_Book"])
-
-    agg[["TWR_Local", "TWR_Book"]] = agg.apply(calculate_twr, axis=1)
+    agg["TWR_Local"] = np.where(
+        den_l != 0, num_l / np.where(den_l != 0, den_l, 1.0), np.nan
+    )
+    agg["TWR_Book"] = np.where(
+        den_b != 0, num_b / np.where(den_b != 0, den_b, 1.0), np.nan
+    )
 
     # ── CHAINED INDEX (within this range) ─────────────────────────────────────
     agg["LocalToDate"] = agg.groupby(aif_field)["TWR_Local"].transform(

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Visibility — Console</title>
+<title>Visibility — Performance Console</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
@@ -14,11 +14,12 @@
     --accent:    #2E5FA3;
     --accent2:   #4a7fc1;
     --text:      #d8dce8;
-    --muted:     #c4c9d8;;
+    --muted:     #c4c9d8;
     --success:   #2a7a4a;
     --success-t: #3dba70;
     --fail:      #7a2a2a;
     --fail-t:    #e05555;
+    --gold:      #e6a817;
     --mono:      'JetBrains Mono', monospace;
     --serif:     'Crimson Pro', Georgia, serif;
   }
@@ -78,6 +79,8 @@
     border-right: 1px solid var(--border);
     padding: 20px 0;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
   }
   .nav-section {
     padding: 6px 20px 4px;
@@ -108,23 +111,20 @@
     font-weight: 500;
     letter-spacing: 0.5px;
     text-shadow: 0 0 8px rgba(80,200,120,0.4);
-}
-
-  /* link out to another console (Firm Analytics -> Performance) */
-  .nav-link-item {
-    display: block;
-    padding: 9px 20px;
-    font-family: var(--mono);
-    font-size: 0.78em;
-    color: var(--accent2);
-    cursor: pointer;
-    text-decoration: none;
-    border-left: 2px solid transparent;
-    transition: all 0.15s;
-    user-select: none;
   }
-  .nav-link-item:hover { color: var(--text); background: rgba(46,95,163,0.08); border-left-color: var(--accent); }
-  .nav-link-item .arrow { float: right; opacity: 0.8; }
+
+  /* link back to FIG — mirrors ops' nav-fig-link pattern */
+  .nav-link-out { margin-top: auto; padding: 16px 20px 4px; }
+  .nav-link-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 0.72em; letter-spacing: 1px;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--accent2); border: 1px solid var(--border);
+    background: var(--bg); padding: 8px 14px; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .nav-link-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(46,95,163,0.1); }
+  .nav-link-arrow { font-size: 1.05em; }
 
   main {
     padding: 32px 36px;
@@ -134,31 +134,16 @@
     gap: 24px;
   }
 
-  .panel {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-  }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; }
   .panel-head {
-    padding: 14px 20px;
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    gap: 10px;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
   }
   .panel-title {
-    font-family: var(--mono);
-    font-size: 0.8em;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: #fff;
+    font-family: var(--mono); font-size: 0.8em; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #fff;
   }
-  .panel-desc {
-    font-size: 0.85em;
-    color: var(--muted);
-    margin-left: auto;
-    font-style: italic;
-  }
+  .panel-desc { font-size: 0.85em; color: var(--muted); margin-left: auto; font-style: italic; }
   .panel-body { padding: 20px; }
 
   .form-grid {
@@ -169,45 +154,27 @@
   }
   .form-group { display: flex; flex-direction: column; gap: 5px; }
   label {
-    font-family: var(--mono);
-    font-size: 0.65em;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--muted);
+    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
   }
   input, select {
-    background: var(--bg);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 0.82em;
-    padding: 8px 10px;
-    border-radius: 2px;
-    outline: none;
-    transition: border-color 0.15s;
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 0.82em; padding: 8px 10px;
+    border-radius: 2px; outline: none; transition: border-color 0.15s;
   }
   input:focus, select:focus { border-color: var(--accent); }
   input::placeholder { color: var(--muted); }
   .field-hint {
-    font-family: var(--mono);
-    font-size: 0.62em;
-    color: var(--muted);
-    line-height: 1.6;
-    margin-top: 3px;
+    font-family: var(--mono); font-size: 0.62em; color: var(--muted);
+    line-height: 1.6; margin-top: 3px;
   }
   .field-hint span { color: var(--accent2); }
 
   .btn-row { display: flex; gap: 10px; align-items: center; }
   .btn {
-    font-family: var(--mono);
-    font-size: 0.75em;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    padding: 9px 22px;
-    border: 1px solid;
-    cursor: pointer;
-    border-radius: 2px;
-    transition: all 0.15s;
+    font-family: var(--mono); font-size: 0.75em; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 9px 22px; border: 1px solid;
+    cursor: pointer; border-radius: 2px; transition: all 0.15s;
   }
   .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
@@ -254,31 +221,11 @@
   .bp-box.inspan { background: rgba(46,95,163,0.20); border-color: rgba(46,95,163,0.45); color: #cfe0f7; }
   .bp-box.endpoint { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
 
-  .all-clear-banner {
-    display: none;
-    padding: 18px 24px;
-    border-radius: 2px;
-    font-family: var(--mono);
-    align-items: center;
-    gap: 16px;
-  }
-  .all-clear-banner.show { display: flex; }
-  .all-clear-banner.pass { background: rgba(42,122,74,0.15); border: 1px solid var(--success); color: var(--success-t); }
-  .all-clear-banner.fail { background: rgba(122,42,42,0.15); border: 1px solid var(--fail); color: var(--fail-t); }
-  .badge { font-size: 1.3em; font-weight: 600; letter-spacing: 3px; }
-  .all-clear-detail { font-size: 0.78em; opacity: 0.85; }
-
   .perf-block {
     display: none;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 2px;
-    padding: 14px 16px;
-    font-family: var(--mono);
-    font-size: 0.72em;
-    color: var(--muted);
-    gap: 28px;
-    flex-wrap: wrap;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+    padding: 14px 16px; font-family: var(--mono); font-size: 0.72em; color: var(--muted);
+    gap: 28px; flex-wrap: wrap;
   }
   .perf-block.show { display: flex; }
   .perf-item { display: flex; flex-direction: column; gap: 3px; }
@@ -288,35 +235,22 @@
   .table-wrap { overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
   th {
-    background: var(--bg);
-    color: var(--muted);
-    font-weight: 400;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 8px 12px;
-    text-align: left;
-    border-bottom: 1px solid var(--border);
-    white-space: nowrap;
+    background: var(--bg); color: var(--muted); font-weight: 400; letter-spacing: 1px;
+    text-transform: uppercase; padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
   }
   td {
-    padding: 7px 12px;
-    border-bottom: 1px solid rgba(26,30,46,0.6);
-    white-space: nowrap;
-    color: var(--text);
+    padding: 7px 12px; border-bottom: 1px solid rgba(26,30,46,0.6);
+    white-space: nowrap; color: var(--text);
   }
   tr:hover td { background: rgba(46,95,163,0.05); }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
-  td.pass { color: var(--success-t); }
-  td.fail { color: var(--fail-t); }
   .row-count { font-family: var(--mono); font-size: 0.68em; color: var(--muted); padding: 8px 16px 12px; }
 
   .spinner {
-    display: none;
-    width: 14px; height: 14px;
-    border: 2px solid var(--border);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.6s linear infinite;
+    display: none; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
   }
   .spinner.show { display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
@@ -326,37 +260,28 @@
 
 <header>
   <h1>Visibility</h1>
-  <span>Financial Information Gateway · Console</span>
+  <span>Performance Console · Time-Weighted Returns</span>
   <div class="header-dot"></div>
 </header>
 
 <nav>
-  <div class="nav-section">Operations</div>
-  <div class="nav-item" onclick="selectEndpoint('cash-trade-date', this)">Cash Ledger — Trade Date</div>
-  <div class="nav-item active" onclick="selectEndpoint('appraisal', this)">Appraisal</div>
-  <div class="nav-item" onclick="selectEndpoint('ledger', this)">Accounting Ledger</div>
-  <div class="nav-item" onclick="selectEndpoint('position-ledger', this)">Position Ledger</div>
+  <div class="nav-sections">
+    <div class="nav-section">Firm Analytics</div>
+    <div class="nav-item active" onclick="selectEndpoint('performance', this)">Detailed TWR Performance</div>
+    <div class="nav-item" onclick="selectEndpoint('performance-summary', this)">Summarized TWR Performance</div>
+  </div>
 
-  <div class="nav-section" style="margin-top:12px">Fund Accounting</div>
-  <div class="nav-item" onclick="selectEndpoint('cost-basis', this)">Cost Basis</div>
-  <div class="nav-item" onclick="selectEndpoint('income', this)">Income</div>
-  <div class="nav-item" onclick="selectEndpoint('realized', this)">Realized Gains</div>
-  <div class="nav-item" onclick="selectEndpoint('unrealized', this)">Unrealized</div>
-  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
-
-  <div class="nav-section" style="margin-top:12px">Firm Analytics</div>
-  <a class="nav-link-item" href="/perf?context=fig">Performance Console <span class="arrow">↗</span></a>
-
-  <div class="nav-section" style="margin-top:12px">Reconciliation</div>
-  <div class="nav-item" onclick="selectEndpoint('recon', this)">Master Recon</div>
+  <div class="nav-link-out">
+    <a href="/fig?context=perf" class="nav-link-btn">FIG — Reports <span class="nav-link-arrow">↗</span></a>
+  </div>
 </nav>
 
 <main>
 
   <div class="panel">
     <div class="panel-head">
-      <div class="panel-title" id="endpoint-title">Appraisal</div>
-      <div class="panel-desc" id="endpoint-desc">Point-in-time portfolio appraisal</div>
+      <div class="panel-title" id="endpoint-title">Performance</div>
+      <div class="panel-desc" id="endpoint-desc">Chained TWR — any range, level, and cadence</div>
     </div>
     <div class="panel-body">
       <div class="form-grid">
@@ -376,9 +301,9 @@
 
         <div class="form-group">
           <label>Period Start</label>
-          <input id="f-period-start" value="2025-12">
+          <input id="f-period-start" value="2021-01">
           <div class="field-hint" id="period-hint">
-            Monthly: <span>2025-12</span> · Quarterly: <span>2021-Q1</span><br>
+            Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>
             Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>
           </div>
         </div>
@@ -395,38 +320,20 @@
           <div class="field-hint">Leave blank for full portfolio</div>
         </div>
 
-        <div class="form-group" id="fg-mode" style="display:none">
-          <label>Mode</label>
-          <select id="f-mode">
-            <option value="period_close">Period Close</option>
-            <option value="period_open">Period Open</option>
-          </select>
-          <div class="field-hint"><span>period_close</span> = as of end · <span>period_open</span> = as of start</div>
-        </div>
-
-        <div class="form-group" id="fg-summary" style="display:none">
-          <label>Detail Level</label>
-          <select id="f-summary">
-            <option value="true">Summary — totals only (fast)</option>
-            <option value="false">Detail — every lot</option>
-          </select>
-          <div class="field-hint"><span>Summary</span> = position view · <span>Detail</span> = full lot breakdown</div>
-        </div>
-
-        <div class="form-group" id="fg-level" style="display:none">
+        <div class="form-group" id="fg-level">
           <label>Level</label>
           <select id="f-level">
+            <option value="portfolio">Portfolio</option>
             <option value="investment">Investment</option>
             <option value="sector">Sector</option>
             <option value="analyst">Analyst</option>
             <option value="country">Country</option>
             <option value="currency">Currency</option>
-            <option value="portfolio">Portfolio</option>
           </select>
           <div class="field-hint">Grouping level for returns</div>
         </div>
 
-        <div class="form-group" id="fg-cadence" style="display:none">
+        <div class="form-group" id="fg-cadence">
           <label>Cadence</label>
           <select id="f-cadence">
             <option value="">Full Range</option>
@@ -453,11 +360,6 @@
         <div class="status" id="status"></div>
       </div>
     </div>
-  </div>
-
-  <div class="all-clear-banner" id="all-clear-banner">
-    <span class="badge" id="all-clear-text"></span>
-    <span class="all-clear-detail" id="all-clear-detail"></span>
   </div>
 
   <div class="perf-block" id="perf-block">
@@ -501,34 +403,6 @@
 const BASE = '';
 
 const ENDPOINTS = {
-  'cash-trade-date': {
-    title: 'Cash — Trade Date',
-    desc: 'Operational tradeable cash on currency investments',
-    path: '/api/v1/cash-trade-date',
-    csvPath: '/api/v1/cash-trade-date/csv',
-    extras: [],
-  },
-  'appraisal': {
-    title: 'Appraisal',
-    desc: 'Point-in-time portfolio appraisal at tax lot level',
-    path: '/api/v1/appraisal',
-    csvPath: '/api/v1/appraisal/csv',
-    extras: ['summary'],
-  },
-  'ledger': {
-    title: 'Accounting Ledger',
-    desc: 'Complete financial state — every account, every lot',
-    path: '/api/v1/ledger',
-    csvPath: '/api/v1/ledger/csv',
-    extras: [],
-  },
-  'position-ledger': {
-    title: 'Position Ledger',
-    desc: 'Tax lots collapsed to investment level',
-    path: '/api/v1/position-ledger',
-    csvPath: '/api/v1/position-ledger/csv',
-    extras: [],
-  },
   'performance': {
     title: 'Performance',
     desc: 'Chained TWR — any range, level, and cadence',
@@ -540,55 +414,12 @@ const ENDPOINTS = {
     title: 'Performance Summary',
     desc: 'MTD · QTD · YTD · 1YR · 3YR · 5YR · Annualized · Beta · Alpha · Sharpe',
     path: '/api/v1/performance/summary',
-    csvPath: '/api/v1/performance/summary/csv',
+    csvPath: null,                 // summary CSV not yet implemented — no dead button
     extras: ['level'],
-  },
-  'cost-basis': {
-    title: 'Cost Basis',
-    desc: 'Opening · Activity · Closing for every cost basis account',
-    path: '/api/v1/cost-basis',
-    csvPath: '/api/v1/cost-basis/csv',
-    extras: [],
-  },
-  'income': {
-    title: 'Income',
-    desc: 'Revenue and expense account movements',
-    path: '/api/v1/income',
-    csvPath: '/api/v1/income/csv',
-    extras: [],
-  },
-  'realized': {
-    title: 'Realized Gains',
-    desc: 'Realized price and FX gains on disposition',
-    path: '/api/v1/realized',
-    csvPath: '/api/v1/realized/csv',
-    extras: [],
-  },
-  'unrealized': {
-    title: 'Unrealized',
-    desc: 'Cumulative unrealized gain — Cost + Unrealized = MarketVal',
-    path: '/api/v1/unrealized',
-    csvPath: '/api/v1/unrealized/csv',
-    extras: [],
-  },
-  'capital': {
-    title: 'Capital',
-    desc: 'External capital flows — contributions and withdrawals',
-    path: '/api/v1/capital',
-    csvPath: '/api/v1/capital/csv',
-    extras: [],
-  },
-  'recon': {
-    title: 'Master Reconciliation',
-    desc: 'Three views · One truth · One all_clear',
-    path: '/api/v1/recon',
-    csvPath: null,
-    extras: [],
-    isRecon: true,
   },
 };
 
-let currentEndpoint = 'appraisal';
+let currentEndpoint = 'performance';
 
 function updatePeriodHints() {
   const cal  = document.getElementById('f-calendar').value.trim().toLowerCase();
@@ -597,17 +428,17 @@ function updatePeriodHints() {
   const hint = document.getElementById('period-hint');
 
   if (cal === 'yearly') {
-    ps.value = '2025'; pe.value = '2025';
-    hint.innerHTML = 'Yearly: <span>2025</span>';
+    ps.value = '2021'; pe.value = '2025';
+    hint.innerHTML = 'Yearly: <span>2021</span>';
   } else if (cal === 'quarterly') {
-    ps.value = '2025-Q4'; pe.value = '2025-Q4';
-    hint.innerHTML = 'Quarterly: <span>2025-Q4</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+    ps.value = '2021-Q1'; pe.value = '2025-Q4';
+    hint.innerHTML = 'Quarterly: <span>2021-Q1</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   } else if (cal === 'daily') {
-    ps.value = '2025-12-31'; pe.value = '2025-12-31';
-    hint.innerHTML = 'Daily: <span>2025-12-31</span>';
+    ps.value = '2021-01-08'; pe.value = '2025-12-31';
+    hint.innerHTML = 'Daily: <span>2021-01-08</span>';
   } else {
-    ps.value = '2025-12'; pe.value = '2025-12';
-    hint.innerHTML = 'Monthly: <span>2025-12</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+    ps.value = '2021-01'; pe.value = '2025-12';
+    hint.innerHTML = 'Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   }
 }
 
@@ -615,17 +446,9 @@ document.getElementById('f-calendar').addEventListener('change', () => { updateP
 document.getElementById('f-calendar').addEventListener('blur',   () => { updatePeriodHints(); reloadGridIfOpen(); });
 document.getElementById('f-portfolio').addEventListener('change', reloadGridIfOpen);
 
-/* ============================================================
-   PERIOD BOX PICKER
-   Fetches periods from the ops calendar endpoint and renders a
-   year-partitioned, scrollable grid. Click one period (single)
-   or two (contiguous range — span fills, across years). A third
-   click slides the window. Writes the resolved start/end into
-   f-period-start / f-period-end — the fields execute() reads —
-   so the execute path is completely unchanged.
-   ============================================================ */
-let _bpOrdered  = [];   // flat chronological list of period_name
-let _bpSelected = [];   // up to 2 endpoints, in click order
+/* ── PERIOD BOX PICKER (reuses the ops calendar endpoint) ── */
+let _bpOrdered  = [];
+let _bpSelected = [];
 let _bpOpen     = false;
 
 function togglePicker() {
@@ -661,17 +484,15 @@ async function loadGrid() {
     return;
   }
 
-  _bpOrdered = periods.map(p => p.name).sort();          // lexical = chronological
+  _bpOrdered = periods.map(p => p.name).sort();
   const statusBy = Object.fromEntries(periods.map(p => [p.name, p.status]));
 
-  // Pre-select from whatever is currently typed in the period fields.
   const curStart = document.getElementById('f-period-start').value.trim();
   const curEnd   = document.getElementById('f-period-end').value.trim();
   _bpSelected = [];
   if (_bpOrdered.includes(curStart)) _bpSelected.push(curStart);
   if (curEnd && curEnd !== curStart && _bpOrdered.includes(curEnd)) _bpSelected.push(curEnd);
 
-  // Group by year (first 4 chars), chronological within each.
   const byYear = {};
   for (const name of _bpOrdered) (byYear[name.slice(0,4)] ||= []).push(name);
 
@@ -681,7 +502,7 @@ async function loadGrid() {
       <div class="bp-row">
         ${byYear[yr].map(name => {
           const pend  = (statusBy[name] && statusBy[name] !== 'Closed') ? ' pending' : '';
-          const label = name.length <= 4 ? name : name.slice(5);  // MM | Qn | MM-DD
+          const label = name.length <= 4 ? name : name.slice(5);
           return `<div class="bp-box${pend}" data-name="${name}" onclick="bpPick('${name}')">${label}</div>`;
         }).join('')}
       </div>
@@ -692,22 +513,21 @@ async function loadGrid() {
 
 function bpPick(name) {
   const i = _bpSelected.indexOf(name);
-  if (i !== -1) { _bpSelected.splice(i, 1); }                 // re-click deselects
-  else { _bpSelected.push(name); if (_bpSelected.length > 2) _bpSelected.shift(); }  // cap 2, slide
+  if (i !== -1) { _bpSelected.splice(i, 1); }
+  else { _bpSelected.push(name); if (_bpSelected.length > 2) _bpSelected.shift(); }
   bpRender();
 }
 
 function bpResolve() {
   if (_bpSelected.length === 0) return [null, null];
   if (_bpSelected.length === 1) return [_bpSelected[0], _bpSelected[0]];
-  const s = [..._bpSelected].sort();                          // chronological endpoints
+  const s = [..._bpSelected].sort();
   return [s[0], s[s.length - 1]];
 }
 
 function bpRender() {
   const [start, end] = bpResolve();
 
-  // In-span set (inclusive), off the flat ordered list — crosses years naturally.
   const span = new Set();
   if (start && end) {
     const lo = _bpOrdered.indexOf(start), hi = _bpOrdered.indexOf(end);
@@ -720,7 +540,6 @@ function bpRender() {
     box.classList.toggle('inspan', span.has(n) && !_bpSelected.includes(n));
   });
 
-  // Write into the fields execute() reads — this is the whole integration.
   document.getElementById('f-period-start').value = start || '';
   document.getElementById('f-period-end').value   = end   || '';
 
@@ -740,13 +559,12 @@ function selectEndpoint(key, el) {
   document.getElementById('endpoint-title').textContent = ep.title;
   document.getElementById('endpoint-desc').textContent  = ep.desc;
 
-  ['mode','level','cadence','summary'].forEach(f => {
+  ['level','cadence'].forEach(f => {
     document.getElementById('fg-' + f).style.display =
       ep.extras.includes(f) ? '' : 'none';
   });
 
   document.getElementById('results-panel').style.display = 'none';
-  document.getElementById('all-clear-banner').classList.remove('show');
   document.getElementById('perf-block').classList.remove('show');
   document.getElementById('btn-csv').classList.remove('visible');
   document.getElementById('status').textContent = '';
@@ -763,10 +581,6 @@ function buildUrl(path) {
   if (inv) url += `&investment=${encodeURIComponent(inv)}`;
 
   const ep = ENDPOINTS[currentEndpoint];
-  if (ep.extras.includes('mode'))
-    url += `&mode=${document.getElementById('f-mode').value}`;
-  if (ep.extras.includes('summary'))
-    url += `&summary_only=${document.getElementById('f-summary').value}`;
   if (ep.extras.includes('level'))
     url += `&level=${document.getElementById('f-level').value}`;
   if (ep.extras.includes('cadence')) {
@@ -789,7 +603,6 @@ async function execute() {
   status.textContent = 'Executing…';
 
   document.getElementById('results-panel').style.display = 'none';
-  document.getElementById('all-clear-banner').classList.remove('show');
   document.getElementById('perf-block').classList.remove('show');
   document.getElementById('btn-csv').classList.remove('visible');
 
@@ -818,25 +631,8 @@ async function execute() {
     document.getElementById('perf-investments').textContent =
       perf.processed?.investments ?? '—';
     document.getElementById('perf-hw').textContent =
-      perf.hardware ? 'Laptop · No DB · Pure Python' : '—';
+      perf.hardware ? 'Cloud · No DB · Pure Python' : '—';
     document.getElementById('perf-block').classList.add('show');
-
-    if (ep.isRecon) {
-      const allClear = perf.all_clear ?? json.valid;
-      const banner   = document.getElementById('all-clear-banner');
-      banner.classList.add('show');
-      if (allClear) {
-        banner.className = 'all-clear-banner show pass';
-        document.getElementById('all-clear-text').textContent   = '✓  ALL CLEAR';
-        document.getElementById('all-clear-detail').textContent =
-          'Every view · Every investment · Every account ties.';
-      } else {
-        banner.className = 'all-clear-banner show fail';
-        document.getElementById('all-clear-text').textContent   = '✗  FAILURES DETECTED';
-        document.getElementById('all-clear-detail').textContent =
-          (json.errors || []).slice(0,3).join('  ·  ');
-      }
-    }
 
     if (rows.length > 0) {
       const cols = Object.keys(rows[0]);
@@ -848,10 +644,14 @@ async function execute() {
             const v   = row[col];
             const num = typeof v === 'number';
             let cls   = num ? 'num' : '';
-            if (['ties','all_clear','nav_ties'].includes(col))
-              cls += v === true ? ' pass' : v === false ? ' fail' : '';
+            // Index and return columns need 5 decimals — cumulative returns
+            // sit near 1.0 and the movement is in the trailing digits, so 2dp
+            // collapses distinct daily values. Money columns stay at 2dp.
+            const hi = /Index|ToDate|TWR|Return|Percent/i.test(col);
             const disp = v == null ? '' : num
-              ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4})
+              ? (hi
+                  ? v.toLocaleString('en-US',{minimumFractionDigits:5,maximumFractionDigits:5})
+                  : v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}))
               : String(v);
             return `<td class="${cls.trim()}">${disp}</td>`;
           }).join('') + '</tr>'
@@ -883,9 +683,8 @@ function downloadCSV() {
   window.location.href = buildUrl(ep.csvPath);
 }
 
-// Initialize period fields to match the default calendar on load —
-// the hardcoded input values above are only a pre-script fallback.
-updatePeriodHints();
+// initialise the default view
+selectEndpoint('performance', document.querySelector('.nav-item.active'));
 </script>
 </body>
 </html>

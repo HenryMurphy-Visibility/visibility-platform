@@ -13,6 +13,16 @@
 # postings (see compute_cash_trade_date.py) -- the two ledgers stay
 # non-overlapping by design.
 #
+# FILTER SCOPE:
+#   This is a CASH ledger. Cash is not attributable to a single
+#   non-currency instrument (there is no "GOOG's share of settled
+#   USD cash"). An investment-level uber_filter is therefore IGNORED
+#   here: the ledger is always computed portfolio-wide. The parameter
+#   is still accepted (so the endpoint/signature is unchanged) but has
+#   no effect on the output. To see the activity that drove a specific
+#   instrument, use the position/accounting ledgers, not this one.
+#   metadata['filter_scope'] records that the filter was dropped.
+#
 # FX TRUE-UP (FXGainTradeSettle):
 #   The settle-date Cost leg's LOCAL figure is the true currency-
 #   native cash movement. Its BOOK figure reflects whatever FX rate
@@ -35,7 +45,7 @@
 import pandas as pd
 from datetime import datetime
 
-from financial_information_gateway.fig_code.fig_core import prep_state_cached as prep_state
+from financial_information_gateway.fig_code.fig_core import prep_state
 from financial_information_gateway.fig_code.compute_result import ComputeResult
 from financial_information_gateway.fig_code.compute_accounting_ledger import (
     compute_accounting_ledger,
@@ -106,6 +116,11 @@ def compute_cash_settle_date(
     """
     Custodian-recon settle-date cash ledger for currency investments.
 
+    FILTER SCOPE: uber_filter is IGNORED. Cash is not attributable to a
+    single non-currency instrument, so this ledger is always computed
+    portfolio-wide. The parameter is accepted for signature/endpoint
+    compatibility but does not scope the output. See module header.
+
     OPENING / CLOSING are real point-in-time balances -- the AL-repo
     snapshot rolled up across SETTLE_DATE_CASH_ACCOUNTS (Cost) for
     currency investments, at prior_cutoff and current_cutoff. Same
@@ -134,13 +149,23 @@ def compute_cash_settle_date(
     """
     start_time = datetime.now()
 
+    # -- FILTER REMOVAL --
+    # Cash ledgers are portfolio-wide. An investment-level filter has no
+    # meaning for settled cash (cash is not attributable to a single
+    # non-currency instrument), and passing it downstream would strip the
+    # currency Cost activity while the snapshot-based closing stayed full,
+    # breaking the recon. So we drop it for BOTH the accounting-ledger call
+    # and all scoping here. Record that it was dropped.
+    filter_dropped = uber_filter is not None
+    uber_filter = None
+
     if prep is None:
         prep = prep_state(portfolio, calendar, period_start, period_end)
 
     ledger = compute_accounting_ledger(
         portfolio=portfolio, calendar=calendar,
         period_start=period_start, period_end=period_end,
-        uber_filter=uber_filter, prep=prep,
+        uber_filter=None, prep=prep,
         ppa_ibor_date=ppa_ibor_date,
     )
 
@@ -294,6 +319,10 @@ def compute_cash_settle_date(
         "rows_after_filter": len(out_df) if out_df is not None else 0,
         "accounts_included": sorted(SETTLE_DATE_CASH_ACCOUNTS | FX_TRUE_UP_ACCOUNTS),
         "fx_true_up_presentation": "visible_row",  # flagged as revisit-after-output
+        "filter_scope": (
+            "portfolio — investment filter dropped (cash is not "
+            "investment-attributable)" if filter_dropped else "portfolio"
+        ),
         "elapsed_ms": round(elapsed_ms, 2),
         "investment_master_source": "TEMPORARY_BRIDGE_disk_csv",
         "recon_failures": len(recon_failures),
@@ -303,6 +332,7 @@ def compute_cash_settle_date(
         f">>> COMPUTE CASH SETTLE DATE COMPLETE "
         f"| {portfolio} | {calendar} | {period_start} -> {period_end} "
         f"| {metadata['rows_after_filter']} rows "
+        f"| filter_dropped={filter_dropped} "
         f"| recon_fail={len(recon_failures)} "
         f"| {round(elapsed_ms, 1)}ms"
     )

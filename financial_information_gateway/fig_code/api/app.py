@@ -54,15 +54,14 @@ from financial_information_gateway.fig_code.compute_performance import (
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.api.app_routes import router
 
-from cph_routes       import cph_router
-from ops_routes       import ops_router
+from cph_routes import cph_router
+from ops_routes import ops_router
 from oversight_routes import oversight_router
-from tips_routes      import tips_router
-from auth_routes      import auth_router
-from auth_manager     import init_auth
-from auth_middleware  import AuthMiddleware
-from v_config         import CHEST_PATH
-
+from tips_routes import tips_router
+from auth_routes import auth_router
+from auth_manager import init_auth
+from auth_middleware import AuthMiddleware
+from v_config import CHEST_PATH
 
 # ============================================================
 # PERIOD FORMAT GUIDE
@@ -75,6 +74,7 @@ PERIOD_FORMAT_GUIDE = (
     "Monthly: YYYY-MM (e.g. 2021-01) · "
     "Daily: YYYY-MM-DD (e.g. 2021-01-15)"
 )
+
 
 def _parse_period_start(period_start: str) -> datetime:
     """Parse period_start to datetime regardless of calendar format."""
@@ -167,10 +167,11 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
+
 app.openapi = custom_openapi
 
-
 from fastapi.staticfiles import StaticFiles
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(GZipMiddleware, minimum_size=1000)
@@ -300,14 +301,15 @@ def landing():
         among the first to see it.</p>
         <p class="closing">Thank you for your interest.</p>
     </div>
+
     <div class="consoles">
-        <a href="/ops" class="console-btn primary"><span class="console-label">OPS</span><span class="console-desc">Operations</span></a>
-        <a href="/fig" class="console-btn primary"><span class="console-label">FIG</span><span class="console-desc">Reports</span></a>
-        <a href="/cph" class="console-btn primary"><span class="console-label">CPH</span><span class="console-desc">Processing</span></a>
-        <a href="/oversight" class="console-btn oversight"><span class="console-label">Oversight</span><span class="console-desc">Governance</span></a>
-        <a class="console-btn stub"><span class="console-label">FA</span><span class="console-desc">Coming Soon</span></a>
-        <a class="console-btn stub"><span class="console-label">PERF</span><span class="console-desc">Coming Soon</span></a>
-    </div>
+    <a href="/ops" class="console-btn primary"><span class="console-label">OPERATIONS</span><span class="console-desc">Operations</span></a>
+    <a href="/fig" class="console-btn primary"><span class="console-label">REPORTING</span><span class="console-desc">Reports</span></a>
+    <a href="/perf" class="console-btn primary"><span class="console-label">PERFORMANCE</span><span class="console-desc">Performance</span></a>
+    <a href="/oversight" class="console-btn oversight"><span class="console-label">Oversight</span><span class="console-desc">Governance</span></a>
+    <a href="/cph" class="console-btn primary"><span class="console-label">CPH</span><span class="console-desc">Processing</span></a>
+    <a class="console-btn stub"><span class="console-label">FUND ACCOUNTING</span><span class="console-desc">Coming Soon</span></a>
+</div>
     <div class="footer">Visibility &nbsp;·&nbsp; Chest Financial Systems &nbsp;·&nbsp; Henry J. Murphy, Founder &nbsp;·&nbsp; Confidential</div>
 </div>
 </body>
@@ -339,6 +341,14 @@ def cph_console():
         return f.read()
 
 
+@app.get("/perf", response_class=HTMLResponse)
+def perf_console():
+    import os
+    perf_path = os.path.join(os.path.dirname(__file__), "perf.html")
+    with open(perf_path, "r", encoding="utf-8") as f:
+        return f.read()
+
+
 @app.get("/ops", response_class=HTMLResponse)
 def ops_console():
     import os
@@ -362,10 +372,10 @@ def oversight_console():
 @app.get("/api/v1/health")
 def health():
     return {
-        "status":            "ok",
-        "version":           "1.0.0",
+        "status": "ok",
+        "version": "1.0.0",
         "compute_functions": list(COMPUTE_REGISTRY.keys()),
-        "timestamp":         datetime.now().isoformat(),
+        "timestamp": datetime.now().isoformat(),
     }
 
 
@@ -377,7 +387,7 @@ def health():
 def registry():
     return {
         "functions": list_compute_functions(),
-        "count":     len(COMPUTE_REGISTRY),
+        "count": len(COMPUTE_REGISTRY),
     }
 
 
@@ -387,17 +397,19 @@ def registry():
 
 @app.get("/api/v1/ledger")
 def compute_accounting_ledger_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(1000,          ge=1, le=10000),
-    ppa_date:     Optional[str] = Query(None,          description="PPA IBOR date YYYY-MM-DD. Defaults to first day of period."),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_start: str = Query("2025-12", description=PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        investment: Optional[str] = Query(None,
+                                          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
+        ppa_date: Optional[str] = Query(None, description="PPA IBOR date YYYY-MM-DD. Defaults to first day of period."),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = (
             datetime.strptime(ppa_date, "%Y-%m-%d")
             if ppa_date else
@@ -418,15 +430,15 @@ def compute_accounting_ledger_endpoint(
 
 @app.get("/api/v1/ledger/csv")
 def compute_accounting_ledger_csv(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    investment:   Optional[str] = Query(None),
-    ppa_date:     Optional[str] = Query(None),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2025-12"),
+        period_end: str = Query("2025-12"),
+        investment: Optional[str] = Query(None),
+        ppa_date: Optional[str] = Query(None),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = (
             datetime.strptime(ppa_date, "%Y-%m-%d")
             if ppa_date else
@@ -459,29 +471,43 @@ def compute_accounting_ledger_csv(
 # ============================================================
 # COMPUTE APPRAISAL
 # ============================================================
-
 @app.get("/api/v1/appraisal")
 def compute_appraisal_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    mode:         str           = Query("period_close",description="period_open · period_close (default)"),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG."),
-    summary_only: bool          = Query(True,          description="True returns subtotals and totals only. False returns full detail."),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(500,           ge=1, le=5000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_end: str = Query("2025-12",
+                                description="As-of period. An appraisal is a point-in-time snapshot at this period's close. " + PERIOD_FORMAT_GUIDE),
+        investment: Optional[str] = Query(None,
+                                          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+        summary_only: bool = Query(True,
+                                   description="True (default) = position-level subtotals and totals — fast. False = full lot detail."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(500, ge=1, le=5000),
 ):
+    """
+    ## Appraisal — Point-in-Time Snapshot
+
+    A portfolio valuation as of the close of `period_end`. An appraisal is a
+    single instant, not a range, so only the as-of period is required.
+
+    summary_only=True (default) returns position-level subtotals and totals —
+    the fast, position-report view. Set summary_only=False for full lot detail.
+    """
     try:
+        # An appraisal is point-in-time: start == end, always at period close.
+        period_start = period_end
         uber_filter = {"investment": investment} if investment else None
-        result      = compute_appraisal(
+        result = compute_appraisal(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
-            mode=mode, uber_filter=uber_filter,
+            mode="period_close", uber_filter=uber_filter,
         )
         if summary_only and result.data is not None and not result.data.empty:
             result.data = result.data[
-                result.data["row_type"].isin(["subtotal", "type_total", "grand_total"])
+                result.data["row_type"].isin(
+                    ["currency_total", "subtotal", "type_total", "grand_total"]
+                )
             ].copy()
         return render(result, target="api", options={"page": page, "page_size": 20000})
     except ValueError as e:
@@ -493,31 +519,34 @@ def compute_appraisal_endpoint(
 
 @app.get("/api/v1/appraisal/csv")
 def compute_appraisal_csv(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    mode:         str           = Query("period_close"),
-    investment:   Optional[str] = Query(None),
-    summary_only: bool          = Query(False),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_end: str = Query("2025-12"),
+        investment: Optional[str] = Query(None),
+        summary_only: bool = Query(False),
 ):
+    """Appraisal — CSV Download. Point-in-time snapshot at the close of period_end."""
     try:
+        # An appraisal is point-in-time: start == end, always at period close.
+        period_start = period_end
         uber_filter = {"investment": investment} if investment else None
-        result      = compute_appraisal(
+        result = compute_appraisal(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
-            mode=mode, uber_filter=uber_filter,
+            mode="period_close", uber_filter=uber_filter,
         )
         df = result.data
         if summary_only and df is not None and not df.empty:
-            df = df[df["row_type"].isin(["subtotal", "type_total", "grand_total"])].copy()
+            df = df[df["row_type"].isin(
+                ["currency_total", "subtotal", "type_total", "grand_total"]
+            )].copy()
         if df is None or df.empty:
             raise HTTPException(status_code=404, detail="No data returned")
         buffer = io.StringIO()
         df.to_csv(buffer, index=False)
         buffer.seek(0)
         inv_part = f"_{investment}" if investment else "_portfolio"
-        filename = f"visibility_appraisal{inv_part}_{portfolio}_{calendar}_{period_end}_{mode}.csv"
+        filename = f"visibility_appraisal{inv_part}_{portfolio}_{calendar}_{period_end}.csv"
         return StreamingResponse(
             iter([buffer.getvalue()]), media_type="text/csv",
             headers={"Content-Disposition": f"attachment; filename={filename}"}
@@ -535,18 +564,19 @@ def compute_appraisal_csv(
 
 @app.get("/api/v1/position-ledger")
 def compute_position_ledger_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG."),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(1000,          ge=1, le=10000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_start: str = Query("2025-12", description=PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        investment: Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_position_ledger(
+        result = compute_position_ledger(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -561,16 +591,16 @@ def compute_position_ledger_endpoint(
 
 @app.get("/api/v1/position-ledger/csv")
 def compute_position_ledger_csv(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    investment:   Optional[str] = Query(None),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2025-12"),
+        period_end: str = Query("2025-12"),
+        investment: Optional[str] = Query(None),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_position_ledger(
+        result = compute_position_ledger(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -600,19 +630,22 @@ def compute_position_ledger_csv(
 
 @app.get("/api/v1/cash-trade-date")
 def compute_cash_trade_date_endpoint(
-    portfolio:              str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:               str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start:           str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:             str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    investment:             Optional[str] = Query(None,          description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
-    near_cash_horizon_days: int           = Query(5,             description="Receivable/Payable postings settling beyond this many business days are excluded from ACTIVITY."),
-    page:                   int           = Query(1,             ge=1),
-    page_size:              int           = Query(1000,          ge=1, le=10000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_start: str = Query("2025-12", description=PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        investment: Optional[str] = Query(None,
+                                          description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
+        near_cash_horizon_days: int = Query(5,
+                                            description="Receivable/Payable postings settling beyond this many business days are excluded from ACTIVITY."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_cash_trade_date(
+        result = compute_cash_trade_date(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -628,17 +661,17 @@ def compute_cash_trade_date_endpoint(
 
 @app.get("/api/v1/cash-trade-date/csv")
 def compute_cash_trade_date_csv(
-    portfolio:              str           = Query("Portfolio1"),
-    calendar:               str           = Query("Monthly"),
-    period_start:           str           = Query("2025-12"),
-    period_end:             str           = Query("2025-12"),
-    investment:             Optional[str] = Query(None),
-    near_cash_horizon_days: int           = Query(5),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2025-12"),
+        period_end: str = Query("2025-12"),
+        investment: Optional[str] = Query(None),
+        near_cash_horizon_days: int = Query(5),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_cash_trade_date(
+        result = compute_cash_trade_date(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -665,22 +698,30 @@ def compute_cash_trade_date_csv(
 
 # ============================================================
 # COMPUTE CASH SETTLE DATE
+# ------------------------------------------------------------
+# UNREGISTERED pre-freeze (invitational-frozen): the settle-date
+# ledger is not exposed until the post-freeze settlement fix
+# (state-driven daily close) makes cross-window settlements post.
+# Function bodies are intact below — re-enable by uncommenting the
+# two decorators. Console nav link removed separately in console.html.
 # ============================================================
 
-@app.get("/api/v1/cash-settle-date")
+# @app.get("/api/v1/cash-settle-date")
 def compute_cash_settle_date_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(1000,          ge=1, le=10000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_start: str = Query("2025-12", description=PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        investment: Optional[str] = Query(None,
+                                          description="Filter by investment ticker e.g. JPY. Omit for full portfolio."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_cash_settle_date(
+        result = compute_cash_settle_date(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -693,18 +734,18 @@ def compute_cash_settle_date_endpoint(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/api/v1/cash-settle-date/csv")
+# @app.get("/api/v1/cash-settle-date/csv")
 def compute_cash_settle_date_csv(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    investment:   Optional[str] = Query(None),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2025-12"),
+        period_end: str = Query("2025-12"),
+        investment: Optional[str] = Query(None),
 ):
     try:
-        uber_filter   = {"investment": investment} if investment else None
+        uber_filter = {"investment": investment} if investment else None
         ppa_ibor_date = _parse_period_start(period_start)
-        result        = compute_cash_settle_date(
+        result = compute_cash_settle_date(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             uber_filter=uber_filter, ppa_ibor_date=ppa_ibor_date,
@@ -728,29 +769,27 @@ def compute_cash_settle_date_csv(
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# ============================================================
-# COMPUTE PERFORMANCE
-# ============================================================
+# app.py — replace the three performance endpoints with these.
+# Only change in each: the prep_state line is removed and prep=None is passed.
 
 @app.get("/api/v1/performance/summary")
 def compute_performance_summary_endpoint(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    level:        str           = Query("portfolio"),
-    investment:   Optional[str] = Query(None),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2021-01"),
+        period_end: str = Query("2025-12"),
+        level: str = Query("portfolio"),
+        investment: Optional[str] = Query(None),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
-        result      = compute_performance_summary(
+        result = compute_performance_summary(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             level=level,
-            uber_filter=uber_filter, prep=prep,
+            uber_filter=uber_filter, prep=None,
         )
         return render(result, target="api", options={"page": page, "page_size": page_size})
     except ValueError as e:
@@ -762,24 +801,27 @@ def compute_performance_summary_endpoint(
 
 @app.get("/api/v1/performance")
 def compute_performance_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    level:        str           = Query("portfolio",   description="investment · sector · analyst · country · currency · asset_class · portfolio"),
-    cadence:      Optional[str] = Query(None,          description="Omit=full range · D=daily · M=monthly · Q=quarterly · Y=yearly"),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG."),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(1000,          ge=1, le=10000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly",
+                              description="Calendar name: Yearly · Quarterly · Monthly · Daily · Operational"),
+        period_start: str = Query("2021-01",
+                                  description="Performance defaults to full history from inception. " + PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        level: str = Query("portfolio",
+                           description="investment · sector · analyst · country · currency · asset_class · portfolio"),
+        cadence: Optional[str] = Query(None,
+                                       description="Omit=full range · D=daily · M=monthly · Q=quarterly · Y=yearly"),
+        investment: Optional[str] = Query(None, description="Filter by investment ticker."),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
-        result      = compute_performance(
+        result = compute_performance(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             level=level, cadence=cadence if cadence else None,
-            uber_filter=uber_filter, prep=prep,
+            uber_filter=uber_filter, prep=None,
         )
         return render(result, target="api", options={"page": page, "page_size": page_size})
     except ValueError as e:
@@ -791,22 +833,21 @@ def compute_performance_endpoint(
 
 @app.get("/api/v1/performance/csv")
 def compute_performance_csv(
-    portfolio:    str           = Query("Portfolio1"),
-    calendar:     str           = Query("Monthly"),
-    period_start: str           = Query("2025-12"),
-    period_end:   str           = Query("2025-12"),
-    level:        str           = Query("portfolio"),
-    cadence:      Optional[str] = Query(None),
-    investment:   Optional[str] = Query(None),
+        portfolio: str = Query("Portfolio1"),
+        calendar: str = Query("Monthly"),
+        period_start: str = Query("2021-01"),
+        period_end: str = Query("2025-12"),
+        level: str = Query("portfolio"),
+        cadence: Optional[str] = Query(None),
+        investment: Optional[str] = Query(None),
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state_cached(portfolio, calendar, period_start, period_end)
-        result      = compute_performance(
+        result = compute_performance(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
             level=level, cadence=cadence if cadence else None,
-            uber_filter=uber_filter, prep=prep,
+            uber_filter=uber_filter, prep=None,
         )
         df = result.data
         if df is None or df.empty:
@@ -815,7 +856,7 @@ def compute_performance_csv(
         df.to_csv(buffer, index=False)
         buffer.seek(0)
         inv_part = f"_{investment}" if investment else ""
-        cad_part = f"_{cadence}"    if cadence    else "_full"
+        cad_part = f"_{cadence}" if cadence else "_full"
         filename = f"visibility_performance{inv_part}_{level}{cad_part}_{portfolio}_{period_start}_{period_end}.csv"
         return StreamingResponse(
             iter([buffer.getvalue()]), media_type="text/csv",
@@ -834,22 +875,23 @@ def compute_performance_csv(
 
 @app.get("/api/v1/recon")
 def compute_recon_endpoint(
-    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start."),
-    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    unrealized:   bool          = Query(True,          description="Include unrealized bridge recon"),
-    page:         int           = Query(1,             ge=1),
-    page_size:    int           = Query(1000,          ge=1, le=10000),
+        portfolio: str = Query("Portfolio1", description="Portfolio identifier e.g. Portfolio1"),
+        calendar: str = Query("Monthly", description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+        period_start: str = Query("2025-12", description=PERIOD_FORMAT_GUIDE),
+        period_end: str = Query("2025-12", description="Period end key — same format as period_start."),
+        investment: Optional[str] = Query(None,
+                                          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+        unrealized: bool = Query(True, description="Include unrealized bridge recon"),
+        page: int = Query(1, ge=1),
+        page_size: int = Query(1000, ge=1, le=10000),
 ):
     try:
         uber_filter = {"investment": investment.upper()} if investment else None
-        prep        = prep_state(portfolio, calendar, period_start, period_end)
-        result      = compute_recon(
+        prep = prep_state(portfolio, calendar, period_start, period_end)
+        result = compute_recon(
             portfolio=portfolio, calendar=calendar,
             period_start=period_start, period_end=period_end,
-            uber_filter=uber_filter, prep=prep,
+            uber_filter=uber_filter, prep=None,
             include_view1=True, include_view2=True,
             include_view3=False, include_cross_view=True,
         )
@@ -867,8 +909,8 @@ def compute_recon_endpoint(
 
 @app.post("/api/v1/compute/{function_name}")
 def compute_endpoint(
-    function_name: str,
-    params:        dict,
+        function_name: str,
+        params: dict,
 ):
     if function_name not in COMPUTE_REGISTRY:
         raise HTTPException(
@@ -877,8 +919,8 @@ def compute_endpoint(
         )
     try:
         if "prep" not in params or params.get("prep") is None:
-            p  = params.get("portfolio")
-            c  = params.get("calendar")
+            p = params.get("portfolio")
+            c = params.get("calendar")
             ps = params.get("period_start")
             pe = params.get("period_end")
             if all([p, c, ps, pe]):

@@ -4,21 +4,30 @@ compute_performance.py
 Registered compute function for the fig_code architecture.
 
 Architecture:
-  - prep_state provides all journal entries for the full requested range
+  - The chaining engine loads its own journals per period (extract_box_components);
+    prep is optional and never needed by the performance path
   - Journals are split into calendar periods internally
   - compute_daily_twr runs at daily grain for each period
   - Period_Index is chained: ending index of period N becomes the Prior_Index
     multiplier for period N+1
   - The fully chained daily state is cached at module level after first build
+    AND persisted to disk, so it survives server restarts (build-once).
   - All subsequent calls (any cadence, level, filter) hit the cache instantly
   - Carving and aggregation run on the cached state — sub-second always
 
-Cache key: (portfolio, calendar, period_start, period_end)
+Cache key: (portfolio, calendar, inception, period_end)
 Cache holds: investment-level chained daily state DataFrame
-Cache scope: server session — persists until server restart
 
-This is the same pattern as _PRICE_INDEX in compute_appraisal.py.
-First call builds and caches. Every call after is a cache hit.
+Two-tier cache:
+  1. RAM  — module-level dict, fastest, cleared on restart
+  2. DISK — pickle under FUNDS_PATH/<portfolio>/Calendars/<calendar>/Performance/,
+            survives restart. A built frame is the gold copy: it stays until
+            deliberately cleared (clear_performance_cache deletes it). It is NOT
+            auto-invalidated when the accounting books change — refreshing the
+            performance book is a deliberate act (call clear_performance_cache
+            then re-request, which rebuilds and rewrites).
+
+Lookup order on a request: RAM → DISK → build (then write both tiers).
 
 Drop into:
   financial_information_gateway/fig_code/compute_performance.py
@@ -30,8 +39,10 @@ Register in compute_registry.py:
 
 from __future__ import annotations
 
+import os
 import time
 from datetime import datetime
+from pathlib import Path
 from typing import Optional
 
 import pandas as pd
@@ -43,6 +54,11 @@ from financial_information_gateway.fig_code.fig_performance_carving import (
     aggregate_by_aif,
 )
 from v_config import REFDATA_PATH, FUNDS_PATH
+
+
+# Same write gate as ops_routes / cph_routes — one flag governs all state
+# creation, books and derivatives alike. Dev sets the env var; cloud doesn't.
+WRITES_ENABLED = os.getenv("VISIBILITY_WRITES_ENABLED", "0") == "0"
 
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -68,23 +84,108 @@ AIF_FIELDS = {
 
 
 # ──────────────────────────────────────────────────────────────────────────────
-# MODULE-LEVEL DAILY STATE CACHE
-# Keyed by (portfolio, calendar, period_start, period_end)
+# MODULE-LEVEL DAILY STATE CACHE (RAM tier)
+# Keyed by (portfolio, calendar, inception, period_end)
 # Value: investment-level chained daily state DataFrame
-# Same pattern as _PRICE_INDEX in compute_appraisal.py
+# Backed by a DISK tier (pickle) so builds survive server restarts.
 # ──────────────────────────────────────────────────────────────────────────────
 
 _DAILY_STATE_CACHE: dict[tuple, pd.DataFrame] = {}
 
 
-def clear_performance_cache():
+def _perf_store_dir(portfolio: str, calendar: str) -> Path:
     """
-    Clear the daily state cache.
-    Call when underlying data changes and cache needs to be rebuilt.
+    Directory holding persisted performance frames for a portfolio/calendar.
+    Sits beside Snapshots/, e.g.
+      FUNDS_PATH/Portfolio1/Calendars/Monthly/Performance/
+    """
+    return (
+        Path(FUNDS_PATH)
+        / portfolio
+        / "Calendars"
+        / calendar
+        / "Performance"
+    )
+
+
+def _perf_store_path(cache_key: tuple) -> Path:
+    """
+    Pickle path for a given cache key.
+    cache_key = (portfolio, calendar, inception, period_end)
+    Filename encodes the build span: <inception>__through__<period_end>.pkl
+
+    Pickle (not parquet) deliberately: no third-party engine dependency
+    (pyarrow/fastparquet) to install on laptop OR cloud, stdlib-only,
+    identical behaviour everywhere. The frame is only ever read back by
+    this same Python code, so parquet's interop/columnar advantages don't
+    apply; pickle round-trips this frame in milliseconds (proven in test).
+    """
+    portfolio, calendar, inception, period_end = cache_key
+    fname = f"{inception}__through__{period_end}.pkl".replace("/", "-")
+    return _perf_store_dir(portfolio, calendar) / fname
+
+
+def _disk_load(cache_key: tuple) -> Optional[pd.DataFrame]:
+    """Load a persisted frame if it exists, else None."""
+    path = _perf_store_path(cache_key)
+    if not path.exists():
+        return None
+    try:
+        df = pd.read_pickle(path)
+        print(f">>> PERFORMANCE DISK HIT | {cache_key} | {path.name}")
+        return df
+    except Exception as e:
+        print(f">>> PERFORMANCE DISK READ FAILED ({path.name}): {e} — will rebuild")
+        return None
+
+
+def _disk_write(cache_key: tuple, df: pd.DataFrame) -> None:
+    """Persist a built frame to disk. Best-effort; logs on failure."""
+    path = _perf_store_path(cache_key)
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        df.to_pickle(path)
+        size_mb = path.stat().st_size / (1024 * 1024)
+        print(f">>> PERFORMANCE DISK STORED | {cache_key} | {path.name} | {size_mb:.2f} MB")
+    except Exception as e:
+        print(f">>> PERFORMANCE DISK WRITE FAILED ({path.name}): {e} — RAM cache only")
+
+
+def clear_performance_cache(
+    portfolio: Optional[str] = None,
+    calendar: Optional[str] = None,
+):
+    """
+    Clear performance state.
+
+    No arguments  → clears the RAM cache only (same as before; safe, in-memory).
+    portfolio+calendar given → ALSO deletes the persisted DISK frames for that
+        portfolio/calendar, forcing a fresh build on the next request. This is
+        the deliberate "refresh the performance book" action — use it after
+        reprocessing or whenever you want the stored gold copy rebuilt.
     """
     global _DAILY_STATE_CACHE
+    if not WRITES_ENABLED:
+        print(">>> PERFORMANCE CLEAR BLOCKED (read-only)")
+        raise ValueError(
+            "Performance cache clear is a processing operation, enabled in "
+            "Phase 2 evaluation for firms advancing to early-adoption "
+            "assessment."
+        )
     _DAILY_STATE_CACHE = {}
-    print(">>> PERFORMANCE CACHE CLEARED")
+    print(">>> PERFORMANCE RAM CACHE CLEARED")
+
+    if portfolio and calendar:
+        store = _perf_store_dir(portfolio, calendar)
+        if store.exists():
+            removed = 0
+            for f in store.glob("*.pkl"):
+                try:
+                    f.unlink()
+                    removed += 1
+                except Exception as e:
+                    print(f">>> could not delete {f.name}: {e}")
+            print(f">>> PERFORMANCE DISK CLEARED | {portfolio}/{calendar} | {removed} file(s)")
 
 
 def _get_cached_daily_state(
@@ -92,23 +193,50 @@ def _get_cached_daily_state(
         journal_entries: list,
         periods: list[str],
         calendar: str,
-        portfolio: str,  # ADD THIS
+        portfolio: str,
 ) -> tuple[pd.DataFrame, float, bool]:
-
-
     """
     Return (daily_state, build_ms, cache_hit).
 
-    If cache_key exists → return cached DataFrame instantly.
-    If not → build chained daily state, cache it, return it.
+    Lookup order:
+      1. RAM cache  → instant.
+      2. DISK store → load pickle, populate RAM, return (still a "hit").
+      3. Build      → run the chaining engine, then write BOTH tiers.
 
-    Build time is only paid once per server session per range.
+    A built frame is the gold copy. It persists on disk until deliberately
+    cleared via clear_performance_cache(portfolio, calendar). It is NOT
+    auto-invalidated when the accounting books change.
     """
     global _DAILY_STATE_CACHE
 
+    # ── 1. RAM ────────────────────────────────────────────────────────
     if cache_key in _DAILY_STATE_CACHE:
-        print(f">>> PERFORMANCE CACHE HIT | {cache_key}")
+        print(f">>> PERFORMANCE CACHE HIT (RAM) | {cache_key}")
         return _DAILY_STATE_CACHE[cache_key], 0.0, True
+
+    # ── 2. DISK ───────────────────────────────────────────────────────
+    disk_df = _disk_load(cache_key)
+    if disk_df is not None and not disk_df.empty:
+        _DAILY_STATE_CACHE[cache_key] = disk_df          # warm RAM for the session
+        return disk_df, 0.0, True
+
+    # ── 3. BUILD — gated: frozen books imply frozen derivatives ───────
+    if not WRITES_ENABLED:
+        portfolio_, calendar_ = cache_key[0], cache_key[1]
+        store = _perf_store_dir(portfolio_, calendar_)
+        spans = []
+        if store.exists():
+            spans = sorted(
+                p.stem.replace("__through__", " → ") for p in store.glob("*.pkl")
+            )
+        avail = "; ".join(spans) if spans else "none"
+        print(f">>> PERFORMANCE BUILD BLOCKED (read-only) | {cache_key}")
+        raise ValueError(
+            f"Performance for period_end '{cache_key[3]}' is not pre-built. "
+            f"Rebuilding performance is a processing operation, enabled in "
+            f"Phase 2 evaluation for firms advancing to early-adoption "
+            f"assessment. Pre-built spans served instantly: {avail}."
+        )
 
     print(f">>> PERFORMANCE CACHE MISS | building {len(periods)} periods...")
     t_build = time.perf_counter()
@@ -117,16 +245,17 @@ def _get_cached_daily_state(
         journal_entries=journal_entries,
         periods=periods,
         calendar=calendar,
-         level="investment",
-        portfolio=portfolio,  # ADD THIS
+        level="investment",
+        portfolio=portfolio,
     )
 
     build_ms = (time.perf_counter() - t_build) * 1000
 
     if not daily_state.empty:
-        _DAILY_STATE_CACHE[cache_key] = daily_state
+        _DAILY_STATE_CACHE[cache_key] = daily_state       # RAM
+        _disk_write(cache_key, daily_state)               # DISK (gold copy)
         print(
-            f">>> PERFORMANCE CACHE STORED | {cache_key} "
+            f">>> PERFORMANCE CACHE STORED (RAM) | {cache_key} "
             f"| {len(daily_state)} rows "
             f"| {build_ms:.0f}ms build time"
         )
@@ -366,9 +495,6 @@ def compute_closing_cash_flows_for_investments(investment_master, je_data, level
 
 def compute_income(investment_master, je_data, level):
 
-
-    print(je_data['financial_account'].unique())
-
 # Must use a bitwise | as Python evaluates the expression in aggregate if OR is used!!!
     income_entries = je_data[(je_data['financial_account'] == 'DividendReceipt') |
                          (je_data['financial_account'] == 'FXGainCurrency') |
@@ -377,7 +503,6 @@ def compute_income(investment_master, je_data, level):
                          (je_data['financial_account'] == 'AccruedInterestIncome') |
                          (je_data['financial_account'] == 'DividendExpense')]
 
-    print(income_entries.head())
     # Group by both 'Investment' and 'IBOR Date' and flip the sign on the sum
     income_je_data = income_entries.groupby([level, 'ibor_date'])[['local', 'book']].sum().reset_index()
 
@@ -524,8 +649,6 @@ def compute_daily_twr(journal_entries, period_start, period_end, agg_level, leve
     #                  income in numerator.
     #   Portfolio:     denominator = Previous_EMV only, no income term.
     def calculate_twr(row):
-        if row[level] == 'portfolio':
-            print("at portfolio level")
         if row[level] != 'portfolio':
             same_sign_local = (row['Previous_EMV_Local'] >= 0) == (row['Currency_Flows_Local'] >= 0)
             same_sign_book = (row['Previous_EMV_Book'] >= 0) == (row['Currency_Flows_Book'] >= 0)
@@ -592,16 +715,6 @@ def compute_daily_twr(journal_entries, period_start, period_end, agg_level, leve
 # The original compute_daily_twr stays exactly as written in performance.py.
 # ──────────────────────────────────────────────────────────────────────────────
 
-# ──────────────────────────────────────────────────────────────────────────────
-# PERIOD CHAINING ENGINE
-# ──────────────────────────────────────────────────────────────────────────────
-
-# ──────────────────────────────────────────────────────────────────────────────
-# THIN ADAPTER — maps the period-by-period caller to the original
-# compute_daily_twr signature WITHOUT touching its domain logic.
-# The original compute_daily_twr stays exactly as written in performance.py.
-# ──────────────────────────────────────────────────────────────────────────────
-
 def _compute_daily_twr_period(journal_entries, level, period_key):
     """
     Adapter for the period-by-period chaining caller.
@@ -629,10 +742,6 @@ def _compute_daily_twr_period(journal_entries, level, period_key):
     )
     return finalized_inputs
 
-
-# ──────────────────────────────────────────────────────────────────────────────
-# PERIOD CHAINING ENGINE
-# ──────────────────────────────────────────────────────────────────────────────
 # ──────────────────────────────────────────────────────────────────────────────
 # PERIOD CHAINING ENGINE
 # ──────────────────────────────────────────────────────────────────────────────
@@ -690,23 +799,29 @@ def _build_chained_daily_state(
 
     for i, period_key in enumerate(periods):
         # ── progress + honest running-average ETA ─────────────────────
+        # Print only every 10th period (plus first and last). Frequent
+        # console writes block the process on Windows while the terminal
+        # renders them — thinning this removes most of that stall and the
+        # focus-percentage sensitivity that came with it.
         _elapsed = _time.perf_counter() - _build_t0
-        if i > 0:
-            _avg = _elapsed / i  # avg over completed periods
-            _remaining = _avg * (_n_periods - i)
-            print(
-                f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
-                f"| elapsed {_elapsed:.0f}s "
-                f"| ~est remaining {_remaining:.0f}s "
-                f"(~{_remaining / 60:.1f}m, updating)",
-                flush=True,
-            )
-        else:
-            print(
-                f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
-                f"| elapsed {_elapsed:.0f}s | estimating...",
-                flush=True,
-            )
+        _show = (i == 0) or (i == _n_periods - 1) or ((i + 1) % 10 == 0)
+        if _show:
+            if i > 0:
+                _avg = _elapsed / i  # avg over completed periods
+                _remaining = _avg * (_n_periods - i)
+                print(
+                    f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
+                    f"| elapsed {_elapsed:.0f}s "
+                    f"| ~est remaining {_remaining:.0f}s "
+                    f"(~{_remaining / 60:.1f}m, updating)",
+                    flush=True,
+                )
+            else:
+                print(
+                    f">>> BUILD PROGRESS | period {i + 1}/{_n_periods} "
+                    f"| elapsed {_elapsed:.0f}s | estimating...",
+                    flush=True,
+                )
 
         p_start, p_end = _period_boundaries(period_key, calendar)
 
@@ -963,12 +1078,14 @@ def compute_performance(
     aggregated, and carved.
 
     First call for a given portfolio/calendar/inception→period_end span
-    builds the chained daily state and caches it. All subsequent calls are
-    cache hits — carving, aggregation, and display-window filtering run on
-    the cached state in sub-second time.
+    builds the chained daily state and caches it (RAM + disk). Subsequent
+    calls are cache hits — carving, aggregation, and display-window filtering
+    run on the cached state in sub-second time. The disk copy survives server
+    restarts, so the expensive build is paid once, not once per session.
 
-    prep is required. It is a dict returned by prep_state().
-    All access via prep["key"].
+    prep is OPTIONAL and normally None. The chaining engine loads its own
+    journals per period; a supplied prep is only sanity-checked. Endpoints
+    should NOT build a prep for performance calls.
 
     Daily grain is always the computational foundation.
     Cadence controls output presentation only.
@@ -985,17 +1102,13 @@ def compute_performance(
         raise ValueError(
             f"Invalid cadence '{cadence}'. Valid: {VALID_CADENCES}"
         )
-    if prep is None:
-        raise ValueError(
-            "prep is required. Call prep_state() and pass the result."
-        )
 
-    # ── JOURNALS FROM PREP DICT ───────────────────────────────────────
+    # prep optional — builder self-loads journals; a supplied prep is only sanity-checked
     t_state = time.perf_counter()
 
-    journal_entries = prep["journal_entries"]
+    journal_entries = prep["journal_entries"] if prep is not None else []
 
-    if not journal_entries:
+    if prep is not None and not journal_entries:
         return ComputeResult(
             function="compute_performance",
             portfolio=portfolio,
@@ -1046,7 +1159,7 @@ def compute_performance(
     # investment is served from it instantly without a per-investment entry.
     cache_key = (portfolio, calendar, inception, period_end)
 
-    # ── GET OR BUILD CHAINED DAILY STATE ─────────────────────────────
+    # ── GET OR BUILD CHAINED DAILY STATE (RAM → DISK → build) ─────────
     # Always build the FULL portfolio with the full journal list and full
     # cache_key. uber_filter is applied to the cached DataFrame afterward,
     # so single-investment queries hit the cache instantly instead of

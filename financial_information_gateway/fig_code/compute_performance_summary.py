@@ -10,8 +10,16 @@ benchmark is configured — a per-period EXCESS column ("YTD vs SPX") plus a
 benchmark row at the bottom.
 
 Benchmark series is fed from refdata/index_master.csv (rebased levels), with the
-symbol resolved from the portfolio's primary_benchmark config (via prep).
+symbol resolved from the portfolio's primary_benchmark config.
 Beta / Alpha / Sharpe and the excess columns are all computed against it.
+
+prep is OPTIONAL. The daily-state build self-loads journals per period; config
+values (base_currency, primary_benchmark, risk_free_rate) come from prep when
+supplied, else fail-soft from portfolio.json, else defaults.
+
+The cache key is aligned with compute_performance:
+  (portfolio, calendar, inception, period_end)
+so summary and detail share the same gold-copy frame.
 
 Input:  chained daily state DataFrame from _build_chained_daily_state
 Output: summary DataFrame ready for UI rendering
@@ -38,12 +46,11 @@ from financial_information_gateway.fig_code.fig_performance_carving import aggre
 from v_config import REFDATA_PATH, FUNDS_PATH
 
 # ── CONSTANTS ─────────────────────────────────────────────────────────────────
-# Canonical index keys (match index_master.csv columns and portfolio.json)
 INDEX_KEYS        = {"SPX", "IXIC", "RUT", "IEF"}
 INDEX_DISPLAY     = {"SPX": "S&P 500", "IXIC": "NASDAQ",
                      "RUT": "Russell 2000", "IEF": "Treasury (IEF)"}
 DEFAULT_BENCHMARK = "SPX"
-RISK_FREE_RATE    = 0.0   # configurable — set via portfolio.json risk_free_rate
+RISK_FREE_RATE    = 0.0
 
 
 # ── RETURN CALCULATION ────────────────────────────────────────────────────────
@@ -62,26 +69,13 @@ def _annualize(total_return: float, days: int) -> Optional[float]:
     return (1.0 + total_return) ** (365.0 / days) - 1.0
 
 
-def _period_return(
-        df: pd.DataFrame,
-        investment: str,
+def _period_return_from_frame(
+        inv_df: pd.DataFrame,
         start_date: pd.Timestamp,
         end_date: pd.Timestamp,
-        level: str = "investment",
 ) -> Optional[float]:
-    """
-    Trailing-window return for investment between start_date and end_date,
-    using Index_Local (the fully chained index).
-
-    Anchoring:
-      - If a row exists STRICTLY BEFORE start_date -> anchor to it (normal
-        trailing window).
-      - If NO row exists before start_date but the entity has rows at/after it,
-        the window opens at/before the entity's inception. Anchor to the
-        entity's own first row (inception-style) rather than returning None.
-      - If the entity has no rows in range at all -> None ("—").
-    """
-    inv_df = df[df[level] == investment].sort_values("ibor_date")
+    """Same logic as _period_return, operating on a pre-filtered, date-sorted
+    single-entity frame."""
     if inv_df.empty:
         return None
 
@@ -111,17 +105,35 @@ def _period_return(
     return _index_return(start_idx, end_idx)
 
 
-def _inception_return(
-    df: pd.DataFrame,
-    investment: str,
-    end_date: pd.Timestamp,
-    level: str = "investment",
+def _period_return(
+        df: pd.DataFrame,
+        investment: str,
+        start_date: pd.Timestamp,
+        end_date: pd.Timestamp,
+        level: str = "investment",
 ) -> Optional[float]:
     """
-    Inception-to-date return for investment, anchored to its OWN first row
-    (day-one), through end_date. Uses Index_Local.
+    Trailing-window return for investment between start_date and end_date,
+    using Index_Local (the fully chained index).
+
+    Anchoring:
+      - If a row exists STRICTLY BEFORE start_date -> anchor to it (normal
+        trailing window).
+      - If NO row exists before start_date but the entity has rows at/after it,
+        the window opens at/before the entity's inception. Anchor to the
+        entity's own first row (inception-style) rather than returning None.
+      - If the entity has no rows in range at all -> None ("—").
     """
     inv_df = df[df[level] == investment].sort_values("ibor_date")
+    return _period_return_from_frame(inv_df, start_date, end_date)
+
+
+def _inception_return_from_frame(
+    inv_df: pd.DataFrame,
+    end_date: pd.Timestamp,
+) -> Optional[float]:
+    """Same logic as _inception_return, operating on a pre-filtered,
+    date-sorted single-entity frame."""
     if inv_df.empty:
         return None
 
@@ -144,14 +156,34 @@ def _inception_return(
     return _index_return(start_idx, end_idx)
 
 
+def _inception_return(
+    df: pd.DataFrame,
+    investment: str,
+    end_date: pd.Timestamp,
+    level: str = "investment",
+) -> Optional[float]:
+    """
+    Inception-to-date return for investment, anchored to its OWN first row
+    (day-one), through end_date. Uses Index_Local.
+    """
+    inv_df = df[df[level] == investment].sort_values("ibor_date")
+    return _inception_return_from_frame(inv_df, end_date)
+
+
 # ── ANALYTICS ─────────────────────────────────────────────────────────────────
+
+def _compute_daily_returns_from_frame(inv_df: pd.DataFrame) -> pd.Series:
+    """Same as _compute_daily_returns, operating on a pre-filtered,
+    date-sorted single-entity frame."""
+    s = inv_df.set_index("ibor_date")["TWR_Local"]
+    s.index = pd.to_datetime(s.index).normalize()
+    return s
+
 
 def _compute_daily_returns(df: pd.DataFrame, investment: str, level: str = "investment") -> pd.Series:
     """Extract daily TWR returns for an investment as a Series indexed by date."""
     inv_df = df[df[level] == investment].sort_values("ibor_date")
-    s = inv_df.set_index("ibor_date")["TWR_Local"]
-    s.index = pd.to_datetime(s.index).normalize()
-    return s
+    return _compute_daily_returns_from_frame(inv_df)
 
 
 def _compute_beta(inv_returns: pd.Series, benchmark_returns: pd.Series) -> Optional[float]:
@@ -231,10 +263,24 @@ def _build_benchmark_frame(levels: pd.Series, level: str, symbol: str,
     frame = pd.DataFrame({
         "ibor_date":   s.index,
         "Index_Local": s.values.astype(float),
-        "TWR_Local":   s.pct_change().values,   # row-0 NaN -> base anchor (=1.0)
+        "TWR_Local":   s.pct_change().values,
     })
     frame[level] = symbol
     return frame
+
+
+# ── CONFIG (fail-soft when prep is absent) ────────────────────────────────────
+
+def _load_portfolio_config(portfolio: str) -> dict:
+    """Read portfolio.json directly. Fail-soft: {} on any problem."""
+    try:
+        import json
+        p = Path(FUNDS_PATH) / portfolio / "portfolio.json"
+        if p.exists():
+            return json.loads(p.read_text())
+    except Exception as e:
+        print(f">>> portfolio.json read failed for {portfolio}: {e}")
+    return {}
 
 
 # ── PERIOD DATE HELPERS ───────────────────────────────────────────────────────
@@ -305,7 +351,6 @@ def build_performance_summary(
 
     contrib_col = f"Contribution {base_currency}"
 
-    # ── BENCHMARK SETUP (fail-soft) ───────────────────────────────────
     bench_frame = None
     bench_daily = None
     bench_ann_return = None
@@ -318,10 +363,17 @@ def build_performance_summary(
             bench_incept = _period_return(bench_frame, benchmark_symbol, inception, as_of, level)
             bench_ann_return = _annualize(bench_incept, inception_days)
 
+    _bench_cache: dict = {}
+
     def _bench_window(start):
         if bench_frame is None:
             return None
-        return _period_return(bench_frame, benchmark_symbol, start or inception, as_of, level)
+        key = start
+        if key not in _bench_cache:
+            _bench_cache[key] = _period_return(
+                bench_frame, benchmark_symbol, start or inception, as_of, level
+            )
+        return _bench_cache[key]
 
     def _excess(entity_val, bench_val):
         if entity_val is None or bench_val is None:
@@ -343,22 +395,27 @@ def build_performance_summary(
         days_held = int((w["EMV_Book"] != 0).sum())
         return float(earn), days_held
 
+    # Group once — each entity's slice is reused for every window/analytic,
+    # instead of re-scanning the full frame per call (481 entities x ~10
+    # full-frame masks was the cost).
+    by_entity = {
+        k: g.sort_values("ibor_date")
+        for k, g in daily_state.groupby(level, sort=False)
+    }
+
     rows = []
     for inv in investments:
-        inv_df = daily_state[daily_state[level] == inv].sort_values("ibor_date")
-        if inv_df.empty:
+        inv_df = by_entity.get(inv)
+        if inv_df is None or inv_df.empty:
             continue
 
-        # Selected-window return
         if cadence == "INCEPT" or sel_start is None:
-            sel_return = _inception_return(daily_state, inv, as_of, level)
+            sel_return = _inception_return_from_frame(inv_df, as_of)
         else:
-            sel_return = _period_return(daily_state, inv, sel_start, as_of, level)
+            sel_return = _period_return_from_frame(inv_df, sel_start, as_of)
 
-        # Selected-window earnings + days_held
         earn, days_held = _window_earnings(inv_df, sel_start, as_of)
 
-        # Contribution BPS
         contrib_bps = None
         pp = portfolio_period.get("INCEPT" if (cadence == "INCEPT" or sel_start is None)
                                   else cadence)
@@ -368,13 +425,12 @@ def build_performance_summary(
             if p_earn not in (None, 0) and p_twr is not None:
                 contrib_bps = (earn / p_earn) * p_twr * 10000.0
 
-        # Analytics
         ann_return = _annualize(
-            _inception_return(daily_state, inv, as_of, level), inception_days
+            _inception_return_from_frame(inv_df, as_of), inception_days
         )
         beta = alpha = sharpe = None
         if bench_daily is not None:
-            inv_returns = _compute_daily_returns(daily_state, inv, level)
+            inv_returns = _compute_daily_returns_from_frame(inv_df)
             beta = _compute_beta(inv_returns, bench_daily)
             alpha = _compute_alpha(ann_return, beta, bench_ann_return, risk_free)
             sharpe = _compute_sharpe(inv_returns, ann_return, risk_free)
@@ -391,14 +447,12 @@ def build_performance_summary(
             "is_benchmark": False,
         }
 
-        # Selected-window excess
         if bench_frame is not None:
             row[f"TWR vs {bench_label}"] = _excess(sel_return, _bench_window(sel_start))
 
-        # INCEPT appends the period scan (+ per-period excess).
         if cadence == "INCEPT":
             for pname, pstart in period_starts.items():
-                e = _period_return(daily_state, inv, pstart, as_of, level)
+                e = _period_return_from_frame(inv_df, pstart, as_of)
                 row[pname] = e
                 if bench_frame is not None:
                     row[f"{pname} vs {bench_label}"] = _excess(e, _bench_window(pstart))
@@ -408,7 +462,6 @@ def build_performance_summary(
 
         rows.append(row)
 
-    # ── BENCHMARK ROW (its own returns; contribution blank; flagged) ──
     if bench_frame is not None:
         b_sel = _bench_window(sel_start)
         b_row = {
@@ -461,15 +514,12 @@ def format_performance_summary(df: pd.DataFrame, level: str = "investment") -> p
 
     out = df.copy()
 
-    # ── EXCESS COLUMNS (signed percent) — handle first so they aren't ──
-    #    swept up by the plain percent loop below.
     vs_cols = [c for c in out.columns if " vs " in c]
     for col in vs_cols:
         out[col] = out[col].apply(
             lambda x: f"{x * 100:+.2f}%" if pd.notna(x) and x is not None else "—"
         )
 
-    # ── PERCENT COLUMNS ───────────────────────────────────────────────
     pct_cols = ["TWR", "MTD", "QTD", "YTD", "1YR", "3YR", "5YR",
                 "Annualized", "Alpha"]
     for col in pct_cols:
@@ -478,13 +528,11 @@ def format_performance_summary(df: pd.DataFrame, level: str = "investment") -> p
                 lambda x: f"{x * 100:.2f}%" if pd.notna(x) and x is not None else "—"
             )
 
-    # ── CONTRIBUTION BPS ──────────────────────────────────────────────
     if "Contribution BPS" in out.columns:
         out["Contribution BPS"] = out["Contribution BPS"].apply(
             lambda x: f"{x:.1f}" if pd.notna(x) and x is not None else "—"
         )
 
-    # ── CONTRIBUTION <CCY> ────────────────────────────────────────────
     contrib_ccy_cols = [
         c for c in out.columns
         if c.startswith("Contribution ") and c != "Contribution BPS"
@@ -494,39 +542,33 @@ def format_performance_summary(df: pd.DataFrame, level: str = "investment") -> p
             lambda x: f"{x:,.0f}" if pd.notna(x) and x is not None else "—"
         )
 
-    # ── DAYS HELD ─────────────────────────────────────────────────────
     if "days_held" in out.columns:
         out["days_held"] = out["days_held"].apply(
             lambda x: f"{int(x):,}" if pd.notna(x) and x is not None else "—"
         )
 
-    # ── FLOAT ANALYTICS (Beta, Sharpe) ────────────────────────────────
     for col in ["Beta", "Sharpe"]:
         if col in out.columns:
             out[col] = out[col].apply(
                 lambda x: f"{x:.2f}" if pd.notna(x) and x is not None else "—"
             )
 
-    # ── DROP INTERNAL FLAG ────────────────────────────────────────────
     if "is_benchmark" in out.columns:
         out = out.drop(columns=["is_benchmark"])
 
-    # ── COLUMN ORDER (period beside its excess; analytics last) ───────
-    # Safe reorder: build a preferred sequence from columns present, then
-    # append anything not listed so no column is ever lost.
     periods_order = ["MTD", "QTD", "YTD", "1YR", "3YR", "5YR", "Annualized"]
     preferred = [level, "TWR"]
     preferred += [c for c in out.columns if c.startswith("TWR vs ")]
     preferred += ["days_held"]
     preferred += [c for c in out.columns
-                  if c.startswith("Contribution ")]  # ccy + BPS
+                  if c.startswith("Contribution ")]
     for p in periods_order:
         if p in out.columns:
             preferred.append(p)
         preferred += [c for c in out.columns if c.startswith(p + " vs ")]
     preferred += ["Beta", "Alpha", "Sharpe"]
     final = [c for c in preferred if c in out.columns]
-    final += [c for c in out.columns if c not in final]  # safety net
+    final += [c for c in out.columns if c not in final]
     out = out[final]
 
     return out
@@ -550,14 +592,18 @@ def compute_performance_summary(
     aggregates to the requested level, computes the portfolio-level period
     earnings + TWR (for Contribution BPS), feeds the configured benchmark from
     index_master.csv, and derives the summary.
+
+    prep is OPTIONAL. The build self-loads journals per period; config values
+    come from prep when supplied, else portfolio.json, else defaults.
+
+    Cache key is aligned with compute_performance —
+    (portfolio, calendar, inception, period_end) — so summary and detail share
+    the same gold-copy frame regardless of the requested period_start.
     """
     t_total = time.perf_counter()
 
-    if prep is None:
-        raise ValueError("prep is required.")
-
-    journal_entries = prep["journal_entries"]
-    if not journal_entries:
+    journal_entries = prep["journal_entries"] if prep is not None else []
+    if prep is not None and not journal_entries:
         return ComputeResult(
             function="compute_performance_summary",
             portfolio=portfolio, calendar=calendar,
@@ -567,9 +613,16 @@ def compute_performance_summary(
         )
 
     available_periods = _get_available_periods(portfolio, calendar)
-    periods = _sorted_periods(period_start, period_end, available_periods)
 
-    cache_key = (portfolio, calendar, period_start, period_end)
+    if period_end not in available_periods:
+        raise ValueError(
+            f"period_end '{period_end}' not found in snapshots."
+        )
+
+    inception = available_periods[0]
+    periods = _sorted_periods(inception, period_end, available_periods)
+
+    cache_key = (portfolio, calendar, inception, period_end)
     daily_state, build_ms, cache_hit = _get_cached_daily_state(
         cache_key=cache_key, journal_entries=journal_entries,
         periods=periods, calendar=calendar, portfolio=portfolio,
@@ -626,9 +679,14 @@ def compute_performance_summary(
         level_state = _rechain_aggregated_state(level_state, level)
 
     # ── CONFIG-DRIVEN INPUTS (currency, benchmark, risk-free) ─────────
-    base_currency     = prep.get("base_currency", "USD") if isinstance(prep, dict) else "USD"
-    primary_benchmark = prep.get("primary_benchmark", DEFAULT_BENCHMARK) if isinstance(prep, dict) else DEFAULT_BENCHMARK
-    pcfg              = prep.get("portfolio_config", {}) if isinstance(prep, dict) else {}
+    if prep is not None and isinstance(prep, dict):
+        base_currency     = prep.get("base_currency", "USD")
+        primary_benchmark = prep.get("primary_benchmark", DEFAULT_BENCHMARK)
+        pcfg              = prep.get("portfolio_config", {}) or {}
+    else:
+        pcfg              = _load_portfolio_config(portfolio)
+        base_currency     = pcfg.get("base_currency", "USD")
+        primary_benchmark = pcfg.get("primary_benchmark", DEFAULT_BENCHMARK)
     risk_free         = float(pcfg.get("risk_free_rate", RISK_FREE_RATE) or 0.0)
     benchmark_levels  = _load_benchmark_levels(primary_benchmark)
 

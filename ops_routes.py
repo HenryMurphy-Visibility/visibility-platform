@@ -2,6 +2,20 @@
 # ops_routes.py
 # Visibility — Operations REST API Routes
 # ============================================================
+#
+# PHASE-2 WRITE GATE
+# ------------------
+# All data-entry / processing endpoints (create portfolio, update method,
+# add investment, add/reverse/modify event, add bond info) call
+# _gate_writes() as their first line. While WRITES_ENABLED is False they
+# return a 403 with an institutional message; every VIEW endpoint (the GETs
+# plus read-only /validate and /proof) stays open. Flip WRITES_ENABLED to
+# True to re-enable data entry for Phase-2 evaluation.
+#
+# NOTE: this is a process-global switch, not per-user. Setting it True
+# re-opens writes for everyone at once. Role-based gating is the eventual
+# replacement.
+# ============================================================
 
 from fastapi import APIRouter, Query, HTTPException
 from fastapi.responses import JSONResponse
@@ -18,6 +32,30 @@ from v_config import FUNDS_PATH, REFDATA_PATH
 from calendar_generator import generate_calendars, CALENDAR_PRESETS
 
 ops_router = APIRouter(prefix="/api/v1/ops", tags=["Operations"])
+
+
+# ============================================================
+# PHASE-2 WRITE GATE
+# ============================================================
+
+WRITES_ENABLED = os.getenv("VISIBILITY_WRITES_ENABLED", "0") == "0"   # Phase 2: dev sets the env var, cloud doesn't
+
+
+_GATE_MESSAGE = (
+    "Processing and data entry are enabled in Phase 2 evaluation, "
+    "available to firms advancing to early-adoption assessment."
+)
+
+
+def _gate_writes():
+    """Raise 403 with the institutional Phase-2 message when writes are disabled.
+
+    Called as the first line of every data-entry / processing endpoint.
+    The console's existing `data.detail` error display surfaces this message
+    verbatim, so a gated write reads as a deliberate access tier — not a crash.
+    """
+    if not WRITES_ENABLED:
+        raise HTTPException(status_code=403, detail=_GATE_MESSAGE)
 
 
 # ============================================================
@@ -182,6 +220,7 @@ def save_portfolio_config(portfolio_id: str, config: dict) -> None:
 
 @ops_router.post("/portfolio")
 def create_portfolio(config: PortfolioConfig):
+    _gate_writes()
     try:
         portfolio_id = config.portfolio_id.strip()
         if not portfolio_id:
@@ -354,6 +393,7 @@ def list_portfolios():
 @ops_router.post("/portfolio/{portfolio_id}/method")
 def update_method(portfolio_id: str, method_type: str = Query(...),
                   value: str = Query(...), effective_from: str = Query(...)):
+    _gate_writes()
     try:
         valid_types = {"closing_method", "accrual_method", "amort_method"}
         if method_type not in valid_types:
@@ -384,6 +424,7 @@ def update_method(portfolio_id: str, method_type: str = Query(...),
 
 @ops_router.post("/portfolio/{portfolio_id}/investment")
 def add_investment(portfolio_id: str, investment: InvestmentRecord):
+    _gate_writes()
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -476,6 +517,7 @@ def list_investments(portfolio_id: str):
 
 @ops_router.post("/portfolio/{portfolio_id}/event")
 def add_event(portfolio_id: str, event: EventRecord):
+    _gate_writes()
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -638,18 +680,43 @@ def add_event(portfolio_id: str, event: EventRecord):
 @ops_router.get("/portfolio/{portfolio_id}/events")
 def list_events(portfolio_id: str, investment: Optional[str] = Query(None),
                 method: Optional[str] = Query(None),
+                tranid: Optional[int] = Query(None),
+                date_from: Optional[str] = Query(None),
+                date_to: Optional[str] = Query(None),
                 show_reversed: bool = Query(False), limit: int = Query(100, ge=1, le=10000)):
     try:
         events_file = Path(FUNDS_PATH) / portfolio_id / "Events" / f"{portfolio_id}.csv"
         if not events_file.exists():
             return {"events": [], "count": 0}
+
+        d_from = _norm_date_iso(date_from) if date_from else None
+        d_to = _norm_date_iso(date_to) if date_to else None
+
         events = []
         with open(events_file, newline="") as f:
             for row in csv.DictReader(f):
+                # Tran ID wins alone — every other filter ignored
+                if tranid is not None:
+                    try:
+                        if int(row.get("tranid", 0)) != tranid:
+                            continue
+                    except (TypeError, ValueError):
+                        continue
+                    if not show_reversed and row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
+                        continue
+                    events.append(dict(row))
+                    break
+
                 if investment and row.get("investment") != investment:
                     continue
                 if method and row.get("method") != method:
                     continue
+                if d_from or d_to:
+                    iso = _norm_date_iso(row.get("tradedate", ""))
+                    if d_from and iso < d_from:
+                        continue
+                    if d_to and iso > d_to:
+                        continue
                 if not show_reversed and row.get("kdend", "12/31/2099:00:00:00") != "12/31/2099:00:00:00":
                     continue
                 events.append(dict(row))
@@ -768,7 +835,7 @@ def get_fx_history(currency:  str = Query(...),
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================
-# VALIDATE ENDPOINT
+# VALIDATE ENDPOINT  (read-only — left OPEN; used by Add Event form)
 # ============================================================
 
 @ops_router.post("/validate")
@@ -976,7 +1043,7 @@ def _normalize_fx_date(val: str) -> str:
     return val
 
 # ============================================================
-# PROOF ENGINE
+# PROOF ENGINE  (read-only verification — left OPEN)
 # ============================================================
 
 @ops_router.post("/portfolio/{portfolio_id}/proof")
@@ -1083,7 +1150,7 @@ def run_proof_endpoint(
         perf_recon = {}
         if period:
             try:
-                from financial_information_gateway.fig_code.fig_core import prep_state_cached
+                from financial_information_gateway.fig_code.fig_core import prep_state
                 from financial_information_gateway.fig_code.compute_appraisal import compute_appraisal
                 from financial_information_gateway.fig_code.fig_performance_carving import aggregate_by_aif
                 from financial_information_gateway.fig_code.compute_performance import (
@@ -1111,7 +1178,7 @@ def run_proof_endpoint(
                 appraisal_earnings = grand_total - STARTING_CAPITAL
 
                 # Performance contribution from daily state
-                prep = prep_state_cached(portfolio_id, calendar, period, period)
+                prep = prep_state(portfolio_id, calendar, period, period)
                 available = _get_available_periods(portfolio_id, calendar)
                 inception = available[0]
                 build_periods = _sorted_periods(inception, period, available)
@@ -1197,6 +1264,7 @@ def run_proof_endpoint(
 
 @ops_router.post("/portfolio/{portfolio_id}/event/reverse")
 def reverse_event(portfolio_id: str, req: ReverseRequest):
+    _gate_writes()
     try:
         portfolio_dir = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -1256,6 +1324,7 @@ def reverse_event(portfolio_id: str, req: ReverseRequest):
 
 @ops_router.post("/portfolio/{portfolio_id}/event/modify")
 def modify_event(portfolio_id: str, req: ModifyRequest):
+    _gate_writes()
     try:
         if not req.reason or not req.reason.strip():
             raise HTTPException(status_code=400, detail="Correction reason is required")
@@ -1504,6 +1573,7 @@ def get_bond_accrual(
 
 @ops_router.post("/portfolio/{portfolio_id}/bond_info")
 def add_bond_info(portfolio_id: str, bond_info: dict):
+    _gate_writes()
     try:
         portfolio_dir  = Path(FUNDS_PATH) / portfolio_id
         if not portfolio_dir.exists():
@@ -1595,6 +1665,7 @@ def get_journal_entries(portfolio_id: str,
                         period_from:       Optional[str] = Query(None),
                         period_to:         Optional[str] = Query(None),
                         entry_type:        Optional[str] = Query(None),
+                        financial_account: Optional[str] = Query(None),
                         exclude_valuation: bool          = Query(False),
                         limit:             int           = Query(10000)):
     import pickle
@@ -1631,6 +1702,9 @@ def get_journal_entries(portfolio_id: str,
                 journal_entries = data.get("journals", []) if isinstance(data, dict) else data
                 for je in journal_entries:
                     if tranid is not None and getattr(je, "tranid", None) != tranid:
+                        continue
+                    if financial_account is not None and \
+                       getattr(je, "financial_account", "") != financial_account:
                         continue
                     if exclude_valuation and getattr(je, "transaction", "") == "Valuation":
                         continue

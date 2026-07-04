@@ -303,8 +303,6 @@
     <div class="nav-section">Marks</div>
     <div class="nav-item" onclick="show('prices', this)">Prices</div>
     <div class="nav-item" onclick="show('fx', this)">FX</div>
-    <div class="nav-item stub">Marks Management <span class="nav-stub-badge">sprint</span></div>
-    <div class="nav-item stub">Accruals &amp; Bond Info <span class="nav-stub-badge">sprint</span></div>
 
     <div class="nav-section">Calendars</div>
     <div class="nav-item" onclick="show('view-calendar', this)">View Calendar</div>
@@ -949,6 +947,9 @@
         <div class="form-group"><label>Portfolio</label><input id="ve-portfolio" placeholder="e.g. Portfolio3"></div>
         <div class="form-group"><label>Investment (optional)</label><input id="ve-investment" placeholder="e.g. AAPL"></div>
         <div class="form-group"><label>Method (optional)</label><input id="ve-method-filter" placeholder="e.g. buy_equity"></div>
+        <div class="form-group"><label>Tran ID (optional)</label><input id="ve-tranid" type="number" placeholder="exact tranid"><div class="field-hint">Overrides other filters</div></div>
+        <div class="form-group"><label>Trade Date From (optional)</label><input type="date" id="ve-date-from"></div>
+        <div class="form-group"><label>Trade Date To (optional)</label><input type="date" id="ve-date-to"></div>
         <div class="form-group"><label>Limit</label><input id="ve-limit" type="number" value="50"></div>
       </div>
       <div class="btn-row">
@@ -1228,6 +1229,7 @@
         </div>
         <div class="form-group"><label>Investment (optional)</label><input id="jv-investment" placeholder="e.g. BND000"><div class="field-hint">Filter by investment</div></div>
         <div class="form-group"><label>Tran ID (optional)</label><input id="jv-tranid" type="number" placeholder="leave blank for all"><div class="field-hint">Find in View Events</div></div>
+        <div class="form-group"><label>Financial Account (optional)</label><input id="jv-financial-account" placeholder="e.g. Cost, Receivable"><div class="field-hint">Exact account name</div></div>
       </div>
       <div class="btn-row">
         <button class="btn btn-primary" onclick="viewJEs()">Load JEs</button>
@@ -2485,10 +2487,19 @@ async function viewEvents() {
   // Remember the portfolio so a row-click can fetch JEs for the same one
   _eventsPortfolio = portfolio;
 
-  let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/events?limit=${limit}`;
-  if (investment) url += `&investment=${encodeURIComponent(investment)}`;
-  if (method)     url += `&method=${encodeURIComponent(method)}`;
+  const tranid   = document.getElementById('ve-tranid').value.trim();
+  const dateFrom = document.getElementById('ve-date-from').value;
+  const dateTo   = document.getElementById('ve-date-to').value;
 
+  let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/events?limit=${limit}`;
+  if (tranid) {
+    url += `&tranid=${encodeURIComponent(tranid)}`;   // tranid wins alone
+  } else {
+    if (investment) url += `&investment=${encodeURIComponent(investment)}`;
+    if (method)     url += `&method=${encodeURIComponent(method)}`;
+    if (dateFrom)   url += `&date_from=${encodeURIComponent(dateFrom)}`;
+    if (dateTo)     url += `&date_to=${encodeURIComponent(dateTo)}`;
+  }
   try {
     const res  = await fetch(url);
     const data = await res.json();
@@ -2546,7 +2557,14 @@ async function viewEventJournals(tranid) {
     .join('');
 
   try {
-    const url  = `${BASE}/api/v1/ops/portfolio/${_eventsPortfolio}/je?calendar=Monthly&limit=50000&tranid=${tranid}`;
+  // Scope the JE scan to the event's period(s) — opens 1–2 pkl files, not all ~1,350.
+    // tradedate/settledate are M/D/YYYY:...; settledate may push into next period.
+    const _toPeriod = (d) => { const p = String(d).split('/'); return p.length>=3 ? `${p[2].split(':')[0]}-${p[0].padStart(2,'0')}` : ''; };
+    const pFrom = _toPeriod(ev.tradedate);
+    const pTo   = _toPeriod(ev.settledate) || pFrom;
+    let url  = `${BASE}/api/v1/ops/portfolio/${_eventsPortfolio}/je?calendar=Monthly&limit=2000&tranid=${tranid}`;
+    if (pFrom) url += `&period_from=${pFrom}`;
+    if (pTo)   url += `&period_to=${pTo}`;
     const res  = await fetch(url);
     const data = await res.json();
 
@@ -2809,6 +2827,7 @@ async function viewJEs() {
   const portfolio  = document.getElementById('jv-portfolio').value.trim();
   const calendar   = document.getElementById('jv-calendar').value;
   const tranid     = document.getElementById('jv-tranid').value.trim();
+  const finAcct    = document.getElementById('jv-financial-account').value.trim();
   const investment = document.getElementById('jv-investment').value.trim().toUpperCase();
   const periodFrom = document.getElementById('jv-period-from').value.trim();
   const periodTo   = document.getElementById('jv-period-to').value.trim();
@@ -2824,8 +2843,9 @@ async function viewJEs() {
   rb.classList.remove('show');
 
   try {
-    let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=50000`;
+    let url = `${BASE}/api/v1/ops/portfolio/${portfolio}/je?calendar=${calendar}&limit=3000`;
     if (tranid)     url += `&tranid=${tranid}`;
+    if (finAcct)    url += `&financial_account=${encodeURIComponent(finAcct)}`;
     if (periodFrom) url += `&period_from=${encodeURIComponent(periodFrom)}`;
     if (periodTo)   url += `&period_to=${encodeURIComponent(periodTo)}`;
     if (entryType)  url += `&entry_type=${encodeURIComponent(entryType)}`;

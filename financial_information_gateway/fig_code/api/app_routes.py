@@ -54,13 +54,13 @@ def _csv_response(df, filename):
 
 @router.get("/api/v1/cost-basis")
 def cost_basis_endpoint(
-    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query(...,  description="Period end key — same format as period_start"),
-    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start"),
+    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+    page:         int           = Query(1,             ge=1),
+    page_size:    int           = Query(1000,          ge=1, le=10000),
 ):
     """
     ## Cost Basis Ledger
@@ -93,10 +93,10 @@ def cost_basis_endpoint(
 
 @router.get("/api/v1/cost-basis/csv")
 def cost_basis_csv(
-    portfolio:    str           = Query(...),
-    calendar:     str           = Query(...),
-    period_start: str           = Query(...),
-    period_end:   str           = Query(...),
+    portfolio:    str           = Query("Portfolio1"),
+    calendar:     str           = Query("Monthly"),
+    period_start: str           = Query("2025-12"),
+    period_end:   str           = Query("2025-12"),
     investment:   Optional[str] = Query(None),
 ):
     """Cost Basis — CSV Download"""
@@ -123,13 +123,13 @@ def cost_basis_csv(
 
 @router.get("/api/v1/income")
 def income_endpoint(
-    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query(...,  description="Period end key — same format as period_start"),
-    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start"),
+    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+    page:         int           = Query(1,             ge=1),
+    page_size:    int           = Query(1000,          ge=1, le=10000),
 ):
     """
     ## Income Ledger
@@ -161,10 +161,10 @@ def income_endpoint(
 
 @router.get("/api/v1/income/csv")
 def income_csv(
-    portfolio:    str           = Query(...),
-    calendar:     str           = Query(...),
-    period_start: str           = Query(...),
-    period_end:   str           = Query(...),
+    portfolio:    str           = Query("Portfolio1"),
+    calendar:     str           = Query("Monthly"),
+    period_start: str           = Query("2025-12"),
+    period_end:   str           = Query("2025-12"),
     investment:   Optional[str] = Query(None),
 ):
     """Income — CSV Download"""
@@ -191,13 +191,13 @@ def income_csv(
 
 @router.get("/api/v1/realized")
 def realized_endpoint(
-    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query(...,  description="Period end key — same format as period_start"),
-    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start"),
+    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+    page:         int           = Query(1,             ge=1),
+    page_size:    int           = Query(1000,          ge=1, le=10000),
 ):
     """
     ## Realized Gains Ledger
@@ -228,10 +228,10 @@ def realized_endpoint(
 
 @router.get("/api/v1/realized/csv")
 def realized_csv(
-    portfolio:    str           = Query(...),
-    calendar:     str           = Query(...),
-    period_start: str           = Query(...),
-    period_end:   str           = Query(...),
+    portfolio:    str           = Query("Portfolio1"),
+    calendar:     str           = Query("Monthly"),
+    period_start: str           = Query("2025-12"),
+    period_end:   str           = Query("2025-12"),
     investment:   Optional[str] = Query(None),
 ):
     """Realized Gains — CSV Download"""
@@ -258,13 +258,13 @@ def realized_csv(
 
 @router.get("/api/v1/unrealized")
 def unrealized_endpoint(
-    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query(...,  description="Period end key — same format as period_start"),
-    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start"),
+    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+    page:         int           = Query(1,             ge=1),
+    page_size:    int           = Query(1000,          ge=1, le=10000),
 ):
     """
     ## Unrealized Gains Ledger
@@ -295,10 +295,10 @@ def unrealized_endpoint(
 
 @router.get("/api/v1/unrealized/csv")
 def unrealized_csv(
-    portfolio:    str           = Query(...),
-    calendar:     str           = Query(...),
-    period_start: str           = Query(...),
-    period_end:   str           = Query(...),
+    portfolio:    str           = Query("Portfolio1"),
+    calendar:     str           = Query("Monthly"),
+    period_start: str           = Query("2025-12"),
+    period_end:   str           = Query("2025-12"),
     investment:   Optional[str] = Query(None),
 ):
     """Unrealized Gains — CSV Download"""
@@ -325,13 +325,13 @@ def unrealized_csv(
 
 @router.get("/api/v1/capital")
 def capital_endpoint(
-    portfolio:    str           = Query(...,  description="Portfolio identifier e.g. Portfolio1"),
-    calendar:     str           = Query(...,  description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
-    period_start: str           = Query(...,  description=PERIOD_FORMAT_GUIDE),
-    period_end:   str           = Query(...,  description="Period end key — same format as period_start"),
-    investment:   Optional[str] = Query(None, description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
-    page:         int           = Query(1,    ge=1),
-    page_size:    int           = Query(1000, ge=1, le=10000),
+    portfolio:    str           = Query("Portfolio1",  description="Portfolio identifier e.g. Portfolio1"),
+    calendar:     str           = Query("Monthly",     description="Calendar name: Yearly · Quarterly · Monthly · Daily"),
+    period_start: str           = Query("2025-12",     description=PERIOD_FORMAT_GUIDE),
+    period_end:   str           = Query("2025-12",     description="Period end key — same format as period_start"),
+    investment:   Optional[str] = Query(None,          description="Filter by investment ticker e.g. GOOG. Omit for full portfolio."),
+    page:         int           = Query(1,             ge=1),
+    page_size:    int           = Query(1000,          ge=1, le=10000),
 ):
     """
     ## Capital Ledger
@@ -362,10 +362,10 @@ def capital_endpoint(
 
 @router.get("/api/v1/capital/csv")
 def capital_csv(
-    portfolio:    str           = Query(...),
-    calendar:     str           = Query(...),
-    period_start: str           = Query(...),
-    period_end:   str           = Query(...),
+    portfolio:    str           = Query("Portfolio1"),
+    calendar:     str           = Query("Monthly"),
+    period_start: str           = Query("2025-12"),
+    period_end:   str           = Query("2025-12"),
     investment:   Optional[str] = Query(None),
 ):
     """Capital — CSV Download"""
