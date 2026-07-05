@@ -178,6 +178,10 @@ INCOME_ACCOUNTS = _accounts_for(
     Category.EXPENSE,
 )
 
+EXPENSE_ACCOUNTS = _accounts_for(
+    Category.EXPENSE,
+)
+
 REALIZED_ACCOUNTS = _accounts_for(
     Category.REALIZED_PRICE,
     Category.REALIZED_FX,
