@@ -1,0 +1,538 @@
+investment,ticker,full_name,investment_type,tradedate,kdend,kdend,asset_class,currency,is_currency,country,beta,analyst,sector,industry,contract_size,pricing_factor
+AAPL,AAPL,Apple Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,0,1
+MSFT,MSFT,Microsoft Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+AMZN,AMZN,Amazon Com Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+NVDA,NVDA,Nvidia Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+GOOGL,GOOGL,Alphabet Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Communication,Communication,1,1
+GOOG,GOOG,Alphabet Inc Class C,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Communication,Communication,1,1
+META,META,Meta Platforms Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+BRKB,BRKB,Berkshire Hathaway Inc Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+TSLA,TSLA,Tesla Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+UNH,UNH,Unitedhealth Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+LLY,LLY,Eli Lilly,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+JPM,JPM,JPMorgan Chase & Co,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+XOM,XOM,Exxon Mobil Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Energy,Energy,1,1
+JNJ,JNJ,Johnson & Johnson,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+V,V,Visa Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+PG,PG,Procter & Gamble,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+AVGO,AVGO,Broadcom Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+MA,MA,Mastercard Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+HD,HD,Home Depot Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+CVX,CVX,Chevron Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+MRK,MRK,Merck & Co Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+ABBV,ABBV,Abbvie Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+PEP,PEP,Pepsico Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+COST,COST,Costco Wholesale Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Staples,Consumer Staples,1,1
+ADBE,ADBE,Adobe Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+KO,KO,Coca-Cola,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+CSCO,CSCO,Cisco Systems Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+WMT,WMT,Walmart Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+TMO,TMO,Thermo Fisher Scientific Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+MCD,MCD,Mcdonalds Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+PFE,PFE,Pfizer Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+CRM,CRM,Salesforce Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+BAC,BAC,Bank Of America Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+ACN,ACN,Accenture Plc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+CMCSA,CMCSA,Comcast Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+LIN,LIN,Linde Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+NFLX,NFLX,Netflix Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+ABT,ABT,Abbott Laboratories,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+ORCL,ORCL,Oracle Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+DHR,DHR,Danaher Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+AMD,AMD,Advanced Micro Devices Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+WFC,WFC,Wells Fargo,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+DIS,DIS,Walt Disney,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Communication,Communication,1,1
+TXN,TXN,Texas Instrument Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+PM,PM,Philip Morris International Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+VZ,VZ,Verizon Communications Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Communication,Communication,1,1
+INTU,INTU,Intuit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+COP,COP,Conocophillips,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Energy,Energy,1,1
+CAT,CAT,Caterpillar Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+AMGN,AMGN,Amgen Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+NEE,NEE,Nextera Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Utilities,Utilities,1,1
+INTC,INTC,Intel Corporation Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+UNP,UNP,Union Pacific Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+LOW,LOW,Lowes Companies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+IBM,IBM,International Business Machines Co,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+BMY,BMY,Bristol Myers Squibb,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+SPGI,SPGI,S&P Global Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+RTX,RTX,Rtx Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+HON,HON,Honeywell International Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+BA,BA,Boeing,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+UPS,UPS,United Parcel Service Inc Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+GE,GE,General Electric,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+QCOM,QCOM,Qualcomm Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+AMAT,AMAT,Applied Material Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+NKE,NKE,Nike Inc Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+PLD,PLD,Prologis Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+NOW,NOW,Servicenow Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+BKNG,BKNG,Booking Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+SBUX,SBUX,Starbucks Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+MS,MS,Morgan Stanley,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+ELV,ELV,Elevance Health Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+MDT,MDT,Medtronic Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+GS,GS,Goldman Sachs Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+DE,DE,Deere,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+ADP,ADP,Automatic Data Processing Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+LMT,LMT,Lockheed Martin Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+TJX,TJX,Tjx Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+T,T,At&T Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Communication,Communication,1,1
+BLK,BLK,Blackrock Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+ISRG,ISRG,Intuitive Surgical Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+MDLZ,MDLZ,Mondelez International Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+GILD,GILD,Gilead Sciences Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+MMC,MMC,Marsh & Mclennan Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+AXP,AXP,American Express,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+SYK,SYK,Stryker Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+REGN,REGN,Regeneron Pharmaceuticals Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+VRTX,VRTX,Vertex Pharmaceuticals Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+ETN,ETN,Eaton Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+LRCX,LRCX,Lam Research Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+ADI,ADI,Analog Devices Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+SCHW,SCHW,Charles Schwab Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+CVS,CVS,Cvs Health Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+ZTS,ZTS,Zoetis Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+CI,CI,Cigna,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+CB,CB,Chubb Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+AMT,AMT,American Tower Reit Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+SLB,SLB,Schlumberger Nv,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+C,C,Citigroup Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+BDX,BDX,Becton Dickinson,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+MO,MO,Altria Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+PGR,PGR,Progressive Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+TMUS,TMUS,T Mobile Us Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+FI,FI,Fiserv Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+SO,SO,Southern,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+EOG,EOG,Eog Resources Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+BSX,BSX,Boston Scientific Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+CME,CME,Cme Group Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+EQIX,EQIX,Equinix Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+MU,MU,Micron Technology Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+DUK,DUK,Duke Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+PANW,PANW,Palo Alto Networks Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+PYPL,PYPL,Paypal Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+AON,AON,Aon Plc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+SNPS,SNPS,Synopsys Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+ITW,ITW,Illinois Tool Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+KLAC,KLAC,Kla Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+HUBB,HUBB,Hubbell Incorporated,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+ICE,ICE,Intercontinental Exchange Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+APD,APD,Air Products And Chemicals Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+SHW,SHW,Sherwin Williams,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+CDNS,CDNS,Cadence Design Systems Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+CSX,CSX,CSX Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+NOC,NOC,Northrop Grumman Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+CL,CL,Colgate-Palmolive,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Staples,Consumer Staples,1,1
+MPC,MPC,Marathon Petroleum Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+HUM,HUM,Humana Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+FDX,FDX,Fedex Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+WM,WM,Waste Management Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+MCK,MCK,Mckesson Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+TGT,TGT,Target Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+ORLY,ORLY,Oreilly Automotive Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+HCA,HCA,Hca Healthcare Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+FCX,FCX,Freeport Mcmoran Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Materials,Materials,1,1
+EMR,EMR,Emerson Electric,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+PXD,PXD,Pioneer Natural Resource,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+MMM,MMM,ThreeM,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+MCO,MCO,Moodys Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+ROP,ROP,Roper Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+CMG,CMG,Chipotle Mexican Grill Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+PSX,PSX,Phillips,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+MAR,MAR,Marriott International Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+PH,PH,Parker-Hannifin Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+APH,APH,Amphenol Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+GD,GD,General Dynamics Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+USB,USB,Us Bancorp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+NXPI,NXPI,Nxp Semiconductors Nv,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+AJG,AJG,Arthur J Gallagher,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+NSC,NSC,Norfolk Southern Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+PNC,PNC,Pnc Financial Services Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+VLO,VLO,Valero Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+F,F,Ford Motor Co,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+MSI,MSI,Motorola Solutions Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+GM,GM,General Motors,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+TT,TT,Trane Technologies Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+EW,EW,Edwards Lifesciences Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+CARR,CARR,Carrier Global Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+AZO,AZO,Autozone Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+ADSK,ADSK,Autodesk Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+TDG,TDG,Transdigm Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+ANET,ANET,Arista Networks Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+SRE,SRE,Sempra,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Utilities,Utilities,1,1
+ECL,ECL,Ecolab Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Materials,Materials,1,1
+OXY,OXY,Occidental Petroleum Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Energy,Energy,1,1
+PCAR,PCAR,Paccar Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+ADM,ADM,Archer Daniels Midland,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+MNST,MNST,Monster Beverage Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+KMB,KMB,Kimberly Clark Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+PSA,PSA,Public Storage Reit,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+CCI,CCI,Crown Castle Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+CHTR,CHTR,Charter Communications Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+MCHP,MCHP,Microchip Technology Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+MSCI,MSCI,Msci Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+CTAS,CTAS,Cintas Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+WMB,WMB,Williams Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Energy,Energy,1,1
+AIG,AIG,American International Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+STZ,STZ,Constellation Brands Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+HES,HES,Hess Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+NUE,NUE,Nucor Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Materials,Materials,1,1
+ROST,ROST,Ross Stores Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+AFL,AFL,Aflac Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+KVUE,KVUE,Kenvue Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+AEP,AEP,American Electric Power Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+IDXX,IDXX,Idexx Laboratories Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+D,D,Dominion Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+TEL,TEL,Te Connectivity Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+JCI,JCI,Johnson Controls International Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+MET,MET,Metlife Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+GIS,GIS,General Mills Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+IQV,IQV,Iqvia Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+EXC,EXC,Exelon Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+WELL,WELL,Welltower Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+DXCM,DXCM,Dexcom Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+HLT,HLT,Hilton Worldwide Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+ON,ON,On Semiconductor Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+COF,COF,Capital One Financial Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+PAYX,PAYX,Paychex Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+TFC,TFC,Truist Financial Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+BIIB,BIIB,Biogen Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+O,O,Realty Income Reit Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+FTNT,FTNT,Fortinet Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+DOW,DOW,Dow Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+TRV,TRV,Travelers Companies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+DLR,DLR,Digital Realty Trust Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+MRNA,MRNA,Moderna Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+CPRT,CPRT,Copart Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+ODFL,ODFL,Old Dominion Freight Line Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+DHI,DHI,D R Horton Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+YUM,YUM,Yum Brands Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+SPG,SPG,Simon Property Group Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+CTSH,CTSH,Cognizant Technology Solutions Cor,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+AME,AME,Ametek Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+BKR,BKR,Baker Hughes Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+SYY,SYY,Sysco Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+A,A,Agilent Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+CTVA,CTVA,Corteva Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+CNC,CNC,Centene Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+EL,EL,Estee Lauder Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+AMP,AMP,Ameriprise Finance Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+CEG,CEG,Constellation Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+HAL,HAL,Halliburton,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+OTIS,OTIS,Otis Worldwide Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+ROK,ROK,Rockwell Automation Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+PRU,PRU,Prudential Financial Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+DD,DD,Dupont De Nemours Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+KMI,KMI,Kinder Morgan Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+VRSK,VRSK,Verisk Analytics Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+LHX,LHX,L3Harris Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+DG,DG,Dollar General Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+FIS,FIS,Fidelity National Information Serv,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+CMI,CMI,Cummins Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+CSGP,CSGP,Costar Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+FAST,FAST,Fastenal,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+PPG,PPG,Ppg Industries Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Materials,Materials,1,1
+GPN,GPN,Global Payments Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+GWW,GWW,Ww Grainger Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+HSY,HSY,Hershey Foods,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+BK,BK,Bank Of New York Mellon Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+XEL,XEL,Xcel Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Utilities,Utilities,1,1
+DVN,DVN,Devon Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Energy,Energy,1,1
+EA,EA,Electronic Arts Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+NEM,NEM,Newmont,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+ED,ED,Consolidated Edison Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+URI,URI,United Rentals Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+VICI,VICI,Vici Pptys Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+PEG,PEG,Public Service Enterprise Group In,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+KR,KR,Kroger,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+RSG,RSG,Republic Services Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+LEN,LEN,Lennar A Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+PWR,PWR,Quanta Services Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+WST,WST,West Pharmaceutical Services Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+COR,COR,Cencora Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+OKE,OKE,Oneok Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+VMC,VMC,Vulcan Materials,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Materials,Materials,1,1
+KDP,KDP,Keurig Dr Pepper Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Staples,Consumer Staples,1,1
+WBD,WBD,Warner Bros. Discovery Inc Series,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+ACGL,ACGL,Arch Capital Group Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+ALL,ALL,Allstate Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+IR,IR,Ingersoll Rand Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+CDW,CDW,Cdw Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+FANG,FANG,Diamondback Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Energy,Energy,1,1
+MLM,MLM,Martin Marietta Materials Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+PCG,PCG,Pg&E Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+DAL,DAL,Delta Air Lines Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+EXR,EXR,Extra Space Storage Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+FTV,FTV,Fortive Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+AWK,AWK,American Water Works Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Utilities,Utilities,1,1
+IT,IT,Gartner Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+KHC,KHC,Kraft Heinz,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+GEHC,GEHC,Ge Healthcare Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+WEC,WEC,Wec Energy Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+HPQ,HPQ,Hp Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+EIX,EIX,Edison International,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+CBRE,CBRE,Cbre Group Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+APTV,APTV,Aptiv Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+ANSS,ANSS,Ansys Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+MTD,MTD,Mettler Toledo Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+DLTR,DLTR,Dollar Tree Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+AVB,AVB,Avalonbay Communities Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+GDDY,GDDY,GoDaddy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+ALGN,ALGN,Align Technology Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+LYB,LYB,Lyondellbasell Industries Nv Class,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+TROW,TROW,T Rowe Price Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+GLW,GLW,Corning Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+EFX,EFX,Equifax Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+WY,WY,Weyerhaeuser Reit,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Real Estate,Real Estate,1,1
+ZBH,ZBH,Zimmer Biomet Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+XYL,XYL,Xylem Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+SBAC,SBAC,Sba Communications Reit Corp Class,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+RMD,RMD,Resmed Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+TSCO,TSCO,Tractor Supply,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+EBAY,EBAY,Ebay Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+KEYS,KEYS,Keysight Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+CHD,CHD,Church And Dwight Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+STT,STT,State Street Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+DFS,DFS,Discover Financial Services,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+HIG,HIG,Hartford Financial Services Group,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+ALB,ALB,Albemarle Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Materials,Materials,1,1
+STE,STE,Steris,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+ES,ES,Eversource Energy,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+TTWO,TTWO,Take Two Interactive Software Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+MPWR,MPWR,Monolithic Power Systems Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+CAH,CAH,Cardinal Health Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+EQR,EQR,Equity Residential Reit,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+RCL,RCL,Royal Caribbean Group Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+WTW,WTW,Willis Towers Watson Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+HPE,HPE,Hewlett Packard Enterprise,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+DTE,DTE,Dte Energy,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+GPC,GPC,Genuine Parts,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+BR,BR,Broadridge Financial Solutions Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+ULTA,ULTA,Ulta Beauty Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+FICO,FICO,Fair Isaac Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+CTRA,CTRA,Coterra Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+BAX,BAX,Baxter International Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+AEE,AEE,Ameren Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+MTB,MTB,M&T Bank Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+MKC,MKC,Mccormick & Co Non-Voting Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Staples,Consumer Staples,1,1
+ETR,ETR,Entergy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+WAB,WAB,Westinghouse Air Brake Technologie,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+DOV,DOV,Dover Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+FE,FE,Firstenergy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+RJF,RJF,Raymond James Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+INVH,INVH,Invitation Homes Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Real Estate,Real Estate,1,1
+FLT,FLT,Fleetcor Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+CLX,CLX,Clorox,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Staples,Consumer Staples,1,1
+TDY,TDY,Teledyne Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+TRGP,TRGP,Targa Resources Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Energy,Energy,1,1
+DRI,DRI,Darden Restaurants Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+LH,LH,Laboratory Corporation Of America,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+HOLX,HOLX,Hologic Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+VRSN,VRSN,Verisign Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+MOH,MOH,Molina Healthcare Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+LUV,LUV,Southwest Airlines,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+PPL,PPL,Ppl Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Utilities,Utilities,1,1
+ARE,ARE,Alexandria Real Estate Equities Re,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+NVR,NVR,Nvr Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+COO,COO,Cooper Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+WBA,WBA,Walgreen Boots Alliance Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+PHM,PHM,Pultegroup Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+NDAQ,NDAQ,Nasdaq Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+HWM,HWM,Howmet Aerospace Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+RF,RF,Regions Financial Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+CNP,CNP,Centerpoint Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+IRM,IRM,Iron Mountain Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+LVS,LVS,Las Vegas Sands Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+FITB,FITB,Fifth Third Bancorp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+EXPD,EXPD,Expeditors International Of Washin,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+VTR,VTR,Ventas Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Real Estate,Real Estate,1,1
+FSLR,FSLR,First Solar Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+PFG,PFG,Principal Financial Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+BRO,BRO,Brown & Brown Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+WDAY,WDAY,Workday Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+IEX,IEX,Idex Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+BG,BG,Bunge Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+ATO,ATO,Atmos Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+FDS,FDS,Factset Research Systems Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+ENPH,ENPH,Enphase Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+MAA,MAA,Mid America Apartment Communities,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Real Estate,Real Estate,1,1
+CMS,CMS,Cms Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Utilities,Utilities,1,1
+IFF,IFF,International Flavors & Fragrances,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+BALL,BALL,Ball Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+SWKS,SWKS,Skyworks Solutions Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+CINF,CINF,Cincinnati Financial Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+NTAP,NTAP,Netapp Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+STLD,STLD,Steel Dynamics Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+UAL,UAL,United Airlines Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+WAT,WAT,Waters Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+OMC,OMC,Omnicom Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+TER,TER,Teradyne Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+CCL,CCL,Carnival Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+JBHT,JBHT,Jb Hunt Transport Services Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+TPL,TPL,Texas Pacific Land,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Energy,Energy,1,1
+TYL,TYL,Tyler Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+HBAN,HBAN,Huntington Bancshares Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+K,K,Kellogg,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Staples,Consumer Staples,1,1
+GRMN,GRMN,Garmin Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+CBOE,CBOE,Cboe Global Markets Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+NTRS,NTRS,Northern Trust Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+TSN,TSN,Tyson Foods Inc Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+AKAM,AKAM,Akamai Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+EG,EG,Everest Group Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+ESS,ESS,Essex Property Trust Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+EQT,EQT,Eqt Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Energy,Energy,1,1
+TXT,TXT,Textron Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+EXPE,EXPE,Expedia Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+SJM,SJM,Jm Smucker,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+PTC,PTC,Ptc Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+DGX,DGX,Quest Diagnostics Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+AVY,AVY,Avery Dennison Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Materials,Materials,1,1
+RVTY,RVTY,Revvity Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Health Care,Health Care,1,1
+BBY,BBY,Best Buy Co Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+CF,CF,Cf Industries Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Materials,Materials,1,1
+CAG,CAG,Conagra Brands Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+EPAM,EPAM,Epam Systems Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+AMCR,AMCR,Amcor Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+LW,LW,Lamb Weston Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+PAYC,PAYC,Paycom Software Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+SNA,SNA,Snap On Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+AXON,AXON,Axon Enterprise Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+POOL,POOL,Pool Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+SYF,SYF,Synchrony Financial,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+SWK,SWK,Stanley Black & Decker Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+ZBRA,ZBRA,Zebra Technologies Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+DPZ,DPZ,Dominos Pizza Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+PKG,PKG,Packaging Corp Of America,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+CFG,CFG,Citizens Financial Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+LDOS,LDOS,Leidos Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+VTRS,VTRS,Viatris Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+PODD,PODD,Insulet Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+LKQ,LKQ,Lkq Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+MOS,MOS,Mosaic,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+APA,APA,Apa Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Energy,Energy,1,1
+EVRG,EVRG,Evergy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Utilities,Utilities,1,1
+TRMB,TRMB,Trimble Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+MGM,MGM,Mgm Resorts International,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+NDSN,NDSN,Nordson Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+WDC,WDC,Western Digital Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+MAS,MAS,Masco Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+LNT,LNT,Alliant Energy Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Utilities,Utilities,1,1
+IPG,IPG,Interpublic Group Of Companies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Communication,Communication,1,1
+MTCH,MTCH,Match Group Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+STX,STX,Seagate Technology Holdings Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+KMX,KMX,Carmax Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+TECH,TECH,Bio Techne Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+WRB,WRB,Wr Berkley Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+BFB,BFB,Brown Forman Corp Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Staples,Consumer Staples,1,1
+LYV,LYV,Live Nation Entertainment Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Communication,Communication,1,1
+IP,IP,International Paper,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Materials,Materials,1,1
+UDR,UDR,Udr Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+AES,AES,Aes Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+CE,CE,Celanese Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+INCY,INCY,Incyte Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+L,L,Loews Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+TAP,TAP,Molson Coors Brewing Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+GEN,GEN,Gen Digital Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Information Technology,Information Technology,1,1
+CPT,CPT,Camden Property Trust Reit,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Real Estate,Real Estate,1,1
+KIM,KIM,Kimco Realty Reit Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Real Estate,Real Estate,1,1
+JKHY,JKHY,Jack Henry And Associates Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+HRL,HRL,Hormel Foods Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Staples,Consumer Staples,1,1
+HST,HST,Host Hotels & Resorts Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+FMC,FMC,FMC Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+CZR,CZR,Caesars Entertainment Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+PEAK,PEAK,Healthpeak Properties Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Real Estate,Real Estate,1,1
+CDAY,CDAY,Ceridian Hcm Holding Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+PNR,PNR,Pentair,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+NI,NI,Nisource Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Utilities,Utilities,1,1
+CHRW,CHRW,CH Robinson Worldwide Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+HSIC,HSIC,Henry Schein Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+CRL,CRL,Charles River Laboratories International,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+REG,REG,Regency Centers Reit Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Real Estate,Real Estate,1,1
+APO,APO,Apollo Global Management Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+TFX,TFX,Teleflex Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Health Care,Health Care,1,1
+KEY,KEY,Keycorp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Financials,Financials,1,1
+GL,GL,Globe Life Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Financials,Financials,1,1
+EMN,EMN,Eastman Chemical,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Materials,Materials,1,1
+WYNN,WYNN,Wynn Resorts Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+ALLE,ALLE,Allegion Plc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+PLTR,PLTR,Palantir Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Information Technology,Information Technology,1,1
+FFIV,FFIV,F5 Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+BWA,BWA,Borgwarner Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+BXP,BXP,Boston Properties Reit Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Real Estate,Real Estate,1,1
+MKTX,MKTX,Marketaxess Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+ROL,ROL,Rollins Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+JNPR,JNPR,Juniper Networks Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+PNW,PNW,Pinnacle West Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Utilities,Utilities,1,1
+DELL,DELL,Dell Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Information Technology,Information Technology,1,1
+BLDR,BLDR,Builders FirstSource Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Industrials,Industrials,1,1
+FOXA,FOXA,Fox Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+AOS,AOS,A O Smith Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Industrials,Industrials,1,1
+HAS,HAS,Hasbro Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+HII,HII,Huntington Ingalls Industries Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Industrials,Industrials,1,1
+NRG,NRG,Nrg Energy Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Utilities,Utilities,1,1
+CPB,CPB,Campbell Soup,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Staples,Consumer Staples,1,1
+UHS,UHS,Universal Health Services Inc Clas,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Health Care,Health Care,1,1
+ERIE,ERIE,Erie Indemnity Co,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+WRK,WRK,Westrock,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Materials,Materials,1,1
+KKR,KKR,KKR & Co Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+LII,LII,Lennox International Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+GEV,GEV,GE Vernova Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Energy,Energy,1,1
+BBWI,BBWI,Bath And Body Works Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+NWSA,NWSA,News Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+TPR,TPR,Tapestry Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+PARA,PARA,Paramount Global Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Communication,Communication,1,1
+SMCI,SMCI,Super Micro Computer Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Information Technology,Information Technology,1,1
+BEN,BEN,Franklin Resources Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+AIZ,AIZ,Assurant Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Financials,Financials,1,1
+NCLH,NCLH,Norwegian Cruise Line Holdings Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Consumer Discretionary,Consumer Discretionary,1,1
+GNRC,GNRC,Generac Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Industrials,Industrials,1,1
+FRT,FRT,Federal Realty Investment Trust Re,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Real Estate,Real Estate,1,1
+IVZ,IVZ,Invesco Ltd,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Financials,Financials,1,1
+SOLV,SOLV,Solventum Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Health Care,Health Care,1,1
+CRWD,CRWD,CrowdStrike Holdings Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Information Technology,Information Technology,1,1
+DVA,DVA,Davita Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Health Care,Health Care,1,1
+JBL,JBL,Jabil Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Electronics Manufacturing,Electronics Manufacturing,1,1
+LULU,LULU,Lululemon Athletica Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Consumer Discretionary,Consumer Discretionary,1,1
+DECK,DECK,Deckers Outdoor Corp,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Consumer Discretionary,Consumer Discretionary,1,1
+UBER,UBER,Uber Technologies Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Mobile Transportation,Mobile Transportation,1,1
+MHK,MHK,Mohawk Industries Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+RL,RL,Ralph Lauren Corp Class A,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Consumer Discretionary,Consumer Discretionary,1,1
+VLTO,VLTO,Veralto,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,BOB,Industrials,Industrials,1,1
+FOX,FOX,Fox Corp Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,ALICE,Communication,Communication,1,1
+BX,BX,Blackstone Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JANE,Financials,Financials,1,1
+ABNB,ABNB,Airbnb Inc,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,JUAN,Consumer Discretionary,Consumer Discretionary,1,1
+NWS,NWS,News Corp Class B,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,USD,0,United States,,TED,Communication,Communication,1,1
+BND000,BND000,US Treasury Bond 5.00% 2027,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,BOB,Government,Government,1,0.01
+BND001,BND001,US Treasury Bond 7.50% 2030,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,ALICE,Government,Government,1,0.01
+BND002,BND002,US Treasury Bond 8.80% 2035,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,JANE,Government,Government,1,0.01
+BND003,BND003,US Treasury Inflation-Protected Security 5.00% 2030 (TIPS),BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,JUAN,Government,Government,1,0.01
+BND004,BND004,GE Corporate Bond 3.00% 2028,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,TED,Corporate,Corporate,1,0.01
+BND005,BND005,GE Corporate Bond 3.30% 2032,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,BOB,Corporate,Corporate,1,0.01
+BND006,BND006,Apple Inc Corporate Bond 4.40% 2027,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,ALICE,Corporate,Corporate,1,0.01
+BND007,BND007,Apple Inc Corporate Bond 4.40% 2031,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,JANE,Corporate,Corporate,1,0.01
+BND008,BND008,JPMorgan Chase Corporate Bond 5.00% 2029,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,JUAN,Corporate,Corporate,1,0.01
+BND009,BND009,JPMorgan Chase Corporate Bond 7.50% 2034,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,TED,Corporate,Corporate,1,0.01
+BND010,BND010,Microsoft Corp Corporate Bond 8.80% 2028,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,BOB,Corporate,Corporate,1,0.01
+BND011,BND011,Microsoft Corp Corporate Bond 5.00% 2033,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,ALICE,Corporate,Corporate,1,0.01
+BND012,BND012,Exxon Mobil Corporate Bond 3.00% 2030,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,JANE,Corporate,Corporate,1,0.01
+BND013,BND013,Exxon Mobil Corporate Bond 3.30% 2036,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,JUAN,Corporate,Corporate,1,0.01
+BND014,BND014,AT&T Corporate Bond 4.40% 2032,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,TED,Corporate,Corporate,1,0.01
+BND015,BND015,Verizon Communications Corporate Bond 4.40% 2031,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Corporate,USD,0,United States,,BOB,Corporate,Corporate,1,0.01
+BND016,BND016,US Agency Bond – Fannie Mae 5.00% 2029,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,ALICE,Government,Government,1,0.01
+BND017,BND017,US Agency Bond – Freddie Mac 7.50% 2031,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Government,USD,0,United States,,JANE,Government,Government,1,0.01
+BND018,BND018,Municipal Bond – State of California GO 8.80% 2030,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Municipal,USD,0,United States,,JUAN,Municipal,Municipal,1,0.01
+BND019,BND019,Municipal Bond – City of New York GO 5.00% 2032,BOND,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Municipal,USD,0,United States,,TED,Municipal,Municipal,1,0.01
+USD,USD,US Dollar,CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,USD,1,United States,,BOB,Currency,Currrency,1,1
+JPY,JPY,Japanese Yen,CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,JPY,1,Japan,,ALICE,Currency,Currrency,1,1
+EUR,EUR,Euro ,CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,EUR,1,European Union,,JANE,Currency,Currrency,1,1
+GBP,GBP,British Pound,CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,GBP,1,Great Britain,,JUAN,Currency,Currrency,1,1
+AUD,AUD,Australian Dollar,CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,AUD,1,Australia,,TED,Currency,Currrency,1,1
+CHF,CHF,Swiss Francs',CURRENCY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Currency,CHF,1,Switzerland,,BOB,Currency,Currrency,1,1
+MITIB,MITIB,Mitubishi Bank,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,JPY,0,Japan, ,ALICE,Technology,Banking,1,1
+BMW,BMW,BMW,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,EUR,0,Germany, ,JANE,Energy,Consumer Discretionary,1,1
+SEIM,SEIM,Seimens,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,EUR,0,Germany, ,JUAN,Energy,Consumer Discretionary,1,1
+HONDA,HONDA,Honda Motors,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,JPY,0,Japan, ,TED,Financials,Consumer Discretionary,1,1
+SAP,SAP,SAP,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,EUR,0,Germany, ,BOB,Materials,Industrial Materials,1,1
+ROLLR,ROLLR,Rolls-Royce,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,GBP,0,United Kingdom, ,TED,Financials,Banking,1,1
+UNIL,UNIL,Unilever,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,GBP,0,United Kingdom, ,BOB,Consumer,Retail,1,1
+TOYOM,TOYOM,Toyota,EQUITY,01/01/2021:00:00:00,01/01/2021:00:00:00,12/31/2099:00:00:00,Common,JPY,0,Japan, ,TED,Industrials,Consumer Discretionary,1,1

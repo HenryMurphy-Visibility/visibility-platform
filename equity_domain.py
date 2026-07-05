@@ -20,7 +20,7 @@ import datetime
 
 
 def close_equity_lots(investment: str, location: str, quantity: float, local: float, book: float, closing_method: str,
-                      tax_date: datetime.datetime, journal_entries, space, ls: str, tranid) -> List[
+                      tax_date: datetime.datetime, space, ls: str, tranid) -> List[
     Tuple[str, str, int, float, float, float, float]]:
     bs_entries = space.asset_liability_repository.get_position_entries(investment)
 
@@ -194,7 +194,8 @@ def lot_iterator(investment, space):
 
         # Extract relevant lot information (account key, lot quantity, local, and book values)
         # Assuming entry[1][0] is the lot quantity, entry[1][1] is local, and entry[1][2] is book
-        return [(entry[0], entry[1][0], entry[1][1], entry[1][2], entry[1][3]) for entry in matching_lots]
+        return [(entry[0], entry[1][0], entry[1][1], entry[1][2], entry[1][3], entry[1][4]) for entry in matching_lots]
+
     else:
         return []
 
@@ -218,15 +219,15 @@ def lot_iterator_by_location(investment, space):
     return result
 
 
+
 def buy_equity(portfolio, investment, location, quantity, local, book, space, tranid, transaction,
                tradedate, settledate, kdbegin, kdend, entry_type):
-    # Create a new je Open IBM
-    ls = "l"
-    financial_account = "Cost"
+    ls        = "l"
     ibor_date = tradedate
-    tax_date = tradedate
-    je = Journals(portfolio, investment, tranid, tax_date, ls, location, financial_account, quantity, local, book, 0, 0,
-                  tranid,
+    tax_date  = tradedate
+
+    je = Journals(portfolio, investment, tranid, tax_date, ls, location, "Cost",
+                  quantity, local, book, 0, 0, tranid,
                   transaction, tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
     space.post_journal_entry(je)
 
@@ -234,190 +235,130 @@ def buy_equity(portfolio, investment, location, quantity, local, book, space, tr
 
 
 def sell_equity(portfolio, investment, location, quantity, local, book, closing_method,
-                space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                tdate_fx):
-    ls = "l"
-    financial_account = "Receivable"
+                space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                payment_currency, tdate_fx):
+    ls        = "l"
     ibor_date = tradedate
-    tax_date = tradedate
+    tax_date  = tradedate
     closing_method = "FIFO"
-    if tranid==3409:
-        print("here")
-    # Close the lots for the given investment and quantity using the specified closing method
-    lots_returned = close_equity_lots(investment, location, quantity, local, book, closing_method, tax_date,
-                                      journal_entries, space, ls, tranid)
 
-    # Initialize aggregate variables for gains/losses
-    total_pgain_local = 0
-    total_pgain_book = 0
-    total_fxgain_book = 0
+    # ── CLOSE COST LOTS ──────────────────────────────────────────
+    lots_returned = close_equity_lots(investment, location, quantity, local, book,
+                                      closing_method, tax_date, space, ls, tranid)
 
-    # Loop over the closed lots and post the corresponding journal entries
     for lotinfo in lots_returned:
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lotinfo
 
-        # Calculate the realized gain/loss on investment
-        fxrate = book / local
+        fxrate      = book / local if local != 0 else 0
         pgain_local = closed_proceeds - closed_local
-        pgain_book = pgain_local * fxrate
+        pgain_book  = pgain_local * fxrate
         fxgain_book = closed_proceeds * fxrate - closed_book - pgain_book
 
-        # Aggregate gains/losses for bulk posting later
-        total_pgain_local += pgain_local
-        total_pgain_book += pgain_book
-        total_fxgain_book += fxgain_book
-
-        # Post the individual lot entries
-        invclose = Journals(
+        # Cost lot closure
+        space.post_journal_entry(Journals(
             portfolio, investment, lotid, tax_date, ls, location, "Cost",
             -closed_qty, -closed_local, -closed_book, 0, 0,
-            tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability"
-        )
-        space.post_journal_entry(invclose)
+            tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+            "Asset/Liability"
+        ))
 
         if pgain_local != 0:
-            pgclose = Journals(
-                portfolio, investment, lotid, tax_date, ls, location, "PriceGainInvestment", 0, -pgain_local,
-                -pgain_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                ibor_date, "Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(pgclose)
+            space.post_journal_entry(Journals(
+                portfolio, investment, lotid, tax_date, ls, location, "PriceGainInvestment",
+                0, -pgain_local, -pgain_book, 0, 0,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+                "Revenue/Expense/Capital"
+            ))
 
         if fxgain_book != 0:
-            fxclose = Journals(
-                portfolio, investment, lotid, tax_date, ls, location, "FXGainInvestment", 0, 0, -fxgain_book, None,
-                None,
-                tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Revenue/Expense/Capital"
-            )
-            space.post_journal_entry(fxclose)
-
-    #
-    # # After processing all lots, post the aggregated gains to UnrealPriceGL, UnrealFXGL, and offset to UnearnedIncome
-    # post_aggregated_gains(portfolio, investment, location, ls, tranid, transaction, tradedate, settledate, kdbegin,
-    #                       kdend,
-    #                       total_pgain_local, total_pgain_book, total_fxgain_book, space)
+            space.post_journal_entry(Journals(
+                portfolio, investment, lotid, tax_date, ls, location, "FXGainInvestment",
+                0, 0, -fxgain_book, None, None,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+                "Revenue/Expense/Capital"
+            ))
 
     return
 
 
-def post_aggregated_gains(portfolio, investment, location, ls, tranid, transaction, tradedate, settledate, kdbegin,
-                          kdend,
-                          total_pgain_local, total_pgain_book, total_fxgain_book, space):
-    # Determine the offset amounts to Unearned Income
-    unearned_income_local = total_pgain_local
-    unearned_income_book = total_pgain_book - total_fxgain_book
-
-    # Post UnrealPriceGL (local and book)
-    unreal_price_gl = Journals(
-        portfolio, investment, 0, 0, ls, location, 'UnrealPriceGL',
-        None, total_pgain_local, total_pgain_book, 0, 0,
-        0, transaction, tradedate, settledate, kdbegin, kdend, tradedate,
-        "Revenue/Expense/Capital"
-    )
-    space.post_journal_entry(unreal_price_gl)
-
-    # Post UnrealFXGL (book)
-    unreal_fx_gl = Journals(
-        portfolio, investment, 0, 0, ls, location, 'UnrealFXGL',
-        None, 0, total_fxgain_book, 0, 0,
-        0, transaction, tradedate, settledate, kdbegin, kdend, tradedate,
-        "Revenue/Expense/Capital"
-    )
-    space.post_journal_entry(unreal_fx_gl)
-    #
-    # # Post offset to Unearned Income (local and book)
-    # unearned_income = Journals(
-    #     portfolio, investment, 0, 0, ls, location, 'UnearnedIncome',
-    #     None, unearned_income_local, unearned_income_book, 0, 0,
-    #     0, transaction, tradedate, settledate, kdbegin, kdend, tradedate,
-    #     "Revenue/Expense/Capital"
-    # )
-    # space.post_journal_entry(unearned_income)
-    #
-
-
 def short_equity(portfolio, investment, location, quantity, local, book, space, tranid, transaction,
                  tradedate, settledate, kdbegin, kdend, payment_currency, tdate_fx, entry_type):
-    # Create a new je Open IBM
-    from currency_domain import open_close_cash
-    ls = "s"
-    financial_account = "Cost"
+    ls        = "s"
     ibor_date = tradedate
-    tax_date = tradedate
-    je = Journals(portfolio, investment, tranid, tax_date, ls, location, financial_account, -quantity, -local, -book, 0,
-                  0, tranid,
+    tax_date  = tradedate
+
+    je = Journals(portfolio, investment, tranid, tax_date, ls, location, "Cost",
+                  -quantity, -local, -book, 0, 0, tranid,
                   transaction, tradedate, settledate, kdbegin, kdend, ibor_date, entry_type)
     space.post_journal_entry(je)
 
     return
 
 
-def cover_equity(portfolio, investment, location, quantity, local, book, closing_method, space, tranid,
-                 transaction, tradedate, settledate, kdbegin, kdend, payment_currency, tdate_fx):
-    ls = "s"
-    financial_account = "Payable"
+def cover_equity(portfolio, investment, location, quantity, local, book, closing_method,
+                 space, tranid, transaction, tradedate, settledate, kdbegin, kdend,
+                 payment_currency, tdate_fx):
+    ls        = "s"
     ibor_date = tradedate
-    tax_date = tradedate
-    je = Journals(portfolio, payment_currency, tranid, tax_date, ls, location, financial_account, -local, -local, -book,
-                  0, 0,
-                  tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
-    space.post_journal_entry(je)
+    tax_date  = tradedate
+    closing_method = "FIFO"
 
-    # pass 'ls' flag into closelots - determine if l or is is being closed
-    # Close the lots for the given investment and quantity using the specified closing method
-    lots_returned = close_equity_lots(investment, location, -quantity, -local, -book, closing_method, tax_date,
-                                      space, 's', tranid)
+    # ── CLOSE SHORT COST LOTS ─────────────────────────────────
+    # No negation — close_equity_lots handles direction via ls="s"
+    lots_returned = close_equity_lots(investment, location, quantity, local, book,
+                                      closing_method, tax_date, space, ls, tranid)
 
-    # Loop over the closed lots and post the corresponding journal entries
     for lotinfo in lots_returned:
         portfolio, investment, lotid, tax_date, closed_qty, closed_local, closed_book, closed_proceeds = lotinfo
 
-        # Calculate the realized gain/loss on investment
+        fxrate      = book / local if local != 0 else 0
+        pgain_local = closed_proceeds - closed_local  #
+        pgain_book  = pgain_local * fxrate
+        glbook      = closed_proceeds * fxrate - closed_book - pgain_book
 
-        fxrate = book / local
-        pgain_local = closed_proceeds - closed_local
-        pgain_book = pgain_local * fxrate
-        glbook = closed_proceeds * fxrate - closed_book - pgain_book
-        realized_gl = (closed_proceeds - closed_local) * fxrate * -1
-
-        if closed_book == 0:  # method passes back 0 for book as we need to convert it to trade fx equivalent
+        if closed_book == 0:
             closed_book = closed_local * fxrate
 
-        # Post journal entries to update the bookkeeping space for investment
-        invclose = Journals(portfolio, investment, lotid, tax_date, ls, location, "Cost", closed_qty, closed_local,
-                            closed_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
-                            "Asset/Liability")
-        space.post_journal_entry(invclose)
+        # Cost lot closure
+        space.post_journal_entry(Journals(
+            portfolio, investment, lotid, tax_date, ls, location, "Cost",
+            -closed_qty, -closed_local, -closed_book, 0, 0,
+            tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+            "Asset/Liability"
+        ))
 
         if pgain_local != 0:
-            pgclose = Journals(portfolio, investment, lotid, tax_date, ls, location, "PriceGainInvestment", 0,
-                               pgain_local,
-                               pgain_book, 0, 0, tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
-                               "Revenue/Expense/Capital")
-            space.post_journal_entry(pgclose)
+            space.post_journal_entry(Journals(
+                portfolio, investment, lotid, tax_date, ls, location, "PriceGainInvestment",
+                0, -pgain_local, -pgain_book, 0, 0,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+                "Revenue/Expense/Capital"
+            ))
 
         if glbook != 0:
-            glclose = Journals(portfolio, investment, lotid, tax_date, ls, location, "FXGainInvestment", 0, 0, glbook,
-                               0, 0,
-                               tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
-                               "Revenue/Expense/Capital")
-            space.post_journal_entry(glclose)
+            space.post_journal_entry(Journals(
+                portfolio, investment, lotid, tax_date, ls, location, "FXGainInvestment",
+                0, 0, -glbook, None, None,
+                tranid, transaction, tradedate, settledate, kdbegin, kdend, ibor_date,
+                "Revenue/Expense/Capital"
+            ))
 
     return
 
 
 def dividend_equity(portfolio, investment, space, tranid,
-                    transaction, tradedate, settledate, kdbegin, kdend, payment_currency, per_share, period_start):
+                    transaction, tradedate, settledate, kdbegin, kdend,
+                    payment_currency, per_share, fx_data):
+    from utilities import get_fx_rate
     ibor_date = tradedate
 
-    # Call lot_iterator_by_location - it should return lots by location, total quantity, and lots
-    # For loc, total_quantity, lots in lot_iterator_by_location(investment, bs.asset_liability_entries):
     for location, total_quantity in lot_iterator_by_location(investment, space):
 
         divloc = total_quantity * per_share
-        #   div_book = divloc * get_fx_rate()
 
-        # Check dividend sign and set financial accounts accordingly
+        fx_rate = get_fx_rate(payment_currency, tradedate, fx_data)
+        divbook = divloc * fx_rate
+
         if divloc > 0:
             faal = "DividendsReceivable"
             faie = "DividendReceipt"
@@ -426,18 +367,21 @@ def dividend_equity(portfolio, investment, space, tranid,
             faal = "DividendsPayable"
             faie = "DividendExpense"
             ls = "s"
-        # Post aggregate div for location/ls hitting financial accounts (faal faie) based on prior
-        stkdiv = Journals(portfolio, payment_currency, tranid, tradedate, ls, location, faal, divloc, divloc, divloc, 0,
-                          0, tranid, transaction, tradedate,
-                          settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
-        space.post_journal_entry(stkdiv)
 
-        stkinc = Journals(portfolio, investment, tranid, tradedate, ls, location, faie, 0, -divloc, -divloc, 0, 0,
-                          tranid, transaction, tradedate,
-                          settledate, kdbegin, kdend, ibor_date, "Revenue/Expense/Capital")
-        space.post_journal_entry(stkinc)
+        space.post_journal_entry(Journals(
+            portfolio, investment, tranid, tradedate, ls, location, faie,
+            0, -divloc, -divbook, 0, 0, tranid, transaction,
+            tradedate, settledate, kdbegin, kdend, ibor_date, "Revenue/Expense/Capital"
+        ))
+        if(tradedate != settledate):
+            space.post_journal_entry(Journals(
+                portfolio, payment_currency, tranid, tradedate, ls, location, faal,
+                divloc, divloc, divbook, 0, 0, tranid, transaction,
+                tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability"
+            ))
 
     return
+
 
 
 def split_equity(portfolio, investment, space, tranid, transaction, tradedate, settledate,
@@ -450,7 +394,7 @@ def split_equity(portfolio, investment, space, tranid, transaction, tradedate, s
 
     # Loop over the lots and post the corresponding journal entries
     for lot_info in lots_returned:
-        account_key, lot_qty = lot_info
+        account_key, lot_qty, *_ = lot_info
         # Calculate the new lot quantity after the split
         split_qty = lot_qty * new_shares / old_shares - lot_qty
 

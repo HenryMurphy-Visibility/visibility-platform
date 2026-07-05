@@ -1,250 +1,266 @@
+# -*- coding: utf-8 -*-
+"""
+bond_accrual.py — Visibility Bond Accrual Calculator
+Calculates accrued interest for bond purchase/sale events.
+Coupon rate stored as real percentage (5 = 5%, not 0.05).
+Accrual based on settlement date — standard market convention.
+
+Henry J. Murphy — Chest Financial Systems
+"""
+
 from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 
 
-def generate_coupon_dates(issue_date, maturity_date, payment_frequency, period_start, period_end):
+# ============================================================
+# COUPON DATE GENERATION
+# Uses exact month arithmetic — not timedelta approximation
+# ============================================================
+
+def generate_coupon_dates(issue_date, first_coupon_date, maturity_date, payment_frequency):
     """
-    Generates a list of coupon payment dates from the issue date to the maturity date.
-
-    :param issue_date: The date when the bond was issued.
-    :param maturity_date: The date when the bond matures.
-    :param payment_frequency: The coupon payment frequency ('annual', 'semi-annual', 'quarterly', etc.).
-    :param period_start: The start of the period for which coupons are being generated.
-    :param period_end: The end of the period for which coupons are being generated.
-    :return: List of coupon payment dates.
+    Generate all coupon dates from first coupon to maturity.
+    Uses exact month arithmetic for accuracy.
     """
-    coupon_dates = []
-    current_date = issue_date
+    if isinstance(issue_date,        str): issue_date        = datetime.strptime(issue_date,        "%m/%d/%Y")
+    if isinstance(first_coupon_date, str): first_coupon_date = datetime.strptime(first_coupon_date, "%m/%d/%Y")
+    if isinstance(maturity_date,     str): maturity_date     = datetime.strptime(maturity_date,     "%m/%d/%Y")
 
-    if payment_frequency == 'annual':
-        increment = timedelta(days=365)
-    elif payment_frequency == 'semi-annual':
-        increment = timedelta(days=182)  # Approximation for simplicity
-    elif payment_frequency == 'quarterly':
-        increment = timedelta(days=91)
-    elif payment_frequency == 'monthly':
-        increment = timedelta(days=30)
+    freq_months = {
+        "ANNUAL":      12,
+        "SEMI_ANNUAL":  6,
+        "QUARTERLY":    3,
+        "MONTHLY":      1,
+    }
+
+    months = freq_months.get(payment_frequency.upper())
+    if months is None:
+        raise ValueError(f"Unsupported payment frequency: {payment_frequency}")
+
+    dates = []
+    current = first_coupon_date
+    while current <= maturity_date:
+        dates.append(current)
+        current = current + relativedelta(months=months)
+
+    return dates
+
+
+# ============================================================
+# ACCRUED INTEREST CALCULATION
+# Settlement date based — standard market convention
+# Coupon rate as real percentage (5 = 5%)
+# ============================================================
+
+def calculate_accrued_interest(
+    issue_date,
+    first_coupon_date,
+    maturity_date,
+    settlement_date,
+    coupon_rate,          # Real percentage — 5 means 5%
+    payment_frequency,
+    day_count_convention,
+    face_value=100,
+    semi_split="A",
+):
+    """
+    Calculate accrued interest for a bond transaction.
+
+    Parameters
+    ----------
+    issue_date           : str or datetime — bond issue date
+    first_coupon_date    : str or datetime — first coupon payment date
+    maturity_date        : str or datetime — bond maturity date
+    settlement_date      : str or datetime — SETTLEMENT date (not trade date)
+    coupon_rate          : float — REAL percentage e.g. 5 for 5%
+    payment_frequency    : str — ANNUAL, SEMI_ANNUAL, QUARTERLY, MONTHLY
+    day_count_convention : str — see supported list below
+    face_value           : float — face value per unit (default 100)
+    semi_split           : str — A (actual) or C (calendar)
+
+    Supported day count conventions:
+        30/360 Bond Basis
+        30/360 ISDA
+        30E/360
+        actual/360
+        actual/365
+        actual/actual ISDA
+        actual/actual ICMA
+
+    Returns
+    -------
+    dict with:
+        accrued_per_100      : accrued interest per 100 face value
+        accrued_total        : accrued interest on full face value
+        daily_per_100        : daily accrual per 100 face value
+        days_of_accrual      : days since last coupon
+        days_in_period       : total days in coupon period
+        last_coupon_date     : prior coupon date
+        next_coupon_date     : next coupon date
+        semi_annual_coupon   : coupon payment per period per 100 face
+    """
+    # ── PARSE DATES ───────────────────────────────────────────
+    def _parse(d):
+        if isinstance(d, datetime): return d
+        for fmt in ("%m/%d/%Y", "%Y-%m-%d", "%m/%d/%Y:%H:%M:%S"):
+            try: return datetime.strptime(d.split(":")[0] if ":" in d and len(d) > 10 else d, fmt.split(":")[0] if ":" in fmt else fmt)
+            except: pass
+        raise ValueError(f"Cannot parse date: {d}")
+
+    issue_date        = _parse(issue_date)
+    first_coupon_date = _parse(first_coupon_date)
+    maturity_date     = _parse(maturity_date)
+    settlement_date   = _parse(settlement_date)
+
+    # ── COUPON RATE AS DECIMAL ────────────────────────────────
+    rate = float(coupon_rate) / 100.0  # 5 → 0.05
+
+    # ── FREQUENCY ─────────────────────────────────────────────
+    freq_map = {
+        "ANNUAL": 1, "SEMI_ANNUAL": 2, "QUARTERLY": 4, "MONTHLY": 12
+    }
+    freq = freq_map.get(payment_frequency.upper())
+    if freq is None:
+        raise ValueError(f"Unsupported frequency: {payment_frequency}")
+
+    periodic_rate = rate / freq  # coupon payment per period per unit of face
+
+    # ── COUPON DATES ──────────────────────────────────────────
+    coupon_dates = generate_coupon_dates(
+        issue_date, first_coupon_date, maturity_date, payment_frequency
+    )
+
+    # ── FIND LAST AND NEXT COUPON RELATIVE TO SETTLEMENT ─────
+    past   = [d for d in coupon_dates if d <= settlement_date]
+    future = [d for d in coupon_dates if d >  settlement_date]
+
+    last_coupon = max(past)   if past   else issue_date
+    next_coupon = min(future) if future else maturity_date
+
+    # ── On coupon date — accrued = 0 ─────────────────────────
+    if settlement_date in coupon_dates:
+        return {
+            "accrued_per_100":    0.0,
+            "accrued_total":      0.0,
+            "daily_per_100":      0.0,
+            "days_of_accrual":    0,
+            "days_in_period":     (next_coupon - last_coupon).days,
+            "last_coupon_date":   last_coupon,
+            "next_coupon_date":   next_coupon,
+            "semi_annual_coupon": periodic_rate * face_value,
+            "note":               "Settlement on coupon date — accrued = 0",
+        }
+
+    # ── DAY COUNT ─────────────────────────────────────────────
+    dcc = day_count_convention.upper().replace(" ", "").replace("/", "").replace("-", "")
+
+    def days_30_360(d1, d2):
+        """Standard 30/360."""
+        y1, m1, day1 = d1.year, d1.month, min(d1.day, 30)
+        y2, m2, day2 = d2.year, d2.month, min(d2.day, 30)
+        return 360*(y2-y1) + 30*(m2-m1) + (day2-day1)
+
+    def days_30e_360(d1, d2):
+        """30E/360 — European convention."""
+        y1, m1, day1 = d1.year, d1.month, min(d1.day, 30)
+        y2, m2, day2 = d2.year, d2.month, min(d2.day, 30)
+        return 360*(y2-y1) + 30*(m2-m1) + (day2-day1)
+
+    def days_30_360_isda(d1, d2):
+        """30/360 ISDA."""
+        day1 = 30 if d1.day == 31 else d1.day
+        day2 = 30 if (d2.day == 31 and d1.day in [30, 31]) else d2.day
+        return 360*(d2.year-d1.year) + 30*(d2.month-d1.month) + (day2-day1)
+
+    if dcc in ("30360BONDBASIS", "30360US", "30360"):
+        days_accrual  = days_30_360(last_coupon, settlement_date)
+        days_period   = days_30_360(last_coupon, next_coupon)
+
+    elif dcc == "30E360":
+        days_accrual  = days_30e_360(last_coupon, settlement_date)
+        days_period   = days_30e_360(last_coupon, next_coupon)
+
+    elif dcc == "30360ISDA":
+        days_accrual  = days_30_360_isda(last_coupon, settlement_date)
+        days_period   = days_30_360_isda(last_coupon, next_coupon)
+
+    elif dcc == "ACTUAL360":
+        days_accrual  = (settlement_date - last_coupon).days
+        days_period   = 360 // freq  # conventional period
+
+    elif dcc == "ACTUAL365":
+        days_accrual  = (settlement_date - last_coupon).days
+        days_period   = 365 // freq
+
+    elif dcc in ("ACTUALACTUAL", "ACTUALACTUALISDA"):
+        days_accrual  = (settlement_date - last_coupon).days
+        days_period   = (next_coupon - last_coupon).days
+
+    elif dcc == "ACTUALACTUAICMA":
+        days_accrual  = (settlement_date - last_coupon).days
+        days_period   = (next_coupon - last_coupon).days
+
     else:
-        raise ValueError("Unsupported payment frequency")
+        raise ValueError(f"Unsupported day count convention: {day_count_convention}")
 
-    # Generate coupon dates
-    while current_date < maturity_date:
-        if current_date >= period_start and current_date <= period_end:
-            coupon_dates.append(current_date)
-        current_date += increment
+    # ── CALCULATE ACCRUED ─────────────────────────────────────
+    if days_period == 0:
+        raise ValueError("days_in_period is zero — check bond dates")
 
-    return coupon_dates
+    accrued_per_100 = periodic_rate * face_value * days_accrual / days_period
+    daily_per_100   = periodic_rate * face_value / days_period
+    accrued_total   = accrued_per_100  # per 100 face — caller multiplies by quantity/100
+
+    return {
+        "accrued_per_100":    round(accrued_per_100, 6),
+        "accrued_total":      round(accrued_total,   6),
+        "daily_per_100":      round(daily_per_100,   6),
+        "days_of_accrual":    days_accrual,
+        "days_in_period":     days_period,
+        "last_coupon_date":   last_coupon,
+        "next_coupon_date":   next_coupon,
+        "semi_annual_coupon": round(periodic_rate * face_value, 6),
+        "coupon_rate_pct":    float(coupon_rate),
+        "coupon_rate_dec":    rate,
+        "settlement_date":    settlement_date,
+        "day_count":          day_count_convention,
+        "frequency":          payment_frequency,
+    }
 
 
-def calculate_accrued_interest(issue_date, first_coupon_date, day_count_convention, payment_frequency,
-                               next_to_last_coupon_date, maturity_date, valuation_date, coupon_rate, semi_split,
-                               pricing_factor, face_value=100):
-    # Convert dates to datetime objects if they are strings
-    if isinstance(issue_date, str):
-        issue_date = datetime.strptime(issue_date, "%m/%d/%Y")
-    if isinstance(first_coupon_date, str):
-        first_coupon_date = datetime.strptime(first_coupon_date, "%m/%d/%Y")
-    if isinstance(next_to_last_coupon_date, str):
-        next_to_last_coupon_date = datetime.strptime(next_to_last_coupon_date, "%m/%d/%Y")
-    if isinstance(maturity_date, str):
-        maturity_date = datetime.strptime(maturity_date, "%m/%d/%Y")
-    if isinstance(valuation_date, str):
-        valuation_date = datetime.strptime(valuation_date, "%m/%d/%Y")
+# ============================================================
+# QUICK TEST
+# ============================================================
 
-        # Generate coupon dates
-    coupon_dates = generate_coupon_dates(issue_date, maturity_date, payment_frequency, issue_date, maturity_date)
+if __name__ == "__main__":
+    # BND000 — 5% semi-annual 30E/360
+    # Bought settling 2026-01-05
+    # Last coupon: 2026-01-15 (future) → last coupon was 2025-07-15
+    result = calculate_accrued_interest(
+        issue_date           = "01/15/2015",
+        first_coupon_date    = "07/15/2015",
+        maturity_date        = "01/15/2028",
+        settlement_date      = "01/05/2026",
+        coupon_rate          = 5,             # 5% — real percentage
+        payment_frequency    = "SEMI_ANNUAL",
+        day_count_convention = "30E/360",
+        face_value           = 100,
+        semi_split           = "A",
+    )
 
-    # Check if the valuation date is a coupon payment date
-    if valuation_date in coupon_dates:
-        return 0, 0, 0, 0  # Set accrued interest to 0 on coupon payment date
-
-    # Generate coupon dates
-    coupon_dates = [first_coupon_date]
-    current_date = first_coupon_date
-
-    while current_date < maturity_date:
-        if payment_frequency == 'annual':
-            current_date += timedelta(days=365)
-        elif payment_frequency == 'semi-annual':
-            current_date += timedelta(days=182)
-        elif payment_frequency == 'quarterly':
-            current_date += timedelta(days=91)
-        elif payment_frequency == 'monthly':
-            current_date += timedelta(days=30)
-
-        if current_date <= maturity_date:
-            coupon_dates.append(current_date)
-
-    # Find the last and next coupon dates relative to valuation_date
-    last_coupon_dates = [date for date in coupon_dates if date <= valuation_date]
-    if last_coupon_dates:
-        last_coupon_date = max(last_coupon_dates)
-    else:
-        last_coupon_date = issue_date
-
-    next_coupon_date = min(date for date in coupon_dates if date > valuation_date)
-
-    # Calculate days of accrual based on day count convention
-    if day_count_convention == "30/360 Bond Basis":
-        days_of_accrual = 360 * (valuation_date.year - last_coupon_date.year) + 30 * (
-                valuation_date.month - last_coupon_date.month) + (min(30, valuation_date.day) - min(30, last_coupon_date.day))
-    elif day_count_convention == "30/360 ISDA":
-        d1 = 30 if last_coupon_date.day == 31 else last_coupon_date.day
-        d2 = 30 if valuation_date.day == 31 and last_coupon_date.day in [30, 31] else valuation_date.day
-        days_of_accrual = 360 * (valuation_date.year - last_coupon_date.year) + 30 * (
-                valuation_date.month - last_coupon_date.month) + (d2 - d1)
-    elif day_count_convention == "30E/360":
-        d1 = min(30, last_coupon_date.day)
-        d2 = min(30, valuation_date.day)
-        days_of_accrual = 360 * (valuation_date.year - last_coupon_date.year) + 30 * (
-                valuation_date.month - last_coupon_date.month) + (d2 - d1)
-    elif day_count_convention == "actual/360":
-        days_of_accrual = (valuation_date - last_coupon_date).days
-    elif day_count_convention == "actual/365":
-        days_of_accrual = (valuation_date - last_coupon_date).days
-    elif day_count_convention == "actual/actual ISDA":
-        days_of_accrual = (valuation_date - last_coupon_date).days
-    elif day_count_convention == "actual/actual ICMA":
-        num_days = (valuation_date - last_coupon_date).days
-        days_in_period = (next_coupon_date - last_coupon_date).days
-        days_of_accrual = num_days / days_in_period * 365
-    else:
-        raise ValueError("Unsupported day count convention")
-
-    coupon_rate = float(coupon_rate)
-
-    # Calculate the period's coupon payment
-    if payment_frequency == 'annual':
-        coupon_payment = coupon_rate
-        days_in_period = 365 if day_count_convention == "actual/365" else 360
-    elif payment_frequency == 'semi-annual':
-        coupon_payment = coupon_rate / 2
-        days_in_period = 182 if day_count_convention == "actual/365" else 180
-    elif payment_frequency == 'quarterly':
-        coupon_payment = coupon_rate / 4
-        days_in_period = 91 if day_count_convention == "actual/365" else 90
-    elif payment_frequency == 'monthly':
-        coupon_payment = coupon_rate / 12
-        days_in_period = 30 if day_count_convention == "actual/365" else 30
-    else:
-        raise ValueError("Unsupported payment frequency")
-
-    # Calculate accrued interest
-    accrued_interest = coupon_payment * days_of_accrual / days_in_period
-
-    # Calculate the daily accrued interest per 100 face value
-    daily_accrued_per_100 = accrued_interest / days_of_accrual if days_of_accrual > 0 else 0
-
-    return accrued_interest, days_in_period, days_of_accrual, daily_accrued_per_100
-#
-# # Example usage
-# issue_date = "01/01/2022"
-# first_coupon_date = "07/01/2022"
-# day_count_convention = "30/360 Bond Basis"
-# payment_frequency = "semi-annual"
-# next_to_last_coupon_date = "07/01/2025"
-# maturity_date = "01/01/2026"
-# valuation_date = "09/01/2023"
-# coupon_rate = 5
-# semi_split = 'A'
-#
-# accrued_interest, days_in_period, days_of_accrual, daily_accrued_per_100 = calculate_accrued_interest(
-#     issue_date, first_coupon_date, day_count_convention, payment_frequency, next_to_last_coupon_date,
-#     maturity_date, valuation_date, coupon_rate, semi_split)
-#
-# print(f"\nAccrued Interest: {accrued_interest}")
-# print(f"Days in Period: {days_in_period}")
-# print(f"Days of Accrual: {days_of_accrual}")
-# print(f"Daily Accrued Interest per 100 Face Value: {daily_accrued_per_100:.4f}")
-#
-#
-#
-# import random
-# from datetime import datetime, timedelta
-#
-#
-# def random_date(start, end):
-#     """Generate a random date between start and end."""
-#     delta = end - start
-#     random_days = random.randint(0, delta.days)
-#     return start + timedelta(days=random_days)
-#
-#
-# def random_bond_parameters():
-#     """Generate random bond parameters for testing."""
-#     issue_date = random_date(datetime(2015, 1, 1), datetime(2023, 1, 1))
-#     maturity_date = random_date(issue_date + timedelta(days=365), issue_date + timedelta(days=365 * 10))
-#     first_coupon_date = issue_date + timedelta(days=182)
-#     valuation_date = random_date(issue_date, maturity_date - timedelta(days=30))
-#     coupon_rate = random.uniform(1, 10)  # Random coupon rate between 1% and 10%
-#     payment_frequency = random.choice(['annual', 'semi-annual', 'quarterly', 'monthly'])
-#     day_count_convention = random.choice(
-#         ['30/360 Bond Basis', '30/360 ISDA', '30E/360', 'actual/360', 'actual/365', 'actual/actual ISDA',
-#          'actual/actual ICMA'])
-#     semi_split = random.choice(['A', 'C']) if payment_frequency == 'semi-annual' else None
-#
-#     return {
-#         "issue_date": issue_date.strftime("%m/%d/%Y"),
-#         "first_coupon_date": first_coupon_date.strftime("%m/%d/%Y"),
-#         "day_count_convention": day_count_convention,
-#         "payment_frequency": payment_frequency,
-#         "next_to_last_coupon_date": (maturity_date - timedelta(days=182)).strftime("%m/%d/%Y"),
-#         "maturity_date": maturity_date.strftime("%m/%d/%Y"),
-#         "valuation_date": valuation_date.strftime("%m/%d/%Y"),
-#         "coupon_rate": coupon_rate,
-#         "semi_split": semi_split
-#     }
-#
-#
-# def calculate_accrued_interest_for_random_bonds(num_tests):
-#     """Generate random bonds and calculate accrued interest for each one."""
-#     results = []
-#
-#     for i in range(num_tests):
-#         bond_params = random_bond_parameters()
-#
-#         try:
-#             accrued_interest, days_in_period, days_of_accrual, daily_accrued_per_100 = calculate_accrued_interest(
-#                 bond_params["issue_date"],
-#                 bond_params["first_coupon_date"],
-#                 bond_params["day_count_convention"],
-#                 bond_params["payment_frequency"],
-#                 bond_params["next_to_last_coupon_date"],
-#                 bond_params["maturity_date"],
-#                 bond_params["valuation_date"],
-#                 bond_params["coupon_rate"],
-#                 bond_params["semi_split"]
-#             )
-#
-#             results.append({
-#                 "bond_parameters": bond_params,
-#                 "accrued_interest": accrued_interest,
-#                 "days_in_period": days_in_period,
-#                 "days_of_accrual": days_of_accrual,
-#                 "daily_accrued_per_100": daily_accrued_per_100
-#             })
-#
-#         except ValueError as e:
-#             # Catch unsupported day count convention or calculation issues
-#             results.append({
-#                 "bond_parameters": bond_params,
-#                 "error": str(e)
-#             })
-#
-#     # Print results for each random bond
-#     for idx, result in enumerate(results):
-#         print(f"\n--- Bond Test {idx + 1} ---")
-#         if "error" in result:
-#             print(f"Error: {result['error']}")
-#         else:
-#             print(f"Bond Parameters: {result['bond_parameters']}")
-#             print(f"Accrued Interest: {result['accrued_interest']:.4f}")
-#             print(f"Days in Period: {result['days_in_period']}")
-#             print(f"Days of Accrual: {result['days_of_accrual']}")
-#             print(f"Daily Accrued Interest per 100 Face Value: {result['daily_accrued_per_100']:.4f}")
-#
-#
-# # Run random bond calculations for 10 tests
-# calculate_accrued_interest_for_random_bonds(100)
-#
-#
-#
+    print("\nBND000 — Accrual on settlement 2026-01-05")
+    print(f"Last coupon date  : {result['last_coupon_date'].strftime('%Y-%m-%d')}")
+    print(f"Next coupon date  : {result['next_coupon_date'].strftime('%Y-%m-%d')}")
+    print(f"Days of accrual   : {result['days_of_accrual']}")
+    print(f"Days in period    : {result['days_in_period']}")
+    print(f"Semi-annual coupon: {result['semi_annual_coupon']} per 100 face")
+    print(f"Daily per 100     : {result['daily_per_100']:.6f}")
+    print(f"Accrued per 100   : {result['accrued_per_100']:.6f}")
+    print()
+    print(f"For $1,000,000 face:")
+    face = 1_000_000
+    accrued = result['accrued_per_100'] * face / 100
+    daily   = result['daily_per_100']   * face / 100
+    print(f"  Daily accrual   : ${daily:,.2f}")
+    print(f"  Accrued on buy  : ${accrued:,.2f}")
+    print(f"  Dirty price     : cost + ${accrued:,.2f}")

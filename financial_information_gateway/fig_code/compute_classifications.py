@@ -163,7 +163,6 @@ def _accounts_for(*categories: str) -> frozenset[str]:
         if cat in categories
     )
 
-
 # ── FIVE REPORTING CATEGORIES ─────────────────────────────────────────────────
 
 COST_BASIS_ACCOUNTS = _accounts_for(
@@ -195,6 +194,24 @@ UNREALIZED_ACCOUNTS = _accounts_for(
 CAPITAL_ACCOUNTS = _accounts_for(
     Category.CAPITAL,
 )
+# Single authoritative definition of trade-date cash financial accounts.
+# Import this wherever trade-date cash scope is needed -- compute_cash_trade_date,
+# valuation reports, any future subtotal view that wants to group
+# is_currency investments by these accounts.
+
+TRADE_DATE_CASH_ACCOUNTS = frozenset({
+    "Cost",
+    "Receivable",
+    "DividendsReceivable",
+    "SpotFxReceivable",
+    "InterestReceivable",
+    "Expenses_Receivable",
+    "Payable",
+    "DividendsPayable",
+    "SpotFxPayable",
+    "InterestPayable",
+    "ExpensesPayable",
+})
 
 # ── COMBINED SETS ─────────────────────────────────────────────────────────────
 
@@ -403,3 +420,40 @@ def unknown_accounts(df) -> list[str]:
         if a not in ACCOUNT_CLASSIFICATION
         and a not in STAT_ONLY_ACCOUNTS
     ]
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# SUMMARY ROW HELPER
+# Appends investment subtotals and grand total to any category ledger DataFrame.
+# Called by all five compute functions after account filtering.
+# ──────────────────────────────────────────────────────────────────────────────
+
+def add_summary_rows(df):
+    import pandas as pd
+    if df is None or df.empty:
+        return df
+
+    closing = df[df["event_type"] == "ACTIVITY"]
+
+    if closing.empty:
+        return df
+
+    # Investment subtotals — qty + local + book
+    inv_cols = [c for c in ["qty", "local", "book"] if c in df.columns]
+    subtotals = closing.groupby("investment")[inv_cols].sum().reset_index()
+    subtotals["event_type"] = "SUBTOTAL"
+    subtotals["financial_account"] = "── Investment Total"
+    for col in df.columns:
+        if col not in subtotals.columns:
+            subtotals[col] = ""
+
+    # Grand total — local and book only, no qty
+    grand_cols = [c for c in ["local", "book"] if c in df.columns]
+    grand = {col: "" for col in df.columns}
+    for c in grand_cols:
+        grand[c] = subtotals[c].sum()
+    grand["investment"] = "── GRAND TOTAL"
+    grand["event_type"] = "TOTAL"
+    grand["financial_account"] = ""
+
+    return pd.concat([df, subtotals, pd.DataFrame([grand])], ignore_index=True)

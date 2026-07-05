@@ -129,7 +129,7 @@ def create_adjustment_records(journals_A, journals_B):
 
     return adjustments
 
-def process_closed_periods_mode(space_manager, portfolio_name, process_start_date, smf, scheduler, stat_repo, price_data, fx_data,
+def process_closed_periods_mode(space_manager, portfolio_name, process_start_date, af, scheduler, stat_repo, price_data, fx_data,
                                 mark_daily, aggregate_marks, include_marks, tdate_fx):
     input_records_file_path = f'C:/Users/hjmne/PycharmProjects/chest/configs/inputs{portfolio_name}.txt'
     with open(input_records_file_path, 'r') as file:
@@ -504,7 +504,7 @@ def create_adjustment_records(journals_A, journals_B):
 
     return adjustments
 
-def process_closed_periods_mode(space_manager, portfolio_name, process_start_date, smf, scheduler, stat_repo, price_data, fx_data,
+def process_closed_periods_mode(space_manager, portfolio_name, process_start_date, af, scheduler, stat_repo, price_data, fx_data,
                                 mark_daily, aggregate_marks, include_marks, tdate_fx):
     input_records_file_path = f'C:/Users/hjmne/PycharmProjects/chest/configs/inputs{portfolio_name}.txt'
     with open(input_records_file_path, 'r') as file:

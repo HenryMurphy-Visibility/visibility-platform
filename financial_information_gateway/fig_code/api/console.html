@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visibility — Console</title>
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;5000&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
 
   :root {
     --bg:        #07080f;
@@ -14,7 +14,7 @@
     --accent:    #2E5FA3;
     --accent2:   #4a7fc1;
     --text:      #d8dce8;
-    --muted:     #5a6080;
+    --muted:     #c4c9d8;;
     --success:   #2a7a4a;
     --success-t: #3dba70;
     --fail:      #7a2a2a;
@@ -37,7 +37,6 @@
     grid-template-rows: 56px 1fr;
   }
 
-  /* ── HEADER ── */
   header {
     grid-column: 1 / -1;
     background: var(--surface);
@@ -54,7 +53,6 @@
     letter-spacing: 3px;
     text-transform: uppercase;
     color: #fff;
-    transition: color 0.15s;
     cursor: default;
   }
   header h1:hover { color: var(--accent2); }
@@ -63,7 +61,6 @@
     font-size: 0.7em;
     color: var(--muted);
     letter-spacing: 1px;
-    transition: color 0.15s;
   }
   header span:hover { color: var(--text); }
   .header-dot {
@@ -76,7 +73,6 @@
   }
   @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
 
-  /* ── SIDEBAR ── */
   nav {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -86,11 +82,10 @@
   .nav-section {
     padding: 6px 20px 4px;
     font-family: var(--mono);
-    font-size: 0.6em;
+    font-size: 0.75em;
     letter-spacing: 2px;
     text-transform: uppercase;
-    color: #8a90a8;
-    transition: color 0.15s;
+    color: #ffffff;
     cursor: default;
   }
   .nav-section:hover { color: var(--accent2); }
@@ -99,7 +94,7 @@
     padding: 9px 20px;
     font-family: var(--mono);
     font-size: 0.78em;
-    color: var(--muted);
+    color: #7eb8f7;
     cursor: pointer;
     border-left: 2px solid transparent;
     transition: all 0.15s;
@@ -107,12 +102,30 @@
   }
   .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
   .nav-item.active {
-    color: #fff;
-    border-left-color: var(--accent);
-    background: rgba(46,95,163,0.12);
-  }
+    color: #00ff88 ;
+    border-left-color: #00ff88 ;
+    background: rgba(80,200,120,0.12);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(80,200,120,0.4);
+}
 
-  /* ── MAIN ── */
+  /* link out to another console (Firm Analytics -> Performance) */
+  .nav-link-item {
+    display: block;
+    padding: 9px 20px;
+    font-family: var(--mono);
+    font-size: 0.78em;
+    color: var(--accent2);
+    cursor: pointer;
+    text-decoration: none;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-link-item:hover { color: var(--text); background: rgba(46,95,163,0.08); border-left-color: var(--accent); }
+  .nav-link-item .arrow { float: right; opacity: 0.8; }
+
   main {
     padding: 32px 36px;
     overflow-y: auto;
@@ -121,7 +134,6 @@
     gap: 24px;
   }
 
-  /* ── PANEL ── */
   .panel {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -149,7 +161,6 @@
   }
   .panel-body { padding: 20px; }
 
-  /* ── FORM ── */
   .form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
@@ -177,7 +188,6 @@
   }
   input:focus, select:focus { border-color: var(--accent); }
   input::placeholder { color: var(--muted); }
-
   .field-hint {
     font-family: var(--mono);
     font-size: 0.62em;
@@ -187,7 +197,6 @@
   }
   .field-hint span { color: var(--accent2); }
 
-  /* ── BUTTONS ── */
   .btn-row { display: flex; gap: 10px; align-items: center; }
   .btn {
     font-family: var(--mono);
@@ -200,29 +209,51 @@
     border-radius: 2px;
     transition: all 0.15s;
   }
-  .btn-primary {
-    background: var(--accent);
-    border-color: var(--accent);
-    color: #fff;
-  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
-  .btn-secondary {
-    background: transparent;
-    border-color: var(--border);
-    color: var(--muted);
-    display: none;
-  }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); display: none; }
   .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
   .btn-secondary.visible { display: inline-block; }
-  .status {
-    font-family: var(--mono);
-    font-size: 0.72em;
-    color: var(--muted);
-    margin-left: auto;
-  }
+  .status { font-family: var(--mono); font-size: 0.72em; color: var(--muted); margin-left: auto; }
 
-  /* ── ALL CLEAR BANNER ── */
+  /* ── PERIOD BOX PICKER ──────────────────────────────────── */
+  .picker-toggle-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .btn-pick {
+    font-family: var(--mono); font-size: 0.7em; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 7px 16px; border: 1px solid var(--border);
+    background: transparent; color: #8a90a8; cursor: pointer; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn-pick:hover { border-color: var(--accent); color: var(--text); }
+  .btn-pick.open { border-color: var(--accent); color: var(--accent2); }
+  .picker-readout { font-family: var(--mono); font-size: 0.7em; color: var(--muted); }
+  .picker-readout b { color: var(--accent2); font-weight: 500; }
+  .bp-wrap {
+    border: 1px solid var(--border); border-radius: 2px; background: var(--bg);
+    max-height: 300px; overflow-y: auto; padding: 12px 14px; margin-bottom: 18px;
+  }
+  .bp-wrap::-webkit-scrollbar { width: 6px; }
+  .bp-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .bp-loading { font-family: var(--mono); font-size: 0.72em; color: var(--muted); padding: 8px; }
+  .bp-yearblock { margin-bottom: 14px; }
+  .bp-yearblock:last-child { margin-bottom: 0; }
+  .bp-yearlabel {
+    font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px;
+    color: var(--accent2); text-transform: uppercase; margin: 0 0 6px 2px;
+  }
+  .bp-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .bp-box {
+    min-width: 48px; text-align: center; padding: 6px 8px; border-radius: 3px;
+    border: 1px solid var(--border); background: var(--surface); color: #8a90a8;
+    font-family: var(--mono); font-size: 0.66em; cursor: pointer; user-select: none;
+    transition: all 0.1s;
+  }
+  .bp-box:hover { border-color: var(--accent2); color: var(--text); }
+  .bp-box.pending { border-style: dashed; color: var(--muted); }
+  .bp-box.inspan { background: rgba(46,95,163,0.20); border-color: rgba(46,95,163,0.45); color: #cfe0f7; }
+  .bp-box.endpoint { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
   .all-clear-banner {
     display: none;
     padding: 18px 24px;
@@ -232,27 +263,11 @@
     gap: 16px;
   }
   .all-clear-banner.show { display: flex; }
-  .all-clear-banner.pass {
-    background: rgba(42,122,74,0.15);
-    border: 1px solid var(--success);
-    color: var(--success-t);
-  }
-  .all-clear-banner.fail {
-    background: rgba(122,42,42,0.15);
-    border: 1px solid var(--fail);
-    color: var(--fail-t);
-  }
-  .badge {
-    font-size: 1.3em;
-    font-weight: 600;
-    letter-spacing: 3px;
-  }
-  .all-clear-detail {
-    font-size: 0.78em;
-    opacity: 0.85;
-  }
+  .all-clear-banner.pass { background: rgba(42,122,74,0.15); border: 1px solid var(--success); color: var(--success-t); }
+  .all-clear-banner.fail { background: rgba(122,42,42,0.15); border: 1px solid var(--fail); color: var(--fail-t); }
+  .badge { font-size: 1.3em; font-weight: 600; letter-spacing: 3px; }
+  .all-clear-detail { font-size: 0.78em; opacity: 0.85; }
 
-  /* ── PERFORMANCE BLOCK ── */
   .perf-block {
     display: none;
     background: var(--bg);
@@ -270,14 +285,8 @@
   .perf-label { font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase; }
   .perf-value { color: var(--text); font-size: 1.1em; }
 
-  /* ── TABLE ── */
   .table-wrap { overflow-x: auto; }
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: var(--mono);
-    font-size: 0.72em;
-  }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
   th {
     background: var(--bg);
     color: var(--muted);
@@ -299,14 +308,8 @@
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.pass { color: var(--success-t); }
   td.fail { color: var(--fail-t); }
-  .row-count {
-    font-family: var(--mono);
-    font-size: 0.68em;
-    color: var(--muted);
-    padding: 8px 16px 12px;
-  }
+  .row-count { font-family: var(--mono); font-size: 0.68em; color: var(--muted); padding: 8px 16px 12px; }
 
-  /* ── SPINNER ── */
   .spinner {
     display: none;
     width: 14px; height: 14px;
@@ -328,20 +331,21 @@
 </header>
 
 <nav>
-  <div class="nav-section">Reports</div>
+  <div class="nav-section">Operations</div>
+  <div class="nav-item" onclick="selectEndpoint('cash-trade-date', this)">Cash Ledger — Trade Date</div>
   <div class="nav-item active" onclick="selectEndpoint('appraisal', this)">Appraisal</div>
   <div class="nav-item" onclick="selectEndpoint('ledger', this)">Accounting Ledger</div>
   <div class="nav-item" onclick="selectEndpoint('position-ledger', this)">Position Ledger</div>
 
-  <div class="nav-section" style="margin-top:12px">Performance</div>
-  <div class="nav-item" onclick="selectEndpoint('performance', this)">Performance</div>
-
-  <div class="nav-section" style="margin-top:12px">Balance Sheet Constituents</div>
-  <div class="nav-item" onclick="selectEndpoint('balance-sheet', this)">Cost Basis</div>
+  <div class="nav-section" style="margin-top:12px">Fund Accounting</div>
+  <div class="nav-item" onclick="selectEndpoint('cost-basis', this)">Cost Basis</div>
   <div class="nav-item" onclick="selectEndpoint('income', this)">Income</div>
-  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
-  <div class="nav-item" onclick="selectEndpoint('realized-gains', this)">Realized Gains</div>
+  <div class="nav-item" onclick="selectEndpoint('realized', this)">Realized Gains</div>
   <div class="nav-item" onclick="selectEndpoint('unrealized', this)">Unrealized</div>
+  <div class="nav-item" onclick="selectEndpoint('capital', this)">Capital</div>
+
+  <div class="nav-section" style="margin-top:12px">Firm Analytics</div>
+  <a class="nav-link-item" href="/perf?context=fig">Performance Console <span class="arrow">↗</span></a>
 
   <div class="nav-section" style="margin-top:12px">Reconciliation</div>
   <div class="nav-item" onclick="selectEndpoint('recon', this)">Master Recon</div>
@@ -349,7 +353,6 @@
 
 <main>
 
-  <!-- PARAMETER PANEL -->
   <div class="panel">
     <div class="panel-head">
       <div class="panel-title" id="endpoint-title">Appraisal</div>
@@ -373,22 +376,22 @@
 
         <div class="form-group">
           <label>Period Start</label>
-          <input id="f-period-start" value="2021-01">
+          <input id="f-period-start" value="2025-12">
           <div class="field-hint" id="period-hint">
-            Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>
+            Monthly: <span>2025-12</span> · Quarterly: <span>2021-Q1</span><br>
             Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>
           </div>
         </div>
 
         <div class="form-group">
           <label>Period End</label>
-          <input id="f-period-end" value="2021-01">
+          <input id="f-period-end" value="2025-12">
           <div class="field-hint">Same format as Period Start</div>
         </div>
 
         <div class="form-group">
           <label>Investment (optional)</label>
-          <input id="f-investment" value="GOOG" placeholder="e.g. GOOG">
+          <input id="f-investment" value="" placeholder="e.g. GOOG">
           <div class="field-hint">Leave blank for full portfolio</div>
         </div>
 
@@ -399,6 +402,15 @@
             <option value="period_open">Period Open</option>
           </select>
           <div class="field-hint"><span>period_close</span> = as of end · <span>period_open</span> = as of start</div>
+        </div>
+
+        <div class="form-group" id="fg-summary" style="display:none">
+          <label>Detail Level</label>
+          <select id="f-summary">
+            <option value="true">Summary — totals only (fast)</option>
+            <option value="false">Detail — every lot</option>
+          </select>
+          <div class="field-hint"><span>Summary</span> = position view · <span>Detail</span> = full lot breakdown</div>
         </div>
 
         <div class="form-group" id="fg-level" style="display:none">
@@ -426,17 +438,13 @@
           <div class="field-hint">Presentation period for returns</div>
         </div>
 
-        <div class="form-group" id="fg-shape" style="display:none">
-          <label>Shape</label>
-          <select id="f-shape">
-            <option value="summary">Summary</option>
-            <option value="detail">Detail</option>
-            <option value="total">Total</option>
-          </select>
-          <div class="field-hint"><span>summary</span> = by type · <span>detail</span> = every entry</div>
-        </div>
-
       </div>
+
+      <div class="picker-toggle-row">
+        <button class="btn-pick" id="btn-pick" onclick="togglePicker()">&#9662; Pick Periods</button>
+        <span class="picker-readout" id="picker-readout"></span>
+      </div>
+      <div class="bp-wrap" id="bp-wrap" style="display:none"></div>
 
       <div class="btn-row">
         <button class="btn btn-primary" id="btn-execute" onclick="execute()">Execute</button>
@@ -447,13 +455,11 @@
     </div>
   </div>
 
-  <!-- ALL CLEAR BANNER -->
   <div class="all-clear-banner" id="all-clear-banner">
     <span class="badge" id="all-clear-text"></span>
     <span class="all-clear-detail" id="all-clear-detail"></span>
   </div>
 
-  <!-- PERFORMANCE BLOCK -->
   <div class="perf-block" id="perf-block">
     <div class="perf-item">
       <div class="perf-label">Response Time</div>
@@ -473,7 +479,6 @@
     </div>
   </div>
 
-  <!-- RESULTS -->
   <div class="panel" id="results-panel" style="display:none">
     <div class="panel-head">
       <div class="panel-title">Results</div>
@@ -496,12 +501,19 @@
 const BASE = '';
 
 const ENDPOINTS = {
+  'cash-trade-date': {
+    title: 'Cash — Trade Date',
+    desc: 'Operational tradeable cash on currency investments',
+    path: '/api/v1/cash-trade-date',
+    csvPath: '/api/v1/cash-trade-date/csv',
+    extras: [],
+  },
   'appraisal': {
     title: 'Appraisal',
     desc: 'Point-in-time portfolio appraisal at tax lot level',
     path: '/api/v1/appraisal',
     csvPath: '/api/v1/appraisal/csv',
-    extras: ['mode'],
+    extras: ['summary'],
   },
   'ledger': {
     title: 'Accounting Ledger',
@@ -524,11 +536,18 @@ const ENDPOINTS = {
     csvPath: '/api/v1/performance/csv',
     extras: ['level', 'cadence'],
   },
-  'balance-sheet': {
+  'performance-summary': {
+    title: 'Performance Summary',
+    desc: 'MTD · QTD · YTD · 1YR · 3YR · 5YR · Annualized · Beta · Alpha · Sharpe',
+    path: '/api/v1/performance/summary',
+    csvPath: '/api/v1/performance/summary/csv',
+    extras: ['level'],
+  },
+  'cost-basis': {
     title: 'Cost Basis',
-    desc: 'Opening · Movement · Closing for every cost basis account',
-    path: '/api/v1/balance-sheet',
-    csvPath: '/api/v1/balance-sheet/csv',
+    desc: 'Opening · Activity · Closing for every cost basis account',
+    path: '/api/v1/cost-basis',
+    csvPath: '/api/v1/cost-basis/csv',
     extras: [],
   },
   'income': {
@@ -536,27 +555,27 @@ const ENDPOINTS = {
     desc: 'Revenue and expense account movements',
     path: '/api/v1/income',
     csvPath: '/api/v1/income/csv',
-    extras: ['shape'],
+    extras: [],
+  },
+  'realized': {
+    title: 'Realized Gains',
+    desc: 'Realized price and FX gains on disposition',
+    path: '/api/v1/realized',
+    csvPath: '/api/v1/realized/csv',
+    extras: [],
+  },
+  'unrealized': {
+    title: 'Unrealized',
+    desc: 'Cumulative unrealized gain — Cost + Unrealized = MarketVal',
+    path: '/api/v1/unrealized',
+    csvPath: '/api/v1/unrealized/csv',
+    extras: [],
   },
   'capital': {
     title: 'Capital',
     desc: 'External capital flows — contributions and withdrawals',
     path: '/api/v1/capital',
     csvPath: '/api/v1/capital/csv',
-    extras: [],
-  },
-  'realized-gains': {
-    title: 'Realized Gains',
-    desc: 'Lot-level realized price and FX gains',
-    path: '/api/v1/realized-gains',
-    csvPath: '/api/v1/realized-gains/csv',
-    extras: [],
-  },
-  'unrealized': {
-    title: 'Unrealized',
-    desc: 'Journal roll-up vs state snapshot — two methods, one result',
-    path: '/api/v1/unrealized',
-    csvPath: '/api/v1/unrealized/csv',
     extras: [],
   },
   'recon': {
@@ -571,7 +590,6 @@ const ENDPOINTS = {
 
 let currentEndpoint = 'appraisal';
 
-// ── CALENDAR → PERIOD FORMAT SYNC ─────────────────────────
 function updatePeriodHints() {
   const cal  = document.getElementById('f-calendar').value.trim().toLowerCase();
   const ps   = document.getElementById('f-period-start');
@@ -579,28 +597,139 @@ function updatePeriodHints() {
   const hint = document.getElementById('period-hint');
 
   if (cal === 'yearly') {
-    ps.value = '2021';
-    pe.value = '2021';
-    hint.innerHTML = 'Yearly: <span>2021</span>';
+    ps.value = '2025'; pe.value = '2025';
+    hint.innerHTML = 'Yearly: <span>2025</span>';
   } else if (cal === 'quarterly') {
-    ps.value = '2021-Q1';
-    pe.value = '2021-Q1';
-    hint.innerHTML = 'Quarterly: <span>2021-Q1</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+    ps.value = '2025-Q4'; pe.value = '2025-Q4';
+    hint.innerHTML = 'Quarterly: <span>2025-Q4</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   } else if (cal === 'daily') {
-    ps.value = '2021-01-08';
-    pe.value = '2021-01-29';
-    hint.innerHTML = 'Daily: <span>2021-01-08</span>';
+    ps.value = '2025-12-31'; pe.value = '2025-12-31';
+    hint.innerHTML = 'Daily: <span>2025-12-31</span>';
   } else {
-    ps.value = '2021-01';
-    pe.value = '2021-01';
-    hint.innerHTML = 'Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+    ps.value = '2025-12'; pe.value = '2025-12';
+    hint.innerHTML = 'Monthly: <span>2025-12</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
   }
 }
 
-document.getElementById('f-calendar').addEventListener('change', updatePeriodHints);
-document.getElementById('f-calendar').addEventListener('blur',   updatePeriodHints);
+document.getElementById('f-calendar').addEventListener('change', () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-calendar').addEventListener('blur',   () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-portfolio').addEventListener('change', reloadGridIfOpen);
 
-// ── ENDPOINT SELECTION ────────────────────────────────────
+/* ============================================================
+   PERIOD BOX PICKER
+   Fetches periods from the ops calendar endpoint and renders a
+   year-partitioned, scrollable grid. Click one period (single)
+   or two (contiguous range — span fills, across years). A third
+   click slides the window. Writes the resolved start/end into
+   f-period-start / f-period-end — the fields execute() reads —
+   so the execute path is completely unchanged.
+   ============================================================ */
+let _bpOrdered  = [];   // flat chronological list of period_name
+let _bpSelected = [];   // up to 2 endpoints, in click order
+let _bpOpen     = false;
+
+function togglePicker() {
+  _bpOpen = !_bpOpen;
+  const wrap = document.getElementById('bp-wrap');
+  const btn  = document.getElementById('btn-pick');
+  wrap.style.display = _bpOpen ? 'block' : 'none';
+  btn.classList.toggle('open', _bpOpen);
+  btn.innerHTML = (_bpOpen ? '&#9652; ' : '&#9662; ') + 'Pick Periods';
+  if (_bpOpen) loadGrid();
+}
+
+function reloadGridIfOpen() { if (_bpOpen) loadGrid(); }
+
+async function loadGrid() {
+  const portfolio = document.getElementById('f-portfolio').value.trim();
+  const calendar  = document.getElementById('f-calendar').value.trim();
+  const wrap = document.getElementById('bp-wrap');
+  wrap.innerHTML = '<div class="bp-loading">Loading periods…</div>';
+
+  let periods = [];
+  try {
+    const r = await fetch(`${BASE}/api/v1/ops/portfolio/${encodeURIComponent(portfolio)}/calendar/${encodeURIComponent(calendar)}`);
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+    periods = (d.periods || []).map(p => ({ name: p.period_name, status: p.status }));
+  } catch (e) {
+    wrap.innerHTML = `<div class="bp-loading">No periods for ${portfolio} · ${calendar} — check the portfolio and calendar names.</div>`;
+    return;
+  }
+  if (!periods.length) {
+    wrap.innerHTML = `<div class="bp-loading">No periods returned for ${portfolio} · ${calendar}.</div>`;
+    return;
+  }
+
+  _bpOrdered = periods.map(p => p.name).sort();          // lexical = chronological
+  const statusBy = Object.fromEntries(periods.map(p => [p.name, p.status]));
+
+  // Pre-select from whatever is currently typed in the period fields.
+  const curStart = document.getElementById('f-period-start').value.trim();
+  const curEnd   = document.getElementById('f-period-end').value.trim();
+  _bpSelected = [];
+  if (_bpOrdered.includes(curStart)) _bpSelected.push(curStart);
+  if (curEnd && curEnd !== curStart && _bpOrdered.includes(curEnd)) _bpSelected.push(curEnd);
+
+  // Group by year (first 4 chars), chronological within each.
+  const byYear = {};
+  for (const name of _bpOrdered) (byYear[name.slice(0,4)] ||= []).push(name);
+
+  wrap.innerHTML = Object.keys(byYear).sort().map(yr => `
+    <div class="bp-yearblock">
+      <div class="bp-yearlabel">${yr}</div>
+      <div class="bp-row">
+        ${byYear[yr].map(name => {
+          const pend  = (statusBy[name] && statusBy[name] !== 'Closed') ? ' pending' : '';
+          const label = name.length <= 4 ? name : name.slice(5);  // MM | Qn | MM-DD
+          return `<div class="bp-box${pend}" data-name="${name}" onclick="bpPick('${name}')">${label}</div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+
+  bpRender();
+}
+
+function bpPick(name) {
+  const i = _bpSelected.indexOf(name);
+  if (i !== -1) { _bpSelected.splice(i, 1); }                 // re-click deselects
+  else { _bpSelected.push(name); if (_bpSelected.length > 2) _bpSelected.shift(); }  // cap 2, slide
+  bpRender();
+}
+
+function bpResolve() {
+  if (_bpSelected.length === 0) return [null, null];
+  if (_bpSelected.length === 1) return [_bpSelected[0], _bpSelected[0]];
+  const s = [..._bpSelected].sort();                          // chronological endpoints
+  return [s[0], s[s.length - 1]];
+}
+
+function bpRender() {
+  const [start, end] = bpResolve();
+
+  // In-span set (inclusive), off the flat ordered list — crosses years naturally.
+  const span = new Set();
+  if (start && end) {
+    const lo = _bpOrdered.indexOf(start), hi = _bpOrdered.indexOf(end);
+    for (let k = Math.min(lo, hi); k <= Math.max(lo, hi); k++) span.add(_bpOrdered[k]);
+  }
+
+  document.querySelectorAll('.bp-box').forEach(box => {
+    const n = box.dataset.name;
+    box.classList.toggle('endpoint', _bpSelected.includes(n));
+    box.classList.toggle('inspan', span.has(n) && !_bpSelected.includes(n));
+  });
+
+  // Write into the fields execute() reads — this is the whole integration.
+  document.getElementById('f-period-start').value = start || '';
+  document.getElementById('f-period-end').value   = end   || '';
+
+  const ro = document.getElementById('picker-readout');
+  if (!start)              ro.innerHTML = '';
+  else if (start === end)  ro.innerHTML = `Selected <b>${start}</b>`;
+  else                     ro.innerHTML = `<b>${start}</b> &rarr; <b>${end}</b> · ${span.size} periods`;
+}
+
 function selectEndpoint(key, el) {
   currentEndpoint = key;
   const ep = ENDPOINTS[key];
@@ -611,7 +740,7 @@ function selectEndpoint(key, el) {
   document.getElementById('endpoint-title').textContent = ep.title;
   document.getElementById('endpoint-desc').textContent  = ep.desc;
 
-  ['mode','level','cadence','shape'].forEach(f => {
+  ['mode','level','cadence','summary'].forEach(f => {
     document.getElementById('fg-' + f).style.display =
       ep.extras.includes(f) ? '' : 'none';
   });
@@ -623,7 +752,6 @@ function selectEndpoint(key, el) {
   document.getElementById('status').textContent = '';
 }
 
-// ── BUILD URL ─────────────────────────────────────────────
 function buildUrl(path) {
   const p   = document.getElementById('f-portfolio').value.trim();
   const c   = document.getElementById('f-calendar').value.trim();
@@ -637,20 +765,19 @@ function buildUrl(path) {
   const ep = ENDPOINTS[currentEndpoint];
   if (ep.extras.includes('mode'))
     url += `&mode=${document.getElementById('f-mode').value}`;
+  if (ep.extras.includes('summary'))
+    url += `&summary_only=${document.getElementById('f-summary').value}`;
   if (ep.extras.includes('level'))
     url += `&level=${document.getElementById('f-level').value}`;
   if (ep.extras.includes('cadence')) {
     const cad = document.getElementById('f-cadence').value;
     if (cad) url += `&cadence=${cad}`;
   }
-  if (ep.extras.includes('shape'))
-    url += `&shape=${document.getElementById('f-shape').value}`;
 
   url += `&page_size=5000`;
   return url;
 }
 
-// ── EXECUTE ───────────────────────────────────────────────
 async function execute() {
   const ep     = ENDPOINTS[currentEndpoint];
   const btn    = document.getElementById('btn-execute');
@@ -669,7 +796,7 @@ async function execute() {
   const t0 = performance.now();
 
   try {
-    const url = buildUrl(ep.path);
+    const url  = buildUrl(ep.path);
     const res  = await fetch(url);
     const json = await res.json();
     const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
@@ -684,7 +811,6 @@ async function execute() {
     const rows = json.data || [];
     const perf = json.performance || {};
 
-    // Performance block
     document.getElementById('perf-time').textContent =
       perf.v_side_readable || elapsed;
     document.getElementById('perf-rows').textContent =
@@ -695,33 +821,29 @@ async function execute() {
       perf.hardware ? 'Laptop · No DB · Pure Python' : '—';
     document.getElementById('perf-block').classList.add('show');
 
-    // All-clear banner for recon
     if (ep.isRecon) {
       const allClear = perf.all_clear ?? json.valid;
       const banner   = document.getElementById('all-clear-banner');
       banner.classList.add('show');
       if (allClear) {
         banner.className = 'all-clear-banner show pass';
-        document.getElementById('all-clear-text').textContent    = '✓  ALL CLEAR';
-        document.getElementById('all-clear-detail').textContent  =
+        document.getElementById('all-clear-text').textContent   = '✓  ALL CLEAR';
+        document.getElementById('all-clear-detail').textContent =
           'Every view · Every investment · Every account ties.';
       } else {
         banner.className = 'all-clear-banner show fail';
-        document.getElementById('all-clear-text').textContent    = '✗  FAILURES DETECTED';
-        document.getElementById('all-clear-detail').textContent  =
+        document.getElementById('all-clear-text').textContent   = '✗  FAILURES DETECTED';
+        document.getElementById('all-clear-detail').textContent =
           (json.errors || []).slice(0,3).join('  ·  ');
       }
     }
 
-    // Table
     if (rows.length > 0) {
       const cols = Object.keys(rows[0]);
-
       document.getElementById('table-head').innerHTML =
         '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
-
       document.getElementById('table-body').innerHTML =
-        rows.slice(0,5000).map(row =>
+        rows.slice(0,20000).map(row =>
           '<tr>' + cols.map(col => {
             const v   = row[col];
             const num = typeof v === 'number';
@@ -737,8 +859,8 @@ async function execute() {
 
       document.getElementById('results-panel').style.display = '';
       document.getElementById('results-desc').textContent = `${rows.length.toLocaleString()} rows`;
-      document.getElementById('row-count').textContent = rows.length > 5000
-        ? `Showing first 5000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
+      document.getElementById('row-count').textContent = rows.length > 20000
+        ? `Showing first 20000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
         : `${rows.length.toLocaleString()} rows`;
     }
 
@@ -751,16 +873,19 @@ async function execute() {
     status.textContent = 'Connection error — is the server running?';
   }
 
-Vgit statusgrep -n "FUNDS_PATH\|funds_path\|chest" /opt/visibility/chest/utilities.py | head -5
+btn.disabled = false;
   spin.classList.remove('show');
 }
 
-// ── CSV DOWNLOAD ──────────────────────────────────────────
 function downloadCSV() {
   const ep = ENDPOINTS[currentEndpoint];
   if (!ep.csvPath) return;
   window.location.href = buildUrl(ep.csvPath);
 }
+
+// Initialize period fields to match the default calendar on load —
+// the hardcoded input values above are only a pre-script fallback.
+updatePeriodHints();
 </script>
 </body>
 </html>

@@ -22,8 +22,8 @@ EVENT_STEPS_SPEC = {
             ("OPEN_POSITION_ACCRUAL", "bond_domain.buy_bond"),
             ("OPEN_PAYABLE", "currency_domain.open_payable"),
             ("OPEN_PAYABLE_ACCRUED", "currency_domain.open_payable"),
-            ("CLOSE_PR_BOND_OUT", "currency_domain.settle_bond_flow_out"),
-            ("UPDATE_SMF", "bond_domain.schedule_update_smf_record_status")
+            ("CLOSE_PR_BOND_OUT", "currency_domain.settle_bond_flows_out"),
+            ("UPDATE_SMF", "bond_domain.schedule_update_af_record_status")
         ]
     },
 
@@ -51,8 +51,8 @@ EVENT_STEPS_SPEC = {
             ("CLOSE_POSITION_ACCRUED", "bond_domain.sell_bond"),
             ("OPEN_RECEIVABLE", "currency_domain.open_receivable"),
             ("OPEN_RECEIVABLE_ACCRUED", "currency_domain.open_receivable"),
-            ("CLOSE_PR_BOND_IN", "currency_domain.settle_bond_flow_in"),
-            ("UPDATE_SMF", "bond_domain.schedule_update_smf_record_status")
+            ("CLOSE_PR_BOND_IN", "currency_domain.settle_bond_flows_in"),
+            ("UPDATE_SMF", "bond_domain.schedule_update_af_record_status")
         ]
     },
 
@@ -80,8 +80,8 @@ EVENT_STEPS_SPEC = {
             ("OPEN_POSITION_ACCRUAL", "bond_domain.short_bond"),
             ("OPEN_RECEIVABLE", "currency_domain.open_receivable"),
             ("OPEN_RECEIVABLE_ACCRUED", "currency_domain.open_receivable"),
-            ("CLOSE_PR_BOND_IN", "currency_domain.settle_bond_flow_in"),
-            ("UPDATE_SMF", "bond_domain.schedule_update_smf_record_status")
+            ("CLOSE_PR_BOND_IN", "currency_domain.settle_bond_flows_in"),
+            ("UPDATE_SMF", "bond_domain.schedule_update_af_record_status")
         ]
     },
 
@@ -109,8 +109,8 @@ EVENT_STEPS_SPEC = {
             ("CLOSE_POSITION_ACCRUED", "bond_domain.cover_bond"),
             ("OPEN_PAYABLE", "currency_domain.open_payable"),
             ("OPEN_PAYABLE_ACCRUED", "currency_domain.open_payable"),
-            ("CLOSE_PR_OUT", "currency_domain.settle_bond_flow_out"),
-            ("UPDATE_SMF", "bond_domain.schedule_update_smf_record_status")
+            ("CLOSE_PR_OUT", "currency_domain.settle_bond_flows_out"),
+            ("UPDATE_SMF", "bond_domain.schedule_update_af_record_status")
         ]
     },
 

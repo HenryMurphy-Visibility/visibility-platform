@@ -29,6 +29,15 @@ only one source of truth.
 No conventional system can run this check.
 In Visibility it runs in milliseconds.
 
+INCEPTION ANCHORING:
+  Cost + Unrealized = MarketVal is an inception-to-date identity, not a
+  period check — cumulative cost basis plus cumulative unrealized equals
+  the position's market value. The recon therefore ALWAYS accumulates
+  from inception through period_end, regardless of the requested
+  period_start (same pattern as compute_performance: the requested
+  window is labeling, not scope). prep is optional; when absent the
+  recon builds its own inception-anchored prep.
+
 Accounting accuracy is credibility.
 ──────────────────────────────────────────────────────────────────────────────
 """
@@ -41,6 +50,10 @@ from typing import Optional
 import pandas as pd
 
 from financial_information_gateway.fig_code.compute_result import ComputeResult
+from financial_information_gateway.fig_code.fig_core import prep_state
+from financial_information_gateway.fig_code.compute_performance import (
+    _get_available_periods,
+)
 from financial_information_gateway.fig_code.compute_classifications import (
     ACCOUNT_CLASSIFICATION,
     STAT_ONLY_ACCOUNTS,
@@ -585,14 +598,38 @@ def compute_recon(
     View 3 — Performance:  TWR implied MV = MarketVal (optional — slower)
     Cross:                 View 1 = View 2 = View 3 = MarketVal
 
+    INCEPTION ANCHORING: Cost + Unrealized = MarketVal only holds
+    cumulatively, so the recon always accumulates from inception through
+    period_end. The requested period_start is labeling only. prep is
+    optional — when absent the recon builds its own inception-anchored
+    prep. An injected prep that is not inception-anchored is warned about,
+    because narrow-window buckets cannot tie to point-in-time market value.
+
     all_clear: true — every view, every investment, agrees on MarketVal.
     Accounting accuracy is credibility.
     """
 
     t_total = time.perf_counter()
 
+    # ── INCEPTION ANCHOR ─────────────────────────────────────────────
+    available_periods = _get_available_periods(portfolio, calendar)
+    if period_end not in available_periods:
+        raise ValueError(
+            f"period_end '{period_end}' not found in snapshots."
+        )
+    inception = available_periods[0]
+
     if prep is None:
-        raise ValueError("prep is required.")
+        prep = prep_state(portfolio, calendar, inception, period_end)
+    else:
+        supplied_start = prep.get("period_start")
+        if supplied_start is not None and supplied_start != inception:
+            print(
+                f">>> compute_recon WARNING: injected prep spans "
+                f"{supplied_start} → {prep.get('period_end')} but the recon "
+                f"is an inception-to-date identity — buckets will be "
+                f"incomplete unless prep is anchored at {inception}."
+            )
 
     # ── EXTRACT ONCE — used by all views ─────────────────────────────
     t_extract = time.perf_counter()
@@ -734,7 +771,7 @@ def compute_recon(
         print(
             f">>> compute_recon ALL CLEAR ✓ "
             f"| {portfolio} | {calendar} "
-            f"| {period_start} → {period_end} "
+            f"| inception {inception} → {period_end} "
             f"| {t_total_ms:.0f}ms"
         )
     else:
@@ -761,6 +798,8 @@ def compute_recon(
         "total_failures":len(all_errors),
         "tolerance":     TOLERANCE,
         "mv_tolerance":  MV_TOLERANCE,
+        "inception":     inception,
+        "anchored":      "inception",
         "uber_filter":   uber_filter,
         "five_buckets": {
             inv: {k: round(v, 2) for k, v in b.items()}

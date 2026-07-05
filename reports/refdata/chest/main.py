@@ -20,7 +20,7 @@ import  bond_domain
 import futures_domain
 import global_domain
 import closed_period
-from bookkeeping import BookkeepingSpace,   Journals, EventScheduler, Event, AssetLiabilityRepository, SettlementChores
+from bookkeeping import BookkeepingSpace,   Journals, EventScheduler, Event, AssetLiabilityRepository, AdministrativeFacility
 import bookkeeping
 from collections import OrderedDict
 import currency_domain
@@ -38,7 +38,7 @@ utilities.load_bond_info_to_aif(sub_ledger, 'c:/BASE_PATH/refdata/bond_info.csv'
 
 #bookkeeping_space = BookkeepingSpace(check_duplicates=False)
 
-smf = SettlementChores()
+af = AdministrativeFacility()
 
 # Enable duplicate checking for debugging or specific operations
 #bookkeeping_space.enable_duplicate_check()
@@ -452,16 +452,16 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
             scheduler.schedule_event(tradedate,  bond_domain.buy_bond, portfolio,
                                      investment,
                                      location, quantity, local, book, journal_entries, sub_ledger, tranid,
-                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency, smf, accrued_local, accrued_book)
+                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency, af, accrued_local, accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio, payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local, accrued_book, fx_data)
+                                         kdend, af, accrued_local, accrued_book, fx_data)
 
                 # Schedule another event to update SMF record status
-                scheduler.schedule_event(settledate, bond_domain.schedule_update_smf_record_status, smf,
+                scheduler.schedule_event(settledate, bond_domain.schedule_update_af_record_status, af,
                                          tranid, "Settled", portfolio)
         if method == "buy_future":
             scheduler.schedule_event(tradedate, futures_domain.buy_future, portfolio, investment,
@@ -492,17 +492,17 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
             scheduler.schedule_event(tradedate, bond_domain.sell_bond, portfolio, investment,
                                      location, quantity, local, book, closing_method, journal_entries,
                                      sub_ledger, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, smf, accrued_local,
+                                     payment_currency, af, accrued_local,
                                      accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_in, portfolio,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_in, portfolio,
                                          payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend,  smf, accrued_local, accrued_book)
+                                         kdend,  af, accrued_local, accrued_book)
                 #Schedule another event to update SMF record status
                 scheduler.schedule_event(settledate,
-                                         bond_domain.schedule_update_smf_record_status, smf,
+                                         bond_domain.schedule_update_af_record_status, af,
                                          tranid, "Settled", portfolio)
         elif method == "sell_future":
             closing_method = "FIFO"
@@ -516,7 +516,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                 scheduler.schedule_event(
                     settledate, currency_domain.settle_pay_rec_by_tranid, portfolio, investment, location,  quantity, local, book, journal_entries,
                     sub_ledger, tranid, "FutureSettlement", tradedate, settledate, kdbegin,
-                        kdend, payment_currency, smf, fx_data)
+                        kdend, payment_currency, af, fx_data)
 
 
         elif method == "short_equity":
@@ -535,16 +535,16 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
             scheduler.schedule_event(tradedate, bond_domain.short_bond, portfolio, investment,
                                      location, quantity, local, book, journal_entries, sub_ledger, tranid,
                                      transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
-                                      smf, accrued_local, accrued_book)
+                                      af, accrued_local, accrued_book)
 
-            def settle_bond_flow_in(portfolio, payment_currency, investment, location, quantity, local,
+            def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
                                     book, journal_entries, sub_ledger, tranid, transaction, tradedate,
                                     settledate,
-                                    kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
+                                    kdbegin, kdend, af, accrued_local, accrued_book, fx_data):
 
                 # Schedule another event to update SMF record status
                 scheduler.schedule_event(settledate,
-                                         bond_domain.schedule_update_smf_record_status, smf,
+                                         bond_domain.schedule_update_af_record_status, af,
                                          tranid, "Settled", portfolio)
         if method == "short_future":
             scheduler.schedule_event(tradedate, futures_domain.buy_future, portfolio, investment,
@@ -574,19 +574,19 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
             scheduler.schedule_event(tradedate, bond_domain.cover_bond, portfolio, investment,
                                      location, quantity, local, book, closing_method, journal_entries,
                                      sub_ledger, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, smf, accrued_local,
+                                     payment_currency, af, accrued_local,
                                      accrued_book)
 
             if tradedate != settledate and settledate <= period_cutoff:
-                scheduler.schedule_event(settledate, currency_domain.settle_bond_flow_out,
+                scheduler.schedule_event(settledate, currency_domain.settle_bond_flows_out,
                                          portfolio,
                                          payment_currency, investment, location, quantity, local, book, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, accrued_local,
+                                         kdend, af, accrued_local,
                                          accrued_book, fx_data)
                 # Schedule another event to update SMF record status
                 scheduler.schedule_event(settledate,
-                                         bond_domain.schedule_update_smf_record_status, smf,
+                                         bond_domain.schedule_update_af_record_status, af,
                                          tranid, "Settled", portfolio)
 
         elif method == "cover_future":
@@ -602,7 +602,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                     settledate, currency_domain.settle_pay_rec_by_tranid, portfolio, investment, location, quantity,
                     local, book, journal_entries,
                     sub_ledger, tranid, "FutureSettlement", tradedate, settledate, kdbegin,
-                    kdend, payment_currency, smf, fx_data)
+                    kdend, payment_currency, af, fx_data)
 
 
         elif method == "dividend_equity":
@@ -616,7 +616,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                 scheduler.schedule_event(settledate, currency_domain.settle_multiple_flows_in_out, portfolio,
                                         payment_currency, investment, financial_account_in, financial_account_out, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, fx_data)
+                                         kdend, af, fx_data)
                 # portfolio, payment_currency, financial_account_in, financial_account_out,
                 # journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
                 # kdbegin, kdend):
@@ -624,7 +624,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
         elif method == "bond_coupon":
             scheduler.schedule_event(tradedate, bond_domain.bond_coupon, portfolio, investment,
                                      journal_entries,sub_ledger, tranid, transaction, tradedate, settledate, kdbegin, kdend,
-                                     payment_currency, per_share,  smf)
+                                     payment_currency, per_share,  af)
 
             if tradedate != settledate and settledate <= period_cutoff:
                 financial_account_in = "InterestReceivable"
@@ -632,7 +632,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                 scheduler.schedule_event(settledate,  currency_domain.settle_multiple_flows_in_out, portfolio,
                                         payment_currency, investment, financial_account_in, financial_account_out, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, fx_data)
+                                         kdend, af, fx_data)
 
         elif method == "split_equity":
             scheduler.schedule_event(tradedate, equity_domain.split_equity, portfolio, investment,
@@ -649,7 +649,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
         elif method == "swap_open":
             scheduler.schedule_event(tradedate, swaps_domain.swap_open, portfolio, investment,
                                      location, quantity, local, book, journal_entries, sub_ledger, tranid,
-                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency, period_start,  smf, legin, legout)
+                                     transaction, tradedate, settledate, kdbegin, kdend, payment_currency, period_start,  af, legin, legout)
 
         elif method == "withdraw_currency":
             scheduler.schedule_event(tradedate, currency_domain.withdraw_currency, portfolio,
@@ -666,7 +666,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
             scheduler.schedule_event(tradedate, global_domain.allocate, portfolio,
                                  investment, location, quantity, local, book,
                                  tranid, transaction, tradedate, settledate, kdbegin, kdend, period_start,
-                                 period_cutoff,  smf, allocation_entities, allocation_percents)
+                                 period_cutoff,  af, allocation_entities, allocation_percents)
 
         elif method == "expense":
             scheduler.schedule_event(tradedate, currency_domain.expense, portfolio,
@@ -684,11 +684,11 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                 scheduler.schedule_event(settledate, currency_domain.settle_single_flow_out, portfolio,
                                          sell_currency, location, sell_amt, sell_amt, buy_amt, journal_entries,
                                          sub_ledger, tranid, "SpotSettlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, fx_data)
+                                         kdend, af, fx_data)
                 scheduler.schedule_event(settledate, currency_domain.settle_single_flow_in, portfolio,
                                          buy_currency, location, buy_amt, buy_amt, buy_amt, journal_entries,
                                          sub_ledger, tranid, "SpotSettlement", tradedate, settledate, kdbegin,
-                                         kdend, smf, fx_data)
+                                         kdend, af, fx_data)
         elif method == "exercise_option_open":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, equity_domain.exercise_option_open, portfolio,
@@ -703,7 +703,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                 scheduler.schedule_event(settledate, currency_domain.settle_multiple_flows_in_out, portfolio,
                                         payment_currency, investment, financial_account_in, financial_account_out, journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate, kdbegin,
-                                         kdend,  smf, fx_data)
+                                         kdend,  af, fx_data)
         elif method == "exercise_option_close":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, equity_domain.exercise_option_close,
@@ -722,7 +722,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                          journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate,
                                          kdbegin,
-                                         kdend, smf, fx_data)
+                                         kdend, af, fx_data)
         elif method == "assign_option_open":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, equity_domain.assign_option_open,
@@ -741,7 +741,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                          journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate,
                                          kdbegin,
-                                         kdend,  smf, fx_data)
+                                         kdend,  af, fx_data)
         elif method == "assign_option_close":
             closing_method = "FIFO"
             scheduler.schedule_event(tradedate, equity_domain.assign_option_close,
@@ -760,7 +760,7 @@ def process_events(space_manager, events_sheet,  fund, process_start_date, perio
                                          journal_entries,
                                          sub_ledger, tranid, "Settlement", tradedate, settledate,
                                          kdbegin,
-                                         kdend,  smf, fx_data)
+                                         kdend,  af, fx_data)
 
             # def spotfx(portfolio, investment, location, qty, local, book, journal_entries, sub_ledger, tranid,
             #            transaction, tradedate, settledate, kdbegin, kdend, buy_currency, sell_currency,

@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Visibility — Performance Console</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:wght@300;400;600&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg:        #07080f;
+    --surface:   #0d0f1a;
+    --border:    #1a1e2e;
+    --accent:    #2E5FA3;
+    --accent2:   #4a7fc1;
+    --text:      #d8dce8;
+    --muted:     #c4c9d8;
+    --success:   #2a7a4a;
+    --success-t: #3dba70;
+    --fail:      #7a2a2a;
+    --fail-t:    #e05555;
+    --gold:      #e6a817;
+    --mono:      'JetBrains Mono', monospace;
+    --serif:     'Crimson Pro', Georgia, serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    grid-template-rows: 56px 1fr;
+  }
+
+  header {
+    grid-column: 1 / -1;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 28px;
+    gap: 16px;
+  }
+  header h1 {
+    font-family: var(--serif);
+    font-size: 1.2em;
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: #fff;
+    cursor: default;
+  }
+  header h1:hover { color: var(--accent2); }
+  header span {
+    font-family: var(--mono);
+    font-size: 0.7em;
+    color: var(--muted);
+    letter-spacing: 1px;
+  }
+  header span:hover { color: var(--text); }
+  .header-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-left: auto;
+    box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 20px 0;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+  .nav-section {
+    padding: 6px 20px 4px;
+    font-family: var(--mono);
+    font-size: 0.75em;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: #ffffff;
+    cursor: default;
+  }
+  .nav-section:hover { color: var(--accent2); }
+  .nav-item {
+    display: block;
+    padding: 9px 20px;
+    font-family: var(--mono);
+    font-size: 0.78em;
+    color: #7eb8f7;
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    transition: all 0.15s;
+    user-select: none;
+  }
+  .nav-item:hover { color: var(--text); background: rgba(46,95,163,0.08); }
+  .nav-item.active {
+    color: #00ff88 ;
+    border-left-color: #00ff88 ;
+    background: rgba(80,200,120,0.12);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 8px rgba(80,200,120,0.4);
+  }
+
+  /* link back to FIG — mirrors ops' nav-fig-link pattern */
+  .nav-link-out { margin-top: auto; padding: 16px 20px 4px; }
+  .nav-link-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-family: var(--mono); font-size: 0.72em; letter-spacing: 1px;
+    text-transform: uppercase; text-decoration: none;
+    color: var(--accent2); border: 1px solid var(--border);
+    background: var(--bg); padding: 8px 14px; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .nav-link-btn:hover { border-color: var(--accent); color: var(--text); background: rgba(46,95,163,0.1); }
+  .nav-link-arrow { font-size: 1.05em; }
+
+  main {
+    padding: 32px 36px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 2px; }
+  .panel-head {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px;
+  }
+  .panel-title {
+    font-family: var(--mono); font-size: 0.8em; letter-spacing: 1.5px;
+    text-transform: uppercase; color: #fff;
+  }
+  .panel-desc { font-size: 0.85em; color: var(--muted); margin-left: auto; font-style: italic; }
+  .panel-body { padding: 20px; }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 5px; }
+  label {
+    font-family: var(--mono); font-size: 0.65em; letter-spacing: 1.5px;
+    text-transform: uppercase; color: var(--muted);
+  }
+  input, select {
+    background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    font-family: var(--mono); font-size: 0.82em; padding: 8px 10px;
+    border-radius: 2px; outline: none; transition: border-color 0.15s;
+  }
+  input:focus, select:focus { border-color: var(--accent); }
+  input::placeholder { color: var(--muted); }
+  .field-hint {
+    font-family: var(--mono); font-size: 0.62em; color: var(--muted);
+    line-height: 1.6; margin-top: 3px;
+  }
+  .field-hint span { color: var(--accent2); }
+
+  .btn-row { display: flex; gap: 10px; align-items: center; }
+  .btn {
+    font-family: var(--mono); font-size: 0.75em; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 9px 22px; border: 1px solid;
+    cursor: pointer; border-radius: 2px; transition: all 0.15s;
+  }
+  .btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-secondary { background: transparent; border-color: var(--border); color: var(--muted); display: none; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--text); }
+  .btn-secondary.visible { display: inline-block; }
+  .status { font-family: var(--mono); font-size: 0.72em; color: var(--muted); margin-left: auto; }
+
+  /* ── PERIOD BOX PICKER ──────────────────────────────────── */
+  .picker-toggle-row { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+  .btn-pick {
+    font-family: var(--mono); font-size: 0.7em; letter-spacing: 1.5px;
+    text-transform: uppercase; padding: 7px 16px; border: 1px solid var(--border);
+    background: transparent; color: #8a90a8; cursor: pointer; border-radius: 2px;
+    transition: all 0.15s;
+  }
+  .btn-pick:hover { border-color: var(--accent); color: var(--text); }
+  .btn-pick.open { border-color: var(--accent); color: var(--accent2); }
+  .picker-readout { font-family: var(--mono); font-size: 0.7em; color: var(--muted); }
+  .picker-readout b { color: var(--accent2); font-weight: 500; }
+  .bp-wrap {
+    border: 1px solid var(--border); border-radius: 2px; background: var(--bg);
+    max-height: 300px; overflow-y: auto; padding: 12px 14px; margin-bottom: 18px;
+  }
+  .bp-wrap::-webkit-scrollbar { width: 6px; }
+  .bp-wrap::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+  .bp-loading { font-family: var(--mono); font-size: 0.72em; color: var(--muted); padding: 8px; }
+  .bp-yearblock { margin-bottom: 14px; }
+  .bp-yearblock:last-child { margin-bottom: 0; }
+  .bp-yearlabel {
+    font-family: var(--mono); font-size: 0.6em; letter-spacing: 2px;
+    color: var(--accent2); text-transform: uppercase; margin: 0 0 6px 2px;
+  }
+  .bp-row { display: flex; flex-wrap: wrap; gap: 5px; }
+  .bp-box {
+    min-width: 48px; text-align: center; padding: 6px 8px; border-radius: 3px;
+    border: 1px solid var(--border); background: var(--surface); color: #8a90a8;
+    font-family: var(--mono); font-size: 0.66em; cursor: pointer; user-select: none;
+    transition: all 0.1s;
+  }
+  .bp-box:hover { border-color: var(--accent2); color: var(--text); }
+  .bp-box.pending { border-style: dashed; color: var(--muted); }
+  .bp-box.inspan { background: rgba(46,95,163,0.20); border-color: rgba(46,95,163,0.45); color: #cfe0f7; }
+  .bp-box.endpoint { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
+  .perf-block {
+    display: none;
+    background: var(--bg); border: 1px solid var(--border); border-radius: 2px;
+    padding: 14px 16px; font-family: var(--mono); font-size: 0.72em; color: var(--muted);
+    gap: 28px; flex-wrap: wrap;
+  }
+  .perf-block.show { display: flex; }
+  .perf-item { display: flex; flex-direction: column; gap: 3px; }
+  .perf-label { font-size: 0.85em; letter-spacing: 1px; text-transform: uppercase; }
+  .perf-value { color: var(--text); font-size: 1.1em; }
+
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 0.72em; }
+  th {
+    background: var(--bg); color: var(--muted); font-weight: 400; letter-spacing: 1px;
+    text-transform: uppercase; padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border); white-space: nowrap;
+  }
+  td {
+    padding: 7px 12px; border-bottom: 1px solid rgba(26,30,46,0.6);
+    white-space: nowrap; color: var(--text);
+  }
+  tr:hover td { background: rgba(46,95,163,0.05); }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .row-count { font-family: var(--mono); font-size: 0.68em; color: var(--muted); padding: 8px 16px 12px; }
+
+  .spinner {
+    display: none; width: 14px; height: 14px;
+    border: 2px solid var(--border); border-top-color: var(--accent);
+    border-radius: 50%; animation: spin 0.6s linear infinite;
+  }
+  .spinner.show { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Visibility</h1>
+  <span>Performance Console · Time-Weighted Returns</span>
+  <div class="header-dot"></div>
+</header>
+
+<nav>
+  <div class="nav-sections">
+    <div class="nav-section">Firm Analytics</div>
+    <div class="nav-item active" onclick="selectEndpoint('performance', this)">Detailed TWR Performance</div>
+    <div class="nav-item" onclick="selectEndpoint('performance-summary', this)">Summarized TWR Performance</div>
+  </div>
+
+  <div class="nav-link-out">
+    <a href="/fig?context=perf" class="nav-link-btn">FIG — Reports <span class="nav-link-arrow">↗</span></a>
+  </div>
+</nav>
+
+<main>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div class="panel-title" id="endpoint-title">Performance</div>
+      <div class="panel-desc" id="endpoint-desc">Chained TWR — any range, level, and cadence</div>
+    </div>
+    <div class="panel-body">
+      <div class="form-grid">
+
+        <div class="form-group">
+          <label>Portfolio</label>
+          <input id="f-portfolio" value="Portfolio1">
+        </div>
+
+        <div class="form-group">
+          <label>Calendar</label>
+          <input id="f-calendar" value="Monthly">
+          <div class="field-hint">
+            <span>Monthly</span> · <span>Daily</span> · <span>Quarterly</span> · <span>Yearly</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Period Start</label>
+          <input id="f-period-start" value="2021-01">
+          <div class="field-hint" id="period-hint">
+            Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>
+            Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Period End</label>
+          <input id="f-period-end" value="2025-12">
+          <div class="field-hint">Same format as Period Start</div>
+        </div>
+
+        <div class="form-group">
+          <label>Investment (optional)</label>
+          <input id="f-investment" value="" placeholder="e.g. GOOG">
+          <div class="field-hint">Leave blank for full portfolio</div>
+        </div>
+
+        <div class="form-group" id="fg-level">
+          <label>Level</label>
+          <select id="f-level">
+            <option value="portfolio">Portfolio</option>
+            <option value="investment">Investment</option>
+            <option value="sector">Sector</option>
+            <option value="analyst">Analyst</option>
+            <option value="country">Country</option>
+            <option value="currency">Currency</option>
+          </select>
+          <div class="field-hint">Grouping level for returns</div>
+        </div>
+
+        <div class="form-group" id="fg-cadence">
+          <label>Cadence</label>
+          <select id="f-cadence">
+            <option value="">Full Range</option>
+            <option value="D">Daily</option>
+            <option value="M">Monthly</option>
+            <option value="Q">Quarterly</option>
+            <option value="Y">Yearly</option>
+          </select>
+          <div class="field-hint">Presentation period for returns</div>
+        </div>
+
+      </div>
+
+      <div class="picker-toggle-row">
+        <button class="btn-pick" id="btn-pick" onclick="togglePicker()">&#9662; Pick Periods</button>
+        <span class="picker-readout" id="picker-readout"></span>
+      </div>
+      <div class="bp-wrap" id="bp-wrap" style="display:none"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-execute" onclick="execute()">Execute</button>
+        <button class="btn btn-secondary" id="btn-csv" onclick="downloadCSV()">Download CSV</button>
+        <div class="spinner" id="spinner"></div>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="perf-block" id="perf-block">
+    <div class="perf-item">
+      <div class="perf-label">Response Time</div>
+      <div class="perf-value" id="perf-time">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Rows</div>
+      <div class="perf-value" id="perf-rows">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Investments</div>
+      <div class="perf-value" id="perf-investments">—</div>
+    </div>
+    <div class="perf-item">
+      <div class="perf-label">Hardware</div>
+      <div class="perf-value" id="perf-hw">—</div>
+    </div>
+  </div>
+
+  <div class="panel" id="results-panel" style="display:none">
+    <div class="panel-head">
+      <div class="panel-title">Results</div>
+      <div class="panel-desc" id="results-desc"></div>
+    </div>
+    <div class="panel-body" style="padding:0">
+      <div class="table-wrap">
+        <table id="results-table">
+          <thead id="table-head"></thead>
+          <tbody id="table-body"></tbody>
+        </table>
+      </div>
+      <div class="row-count" id="row-count"></div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const BASE = '';
+
+const ENDPOINTS = {
+  'performance': {
+    title: 'Performance',
+    desc: 'Chained TWR — any range, level, and cadence',
+    path: '/api/v1/performance',
+    csvPath: '/api/v1/performance/csv',
+    extras: ['level', 'cadence'],
+  },
+  'performance-summary': {
+    title: 'Performance Summary',
+    desc: 'MTD · QTD · YTD · 1YR · 3YR · 5YR · Annualized · Beta · Alpha · Sharpe',
+    path: '/api/v1/performance/summary',
+    csvPath: null,                 // summary CSV not yet implemented — no dead button
+    extras: ['level'],
+  },
+};
+
+let currentEndpoint = 'performance';
+
+function updatePeriodHints() {
+  const cal  = document.getElementById('f-calendar').value.trim().toLowerCase();
+  const ps   = document.getElementById('f-period-start');
+  const pe   = document.getElementById('f-period-end');
+  const hint = document.getElementById('period-hint');
+
+  if (cal === 'yearly') {
+    ps.value = '2021'; pe.value = '2025';
+    hint.innerHTML = 'Yearly: <span>2021</span>';
+  } else if (cal === 'quarterly') {
+    ps.value = '2021-Q1'; pe.value = '2025-Q4';
+    hint.innerHTML = 'Quarterly: <span>2021-Q1</span> · Monthly: <span>2021-01</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+  } else if (cal === 'daily') {
+    ps.value = '2021-01-08'; pe.value = '2025-12-31';
+    hint.innerHTML = 'Daily: <span>2021-01-08</span>';
+  } else {
+    ps.value = '2021-01'; pe.value = '2025-12';
+    hint.innerHTML = 'Monthly: <span>2021-01</span> · Quarterly: <span>2021-Q1</span><br>Daily: <span>2021-01-15</span> · Yearly: <span>2021</span>';
+  }
+}
+
+document.getElementById('f-calendar').addEventListener('change', () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-calendar').addEventListener('blur',   () => { updatePeriodHints(); reloadGridIfOpen(); });
+document.getElementById('f-portfolio').addEventListener('change', reloadGridIfOpen);
+
+/* ── PERIOD BOX PICKER (reuses the ops calendar endpoint) ── */
+let _bpOrdered  = [];
+let _bpSelected = [];
+let _bpOpen     = false;
+
+function togglePicker() {
+  _bpOpen = !_bpOpen;
+  const wrap = document.getElementById('bp-wrap');
+  const btn  = document.getElementById('btn-pick');
+  wrap.style.display = _bpOpen ? 'block' : 'none';
+  btn.classList.toggle('open', _bpOpen);
+  btn.innerHTML = (_bpOpen ? '&#9652; ' : '&#9662; ') + 'Pick Periods';
+  if (_bpOpen) loadGrid();
+}
+
+function reloadGridIfOpen() { if (_bpOpen) loadGrid(); }
+
+async function loadGrid() {
+  const portfolio = document.getElementById('f-portfolio').value.trim();
+  const calendar  = document.getElementById('f-calendar').value.trim();
+  const wrap = document.getElementById('bp-wrap');
+  wrap.innerHTML = '<div class="bp-loading">Loading periods…</div>';
+
+  let periods = [];
+  try {
+    const r = await fetch(`${BASE}/api/v1/ops/portfolio/${encodeURIComponent(portfolio)}/calendar/${encodeURIComponent(calendar)}`);
+    if (!r.ok) throw new Error('status ' + r.status);
+    const d = await r.json();
+    periods = (d.periods || []).map(p => ({ name: p.period_name, status: p.status }));
+  } catch (e) {
+    wrap.innerHTML = `<div class="bp-loading">No periods for ${portfolio} · ${calendar} — check the portfolio and calendar names.</div>`;
+    return;
+  }
+  if (!periods.length) {
+    wrap.innerHTML = `<div class="bp-loading">No periods returned for ${portfolio} · ${calendar}.</div>`;
+    return;
+  }
+
+  _bpOrdered = periods.map(p => p.name).sort();
+  const statusBy = Object.fromEntries(periods.map(p => [p.name, p.status]));
+
+  const curStart = document.getElementById('f-period-start').value.trim();
+  const curEnd   = document.getElementById('f-period-end').value.trim();
+  _bpSelected = [];
+  if (_bpOrdered.includes(curStart)) _bpSelected.push(curStart);
+  if (curEnd && curEnd !== curStart && _bpOrdered.includes(curEnd)) _bpSelected.push(curEnd);
+
+  const byYear = {};
+  for (const name of _bpOrdered) (byYear[name.slice(0,4)] ||= []).push(name);
+
+  wrap.innerHTML = Object.keys(byYear).sort().map(yr => `
+    <div class="bp-yearblock">
+      <div class="bp-yearlabel">${yr}</div>
+      <div class="bp-row">
+        ${byYear[yr].map(name => {
+          const pend  = (statusBy[name] && statusBy[name] !== 'Closed') ? ' pending' : '';
+          const label = name.length <= 4 ? name : name.slice(5);
+          return `<div class="bp-box${pend}" data-name="${name}" onclick="bpPick('${name}')">${label}</div>`;
+        }).join('')}
+      </div>
+    </div>`).join('');
+
+  bpRender();
+}
+
+function bpPick(name) {
+  const i = _bpSelected.indexOf(name);
+  if (i !== -1) { _bpSelected.splice(i, 1); }
+  else { _bpSelected.push(name); if (_bpSelected.length > 2) _bpSelected.shift(); }
+  bpRender();
+}
+
+function bpResolve() {
+  if (_bpSelected.length === 0) return [null, null];
+  if (_bpSelected.length === 1) return [_bpSelected[0], _bpSelected[0]];
+  const s = [..._bpSelected].sort();
+  return [s[0], s[s.length - 1]];
+}
+
+function bpRender() {
+  const [start, end] = bpResolve();
+
+  const span = new Set();
+  if (start && end) {
+    const lo = _bpOrdered.indexOf(start), hi = _bpOrdered.indexOf(end);
+    for (let k = Math.min(lo, hi); k <= Math.max(lo, hi); k++) span.add(_bpOrdered[k]);
+  }
+
+  document.querySelectorAll('.bp-box').forEach(box => {
+    const n = box.dataset.name;
+    box.classList.toggle('endpoint', _bpSelected.includes(n));
+    box.classList.toggle('inspan', span.has(n) && !_bpSelected.includes(n));
+  });
+
+  document.getElementById('f-period-start').value = start || '';
+  document.getElementById('f-period-end').value   = end   || '';
+
+  const ro = document.getElementById('picker-readout');
+  if (!start)              ro.innerHTML = '';
+  else if (start === end)  ro.innerHTML = `Selected <b>${start}</b>`;
+  else                     ro.innerHTML = `<b>${start}</b> &rarr; <b>${end}</b> · ${span.size} periods`;
+}
+
+function selectEndpoint(key, el) {
+  currentEndpoint = key;
+  const ep = ENDPOINTS[key];
+
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  document.getElementById('endpoint-title').textContent = ep.title;
+  document.getElementById('endpoint-desc').textContent  = ep.desc;
+
+  ['level','cadence'].forEach(f => {
+    document.getElementById('fg-' + f).style.display =
+      ep.extras.includes(f) ? '' : 'none';
+  });
+
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('perf-block').classList.remove('show');
+  document.getElementById('btn-csv').classList.remove('visible');
+  document.getElementById('status').textContent = '';
+}
+
+function buildUrl(path) {
+  const p   = document.getElementById('f-portfolio').value.trim();
+  const c   = document.getElementById('f-calendar').value.trim();
+  const ps  = document.getElementById('f-period-start').value.trim();
+  const pe  = document.getElementById('f-period-end').value.trim();
+  const inv = document.getElementById('f-investment').value.trim();
+
+  let url = `${BASE}${path}?portfolio=${p}&calendar=${c}&period_start=${ps}&period_end=${pe}`;
+  if (inv) url += `&investment=${encodeURIComponent(inv)}`;
+
+  const ep = ENDPOINTS[currentEndpoint];
+  if (ep.extras.includes('level'))
+    url += `&level=${document.getElementById('f-level').value}`;
+  if (ep.extras.includes('cadence')) {
+    const cad = document.getElementById('f-cadence').value;
+    if (cad) url += `&cadence=${cad}`;
+  }
+
+  url += `&page_size=5000`;
+  return url;
+}
+
+async function execute() {
+  const ep     = ENDPOINTS[currentEndpoint];
+  const btn    = document.getElementById('btn-execute');
+  const spin   = document.getElementById('spinner');
+  const status = document.getElementById('status');
+
+  btn.disabled = true;
+  spin.classList.add('show');
+  status.textContent = 'Executing…';
+
+  document.getElementById('results-panel').style.display = 'none';
+  document.getElementById('perf-block').classList.remove('show');
+  document.getElementById('btn-csv').classList.remove('visible');
+
+  const t0 = performance.now();
+
+  try {
+    const url  = buildUrl(ep.path);
+    const res  = await fetch(url);
+    const json = await res.json();
+    const elapsed = ((performance.now() - t0) / 1000).toFixed(2) + 's';
+
+    if (!res.ok) {
+      status.textContent = `Error ${res.status}: ${json.detail || 'Unknown'}`;
+      btn.disabled = false;
+      spin.classList.remove('show');
+      return;
+    }
+
+    const rows = json.data || [];
+    const perf = json.performance || {};
+
+    document.getElementById('perf-time').textContent =
+      perf.v_side_readable || elapsed;
+    document.getElementById('perf-rows').textContent =
+      (perf.pagination?.total_rows ?? rows.length).toLocaleString();
+    document.getElementById('perf-investments').textContent =
+      perf.processed?.investments ?? '—';
+    document.getElementById('perf-hw').textContent =
+      perf.hardware ? 'Cloud · No DB · Pure Python' : '—';
+    document.getElementById('perf-block').classList.add('show');
+
+    if (rows.length > 0) {
+      const cols = Object.keys(rows[0]);
+      document.getElementById('table-head').innerHTML =
+        '<tr>' + cols.map(c => `<th>${c.replace(/_/g,' ')}</th>`).join('') + '</tr>';
+      document.getElementById('table-body').innerHTML =
+        rows.slice(0,20000).map(row =>
+          '<tr>' + cols.map(col => {
+            const v   = row[col];
+            const num = typeof v === 'number';
+            let cls   = num ? 'num' : '';
+            // Index and return columns need 5 decimals — cumulative returns
+            // sit near 1.0 and the movement is in the trailing digits, so 2dp
+            // collapses distinct daily values. Money columns stay at 2dp.
+            const hi = /Index|ToDate|TWR|Return|Percent/i.test(col);
+            const disp = v == null ? '' : num
+              ? (hi
+                  ? v.toLocaleString('en-US',{minimumFractionDigits:5,maximumFractionDigits:5})
+                  : v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}))
+              : String(v);
+            return `<td class="${cls.trim()}">${disp}</td>`;
+          }).join('') + '</tr>'
+        ).join('');
+
+      document.getElementById('results-panel').style.display = '';
+      document.getElementById('results-desc').textContent = `${rows.length.toLocaleString()} rows`;
+      document.getElementById('row-count').textContent = rows.length > 20000
+        ? `Showing first 20000 of ${rows.length.toLocaleString()} rows · Download CSV for full dataset`
+        : `${rows.length.toLocaleString()} rows`;
+    }
+
+    if (ep.csvPath)
+      document.getElementById('btn-csv').classList.add('visible');
+
+    status.textContent = `${elapsed} · ${rows.length} rows`;
+
+  } catch(e) {
+    status.textContent = 'Connection error — is the server running?';
+  }
+
+  btn.disabled = false;
+  spin.classList.remove('show');
+}
+
+function downloadCSV() {
+  const ep = ENDPOINTS[currentEndpoint];
+  if (!ep.csvPath) return;
+  window.location.href = buildUrl(ep.csvPath);
+}
+
+// initialise the default view
+selectEndpoint('performance', document.querySelector('.nav-item.active'));
+</script>
+</body>
+</html>

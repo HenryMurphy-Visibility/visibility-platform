@@ -254,9 +254,9 @@ import pandas as pd
 
 # Load the transaction data from an Excel file
 #transactions_data = pd.read_csv('C:/Users/hjmne/PycharmProjects/chest/refdata/MyPortfolio.csv')
-
-# Load the price master data from a CSV file
-prices_data = pd.read_csv('C:/Users/hjmne/PycharmProjects/chest/refdata/price_master.csv')
+from v_config import REFDATA_PATH
+import os
+prices_data = pd.read_csv(os.path.join(REFDATA_PATH, 'price_master.csv'))
 
 # Define the function to check price ranges
 def check_price_range(transactions, prices, percentage_range):

@@ -35,20 +35,27 @@ from financial_information_gateway.fig_code.compute_balance_sheet import compute
 from financial_information_gateway.fig_code.compute_capital import compute_capital
 from financial_information_gateway.fig_code.compute_income import compute_income
 from financial_information_gateway.fig_code.compute_unrealized import compute_unrealized
+from financial_information_gateway.fig_code.compute_realized import compute_realized
 from financial_information_gateway.fig_code.compute_recon import compute_recon
 from financial_information_gateway.fig_code.compute_cost_basis import compute_cost_basis
+
+from financial_information_gateway.fig_code.compute_performance_summary import compute_performance_summary
+
+
 
 COMPUTE_REGISTRY = {
     "compute_accounting_ledger": compute_accounting_ledger,
     "compute_appraisal": compute_appraisal,
     "compute_position_ledger": compute_position_ledger,
-    "compute_performance": compute_performance,
     "compute_capital": compute_capital,
     "compute_balance_sheet": compute_balance_sheet,
     "compute_income": compute_income,
+    "compute_realized": compute_realized,
     "compute_unrealized": compute_unrealized,
     "compute_recon": compute_recon,
     "compute_cost_basis": compute_cost_basis,
+    "compute_performance": compute_performance,
+    "compute_performance_summary": compute_performance_summary
 
 }
 

@@ -22,6 +22,13 @@ import pandas as pd
 from v_config import FUNDS_PATH
 from financial_information_gateway.fig_code.compute_result import ComputeResult
 
+import re
+
+_THREE_DECIMAL_COLS = re.compile(r"(qty|quantity|notional)", re.IGNORECASE)
+
+def _round_for_column(col, val):
+    return round(val, 3) if _THREE_DECIMAL_COLS.search(col) else round(val, 2)
+
 
 def _parse_period_to_cutoff(period_key: str, end_of_period: bool = True) -> datetime:
     """
@@ -70,14 +77,21 @@ def prep_state_cached(portfolio, calendar_name, period_start, period_end):
     """
     Cached version of prep_state.
     First call loads from disk and caches.
-    Subsequent calls with same parameters return instantly.
+    Subsequent calls return instantly.
     Cache persists for the server session.
+
+    NOTE: cache key intentionally EXCLUDES period_start. Prep loads
+    journals inception→period_end regardless of the display window
+    (period_start is a display filter applied downstream, same as in
+    compute_performance's daily-state cache). Keying on period_start
+    would force a needless 3.38M-JE reload every time only the display
+    window changes while period_end stays put.
     """
-    cache_key = (portfolio, calendar_name, period_start, period_end)
+    cache_key = (portfolio, calendar_name, period_end)
 
     if cache_key in _PREP_CACHE:
         print(f">>> PREP CACHE HIT | {portfolio} | {calendar_name} "
-              f"| {period_start} → {period_end}")
+              f"| → {period_end}")
         return _PREP_CACHE[cache_key]
 
     print(f">>> PREP CACHE MISS | loading from disk...")
@@ -126,6 +140,15 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
         / "Journals"
     )
 
+    # Load portfolio config once (currency, benchmark, etc.)
+    cfg_path = Path(FUNDS_PATH) / portfolio / "portfolio.json"
+    portfolio_config = {}
+    if cfg_path.exists():
+        import json
+        with open(cfg_path) as f:
+            portfolio_config = json.load(f)
+    base_currency = portfolio_config.get("base_currency", "USD")
+    primary_benchmark = portfolio_config.get("primary_benchmark", "SPX")
     # --------------------------------------------------
     # BUILD PERIOD MAP
     # --------------------------------------------------
@@ -236,9 +259,9 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
                 j.is_adjustment = is_adj_flag
 
             # Print ONCE per file
-            print(f">>> TAGGED {len(batch)} entries as "
-                  f"{'adjusting' if is_adj_flag else 'regular'} "
-                  f"from {fpath.name}")
+            # print(f">>> TAGGED {len(batch)} entries as "
+            #       f"{'adjusting' if is_adj_flag else 'regular'} "
+            #       f"from {fpath.name}")
 
             journals.extend(batch)
 
@@ -259,6 +282,9 @@ def prep_state(portfolio, calendar_name, period_start, period_end):
         "journal_entries":         journals,
         "prior_cutoff_datetime":   prior_cutoff_datetime,
         "current_cutoff_datetime": current_cutoff_datetime,
+        "base_currency": base_currency,
+        "primary_benchmark": primary_benchmark,
+        "portfolio_config": portfolio_config,
     }
 # ============================================================
 # RENDER
@@ -355,7 +381,7 @@ def _render_api(result: ComputeResult, options: dict):
 
     df = result.data
     page = options.get("page", 1)
-    page_size = options.get("page_size", 1000)
+    page_size = options.get("page_size", 20000)
 
     # Paginate
     if df is not None and not df.empty:
@@ -368,12 +394,12 @@ def _render_api(result: ComputeResult, options: dict):
         for _, row in page_df.iterrows():
             record = {}
             for col, val in row.items():
-                if isinstance(val, float) and val != val:
+                if pd.isna(val):
                     record[col] = None
                 elif hasattr(val, "isoformat"):
-                    record[col] = val.isoformat()
+                    record[col] = val.isoformat(sep=":")
                 elif isinstance(val, float):
-                    record[col] = round(val, 6)
+                    record[col] = _round_for_column(col, val)
                 else:
                     record[col] = val
             records.append(record)
@@ -381,71 +407,62 @@ def _render_api(result: ComputeResult, options: dict):
         records = []
         total_rows = 0
 
-    # --------------------------------------------------
-    # PERFORMANCE BLOCK
-    # The most important part — tells the architectural
-    # story in numbers a technical person will understand
-    # --------------------------------------------------
     meta = result.metadata
-
     v_side_ms = meta.get("elapsed_ms", 0)
-    prep_ms = meta.get("prep_ms", 0)
-    refdata_ms = meta.get("refdata_ms", 0)
-    extract_ms = meta.get("extract_ms", 0)
-    calc_ms = meta.get("calc_ms", 0)
-    dataframe_ms = meta.get("dataframe_ms", 0)
+    rows_returned = min(page_size, total_rows - (page - 1) * page_size)
+    rows_returned = max(0, rows_returned)
 
+    # ── SUMMARY — readable by anyone ──────────────────────────
+    summary = {
+        "what_you_asked_for": (
+            f"{result.portfolio} · {result.calendar} · "
+            f"{result.period_start} to {result.period_end} · "
+            f"{result.function.replace('compute_', '').replace('_', ' ').title()}"
+        ),
+        "rows_returned": rows_returned,
+        "total_rows": total_rows,
+        "time_to_compute": f"{v_side_ms / 1000:.2f} seconds",
+        "time_to_compute_ms": round(v_side_ms, 1),
+        "computed_on": "Cloud Server · No Database · Pure Python",
+        "investments_in_portfolio": meta.get("investments", 0),
+        "cache": "HIT — sub-second" if meta.get("cache_hit") else "MISS — built fresh",
+        "dataset": {
+            "history": "5 years · 2021–2025",
+            "journals": "3.8 million journal entries",
+            "states": "1,300+ immutable period snapshots",
+            "calendars": "Daily · Monthly · Quarterly · Yearly",
+        },
+        "page": page,
+        "pages": max(1, -(-total_rows // page_size)),
+    }
+
+    # ── PERFORMANCE — for techies ──────────────────────────────
     performance = {
-
-        # ── HEADLINE ──────────────────────────────────
         "v_side_total_ms": round(v_side_ms, 1),
         "v_side_readable": f"{v_side_ms / 1000:.2f} seconds",
-
-        # ── BREAKDOWN ─────────────────────────────────
         "breakdown": {
-            "state_load_ms": round(prep_ms, 1),
-            "reference_data_ms": round(refdata_ms, 1),
-            "position_extract_ms": round(extract_ms, 1),
-            "market_value_calc_ms": round(calc_ms, 1),
-            "dataframe_build_ms": round(dataframe_ms, 1),
+            "state_load_ms": round(meta.get("prep_ms", 0), 1),
+            "reference_data_ms": round(meta.get("refdata_ms", 0), 1),
+            "position_extract_ms": round(meta.get("extract_ms", 0), 1),
+            "market_value_calc_ms": round(meta.get("calc_ms", 0), 1),
+            "dataframe_build_ms": round(meta.get("dataframe_ms", 0), 1),
         },
-
-        # ── WHAT WAS PROCESSED ────────────────────────
         "processed": {
             "investments": meta.get("investments", 0),
             "tax_lots": meta.get("detail_rows", 0),
-            "journal_entries": meta.get("journal_count",
-                                        meta.get("adjusting_count", 0)),
-            "price_rows_indexed": 826320,
-            "fx_rows_indexed": 7825,
+            "journal_entries": meta.get("journal_count", 0),
         },
-
-        # ── SCALE CONTEXT ─────────────────────────────
-        "dataset": {
-            "history": "5-year simulated portfolio",
-            "trades": "180,000+",
-            "journals": "3.8 million",
-            "calendars": "4 simultaneous — Daily, Monthly, Quarterly, Yearly",
-            "states": "1,300+ immutably stored period snapshots",
-        },
-
-        # ── SCOPE ─────────────────────────────────────
-        "scope": "V-side compute only",
-        "excludes": "network transmission · client rendering",
-        "hardware": "development laptop · no database server · "
-                    "no indexes · pure Python",
-
-        # ── PAGINATION ────────────────────────────────
         "pagination": {
             "total_rows": total_rows,
             "page": page,
             "page_size": page_size,
             "pages": max(1, -(-total_rows // page_size)),
-            "rows_returned": len(records),
+            "rows_returned": rows_returned,
         }
     }
 
     return {
+        "summary": summary,
         "function": result.function,
         "portfolio": result.portfolio,
         "calendar": result.calendar,

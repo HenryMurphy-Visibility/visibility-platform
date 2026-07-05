@@ -115,8 +115,111 @@ class PortfolioComposite:
 # NOTE: Precedence is assigned to individual event functions, not just event types.
 # This ensures granular control over execution order, particularly for multi-stage events.
 
+def precedence_fingerprint(registry: dict) -> str:
+    """
+    Deterministic fingerprint of an ordering: hash of the sorted
+    (event, slot) pairs. Same fingerprint => same execution order,
+    by construction.
+    """
+    import hashlib
+    canonical = ";".join(f"{k}={v}" for k, v in sorted(registry.items()))
+    return hashlib.sha256(canonical.encode()).hexdigest()[:16]
+
+
+# ── PRECEDENCE REGISTRY (module-level: declared data, not
+#    scheduler-owned state). v1 = tied original; v2 = the
+#    de-tied banded registry of 2026-06. The scheduler
+#    references these; the proof engine reads them without
+#    constructing a scheduler. ──────────────────────────────
+PRECEDENCE_VERSION = "v2"
+
+EVENT_TYPE_PRECEDENCE = {
+
+    # ═══════════════════════════════════════════════════════════
+    # BEGINNING OF DAY — income recognition & claim maturation
+    # Runs against YESTERDAY's settled state: accrual reads the
+    # AF before anything settles today (through-settle-inclusive
+    # ownership depends on this), and the coupon converts
+    # accrued -> due before the settlement band can wash it.
+    # ═══════════════════════════════════════════════════════════
+    'mark_bond_accruals': 1040,  # daily accrual, policy-aware
+    'schedule_mark_settled': 1045,  # AF lifecycle flip: today's settles become entitled
+    'bond_coupon': 1049,  # ex-date: accrued -> due claim (no income; income was daily)
+
+    # ═══════════════════════════════════════════════════════════
+    # SETTLEMENT — booked claims wash to cash
+    # Settles what was BOOKED, never recomputes. Relief runs
+    # last in the band: it reads post-settlement AF state.
+    # ═══════════════════════════════════════════════════════════
+    'settle_bond_flows_in': 1050,
+    'settle_single_flow_in': 1051,
+    'settle_bond_flows_out': 1053,
+    'settle_single_flow_out': 1054,
+    'settle_multiple_flows_in_out': 1055,
+    'settle_pay_rec_by_tranid': 1056,
+    'relieve_accrued_on_close_settle': 1058,  # post-settlement: proportional accrued relief on closes
+
+    # ═══════════════════════════════════════════════════════════
+    # CORPORATE ACTIONS — pre-trade position transformations
+    # ═══════════════════════════════════════════════════════════
+    'split_equity': 1065,
+    'dividend_equity': 1068,
+
+    # ═══════════════════════════════════════════════════════════
+    # TRADING — today's events book; claims open
+    # Opens first (buys/shorts), then closes (sells/covers),
+    # then FX events, then option lifecycle.
+    # ═══════════════════════════════════════════════════════════
+    'open_payable': 1073,
+    'open_receivable': 1074,
+    'buy_equity': 1075,
+    'buy_bond': 1076,
+    'buy_future': 1077,
+    'open_swap': 1078,
+    'short_equity': 1080,
+    'short_bond': 1081,
+    'short_future': 1082,
+    'sell_equity': 1111,
+    'cover_equity': 1112,
+    'sell_bond': 1113,
+    'cover_bond': 1114,
+    'sell_future': 1115,
+    'cover_future': 1116,
+    'reset_swap': 1117,
+    'spot_fx': 1118,
+    'forward_fx': 1119,
+    'write_option': 1120,
+    'assign_call_long': 1121,
+    'assign_put_short': 1122,
+
+    # ═══════════════════════════════════════════════════════════
+    # CASH OPERATIONS — capital movements & same-day money
+    # ═══════════════════════════════════════════════════════════
+    'deposit_currency': 1130,
+    'withdraw_currency': 1131,
+    'cash_payment_same_day': 1132,
+
+    # ═══════════════════════════════════════════════════════════
+    # END OF DAY — valuation & allocation
+    # Everything economic has happened; now measure it.
+    # ═══════════════════════════════════════════════════════════
+    'mark_prices': 9000,
+    'perf_mark': 9001,
+    'allocate': 9500,
+}
+
+# Precedence must be total: every event a unique slot. A tie
+# is an undeclared ordering convention -- forbidden. Fires at
+# import time: a tied registry cannot even load.
+if len(set(EVENT_TYPE_PRECEDENCE.values())) != len(EVENT_TYPE_PRECEDENCE):
+    from collections import Counter
+    _dupes = [v for v, n in Counter(EVENT_TYPE_PRECEDENCE.values()).items() if n > 1]
+    raise ValueError(f"event_type_precedence contains tied slots: "
+                     f"{sorted(_dupes)} -- every event must have a "
+                     f"unique precedence.")
 # In EventScheduler class
 from collections import OrderedDict
+
 
 class EventScheduler:
     def __init__(self, ctx):
@@ -127,35 +230,19 @@ class EventScheduler:
         self.ctx = ctx
         self.events = OrderedDict()
 
+        self.deferred_events = []  # carried-forward out-of-window events
+        self._defer_af = None
+        self._defer_space = None
+        self._defer_fxdata = None
+
+        # Registry is module-level declared data; the scheduler
+        # carries references so existing call sites
+        # (scheduler.event_type_precedence etc.) work unchanged.
+        self.precedence_version = PRECEDENCE_VERSION
+        self.event_type_precedence = EVENT_TYPE_PRECEDENCE
+
         self._sorted = False
         self._executed = False
-
-        self.event_type_precedence = {
-            'open_payable': 1073, 'open_receivable': 1074,
-             'buy_equity': 1075, 'sell_equity': 1111,
-            'short_equity': 1076, 'cover_equity': 1111,
-            'buy_bond': 1075, 'sell_bond': 1111,
-            'short_bond': 1111, 'cover_bond': 1111,
-            'buy_future': 1075, 'sell_future': 1111,
-            'short_future': 1076, 'cover_future': 1111,
-            'open_swap': 1075, 'reset_swap': 1111,
-            'spot_fx': 1111, 'forward_fx': 1111,
-            'deposit_currency': 1090, 'withdraw_currency': 1090,
-            'split_equity': 1065, 'dividend_equity': 1068,
-            'mark_prices': 9000, 'perf_mark': 9000,
-            'allocate': 9500,
-            'settle_bond_flows_in': 1050,
-            'settle_bond_flows_out': 1053,
-            'settle_single_flow_in': 1051,
-            'settle_single_flow_out': 1054,
-            'settle_multiple_flows_in_out': 1055,
-            'settle_pay_rec_by_tranid': 1056,
-            'mark_bond_accruals': 1060,
-            'bond_coupon': 1061,
-            'assign_call_long': 1113,
-            'assign_put_short': 1114,
-            'write_option': 1111
-        }
 
     def schedule_event(self, tradedate, event_function, *args):
 
@@ -243,82 +330,96 @@ class EventScheduler:
         func(*args)
         return 1
 
-def accrue_interest(space, smf, portfolio, investment, current_date, fx_rates_df):
-    investment_cache = {}
+    def defer_event(self, fire_date, event_function, *args):
+        """
+        Carry an out-of-window event forward. The dispatch has already
+        determined fire_date > this period's cutoff; rather than drop
+        the event (which silently breaks any settlement whose date
+        spans a period boundary), stash it as data so the next period
+        re-offers it through the normal schedule_event intake, where
+        sort_events interleaves it by date with native events.
 
-    # Cache investment types and subspaces to minimize redundant accesses
-    for investment in space.asset_liability_repository.investment_spaces_library.keys():
-        if investment not in investment_cache:
-            subspace = space.asset_liability_repository.get_position_space(investment)
-            investment_type = subspace.get_attribute_field("AIF", "investment_type")
-            if investment_type:
-                investment_type = investment_type.strip()
-                investment_cache[investment] = (investment_type, subspace)
+        Live objects in args (af, space, fx_data) cannot survive a
+        snapshot round-trip as references -- they are replaced with
+        sentinels here and re-bound to the live objects on re-offer.
+
+        ASSUMPTION (revisit in cleanup sweep): af, space, and fx_data
+        are the ONLY live objects in any deferred event's args. If a
+        future event function carries another live object, it must be
+        added to the sentinel set here AND the rebind in
+        reoffer_deferred_events, or it will fire next period with a
+        stale snapshot copy.
+        """
+        sanitized = []
+        for a in args:
+            if a is self._defer_af:
+                sanitized.append("__AF__")
+            elif a is self._defer_space:
+                sanitized.append("__SPACE__")
+            elif a is self._defer_fxdata:
+                sanitized.append("__FXDATA__")
             else:
-                #print(f"Investment type for {investment} is None, skipping this investment.")
-                continue
+                sanitized.append(a)
 
-    # Process only BOND investments
-    for investment, (investment_type, subspace) in investment_cache.items():
-        if investment_type == "BOND":
-            print(f"Processing BOND investment: {investment}")
+        self._defer_space.deferred_events.append({
+            "fire_date": fire_date,
+            "fn_name": event_function.__name__,
+            "args": tuple(sanitized),
+        })
 
-            net_positions = smf.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
-            print(f"Net Positions for {investment}: {net_positions}")
 
-            for location, positions in net_positions.items():
-                for position_type, qty in positions.items():
-                    ls = 'l' if 'long' in position_type else 's'
-                    if ls == 's':
-                        qty = -qty
+    def reoffer_deferred_events(self, *, cutoff, af, space, fx_data):
+        """
+        Re-offer carried events whose fire_date now falls within this
+        period's window. Rebinds sentinels to the live objects. Events
+        still beyond the cutoff stay deferred (carry again).
 
-                    issue_date_str = subspace.get_attribute_field('AIF', 'issue_date')
-                    first_coupon_date_str = subspace.get_attribute_field('AIF', 'first_coupon_date')
-                    next_to_last_coupon_date_str = subspace.get_attribute_field('AIF', 'next_to_last_coupon_date')
-                    maturity_date_str = subspace.get_attribute_field('AIF', 'maturity_date')
-                    coupon_rate = float(subspace.get_attribute_field('AIF', 'coupon_rate'))
-                    day_count_convention = 'actual/365'
-                    payment_frequency = 'semi-annual'
-                    semi_split = "C"
+        Also registers this period's live objects so defer_event can
+        sentinel-swap any NEW out-of-window events scheduled this pass.
+        """
+        # Register live handles for this period (used by defer_event).
+        self._defer_af = af
+        self._defer_space = space
+        self._defer_fxdata = fx_data
 
-                    issue_date = datetime.strptime(issue_date_str, '%m/%d/%Y')
-                    first_coupon_date = datetime.strptime(first_coupon_date_str, '%m/%d/%Y')
-                    next_to_last_coupon_date = datetime.strptime(next_to_last_coupon_date_str, '%m/%d/%Y')
-                    maturity_date = datetime.strptime(maturity_date_str, '%m/%d/%Y')
-                    valuation_date = current_date
+        if not hasattr(space, "deferred_events"):
+            space.deferred_events = []
 
-                    accrued_interest, days_in_period, days_of_accrual = bond_calc.calculate_accrued_interest(
-                        issue_date, first_coupon_date, day_count_convention, payment_frequency,
-                        next_to_last_coupon_date, maturity_date, valuation_date, coupon_rate, semi_split
-                    )
+        # Resolve function names back to callables.
+        import currency_domain, bond_domain, equity_domain
 
-                    coupon = qty * accrued_interest
+        fn_table = {}
+        for mod in (currency_domain, bond_domain, equity_domain):
+            for name in dir(mod):
+                obj = getattr(mod, name)
+                if callable(obj):
+                    fn_table[name] = obj
 
-                    if coupon > 0:
-                        faal = "InterestReceivable"
-                        faie = "InterestReceipt"
+        still_deferred = []
+        for d in space.deferred_events:
+            if d["fire_date"] <= cutoff:
+                rebound = []
+                for a in d["args"]:
+                    if a == "__AF__":
+                        rebound.append(af)
+                    elif a == "__SPACE__":
+                        rebound.append(space)
+                    elif a == "__FXDATA__":
+                        rebound.append(fx_data)
                     else:
-                        faal = "InterestPayable"
-                        faie = "InterestExpense"
-
-                    payment_currency = subspace.get_attribute_field('AIF', 'payment_currency')
-                    fx_rate = 1  # Example placeholder
-                    coupon_in_book_terms = coupon * fx_rate
-
-                    bcoup = Journals(portfolio, payment_currency, 0, ls, location, faal, coupon_in_book_terms,
-                                     coupon_in_book_terms, coupon_in_book_terms, 0,
-                                     "Accrual", valuation_date, valuation_date, valuation_date,
-                                     valuation_date, valuation_date, "Asset/Liability")
-                    space.post_journal_entry(bcoup)
-
-                    bcoupRE = Journals(portfolio, investment, 0, ls, location, faie, 0, -coupon_in_book_terms,
-                                       -coupon_in_book_terms, 0,
-                                       "Accrual", valuation_date, valuation_date, valuation_date, valuation_date,
-                                       valuation_date,
-                                       "Revenue/Expense/Capital")
-                    space.post_journal_entry(bcoupRE)
-        else:
-            print(f"Skipping non-BOND investment: {investment}, Type: {investment_type}")
+                        rebound.append(a)
+                fn = fn_table.get(d["fn_name"])
+                if fn is None:
+                    print(f"[DEFER] WARNING: cannot resolve deferred "
+                          f"function {d['fn_name']!r}; event dropped. "
+                          f"Add its module to reoffer_deferred_events.")
+                    continue
+                print(f"[REOFFER] fn={d['fn_name']} stored_args_len={len(d['args'])} "
+                      f"rebound_len={len(rebound)} stored={d['args']} rebound={rebound}")
+                self.schedule_event(d["fire_date"], fn, *rebound)
+            else:
+                still_deferred.append(d)  # not yet -- carry again
+        space.deferred_events = still_deferred
 
 class Event:
     def __init__(self, transaction=None, method=None, tradedate=None, settledate=None,
@@ -869,92 +970,549 @@ class SecurityInformationRepository:
     def __repr__(self):
         return f"<SIR {self.fields}>"
 
-class SettlementChores:
+from datetime import datetime
+
+
+class AdministrativeFacility:
+    """
+    Administrative Facility (AF).
+
+    Holds CURRENT administrative state for trades and other operational
+    concerns. Separation membrane between accounting and administrative-
+    operational state -- the COA stays clean, the account key stays pure,
+    administrative metadata never leaks into journals.
+
+    Rules consult the AF to answer administrative questions ("what's the
+    entitled position now?", "did this settlement close net to zero?",
+    "is this loan in grace?"). Rules then decide what to post based on
+    the AF's answer plus accounting domain knowledge. Rules post JEs;
+    the AF never does.
+
+    Current responsibilities:
+      - Track trade settlement lifecycle (Unsettled -> Settled, plus
+        PartiallySettled, Failed, Cancelled).
+      - Answer entitled-position queries for accrual / coupon / reporting.
+      - Answer "does this settlement close net to zero?" so settlement
+        rules know when to relieve accrued interest.
+      - Expose subscription queries for proof, recon, ops dashboards.
+
+    Future responsibilities (architecture supports without redesign):
+      - Bank-debt grace periods, covenant events, contractual modifiers.
+      - Trade-failure tracking with reason codes.
+      - Recon flags, lifecycle exceptions.
+
+    Current-state-mirror model: the AF reflects whatever state the
+    time-series walker has reached. No historical event log; yesterday's
+    state lives in the journal. Records persist past trade settlement
+    (retention-period-driven cleanup, NOT netted-to-zero-driven --
+    appraisal residue lines and settlement-close queries both need
+    historical tranids available).
+    """
+
+    # Status vocabulary -- treated as constants so callers can reference
+    # them without stringly-typed risk.
+    UNSETTLED         = "Unsettled"
+    PARTIALLY_SETTLED = "PartiallySettled"
+    SETTLED           = "Settled"
+    FAILED            = "Failed"
+    CANCELLED         = "Cancelled"
+
+    OPEN_STATUSES   = {UNSETTLED, PARTIALLY_SETTLED}
+    CLOSED_STATUSES = {SETTLED, FAILED, CANCELLED}
 
     def __init__(self):
-        # Track flows by tranid
-        self.flow_tracker = {}
-        self.records = {}  # Manages records by transaction ID
-        self.position_cache = {}  # Caching mechanism
+        # tranid -> record dict
+        self.records = {}
+        # Query cache, invalidated on any mutation. Keyed by query
+        # signature; values are computed answers.
+        self._query_cache = {}
+
+    # ------------------------------------------------------------------
+    # Lifecycle
+    # ------------------------------------------------------------------
 
     def reset(self):
         """
-        Execution-safe reset.
-        Restores SettlementChores to a pristine state.
+        Execution-safe reset. Restores AF to a pristine state. Called
+        between processing runs so prior-run state doesn't bleed in.
         """
         self.__init__()
 
     def __iter__(self):
-        # This allows the object to be iterable over its records
+        """Iterate over records (values, not keys) for backward
+        compatibility with prior AdministrativeFacility callers."""
         return iter(self.records.values())
 
-    def add_record(self, tranid, portfolio, investment, position, position_effect, location, currency, qty,
-                   currency_amount, status):
-        new_record = {
-            'tranid': tranid,
-            'portfolio': portfolio,
-            'investment': investment,
-            'position': position,
-            'position_effect': position_effect,
-            'location': location,
-            'currency': currency,
-            'qty': qty,
-            'currency_amount': currency_amount,
-            'status': status
+    def __len__(self):
+        return len(self.records)
+
+    def __contains__(self, tranid):
+        return tranid in self.records
+
+    # ------------------------------------------------------------------
+    # Cache management
+    # ------------------------------------------------------------------
+
+    def _invalidate_cache(self):
+        """Any mutation invalidates the entire query cache. Cache is
+        small and queries are fast to recompute; correctness over
+        cleverness here."""
+        self._query_cache.clear()
+
+    # ------------------------------------------------------------------
+    # Mutators -- add a record, mark events
+    # ------------------------------------------------------------------
+
+    def add_record(self, tranid, portfolio, investment, location, ls,
+                   position_effect, qty, currency_amount,
+                   trade_date, expected_settle_date,
+                   currency=None, notes=None):
+        """
+        Register a new trade with the AF. Initial status is Unsettled,
+        settled_qty/amount are zero.
+
+        Args:
+            tranid:                primary key (caller-provided)
+            portfolio, investment: context
+            location:              first-class -- entitled_position
+                                   buckets by location
+            ls:                    'l' or 's' -- position direction,
+                                   tied to the trade, stable across
+                                   its lifecycle
+            position_effect:       'open' or 'close'
+            qty:                   magnitude of trade (stored as
+                                   trade_qty internally)
+            currency_amount:       local amount (stored as
+                                   trade_amount internally)
+            trade_date:            when booked
+            expected_settle_date:  when supposed to settle (string or
+                                   date object -- stored as given)
+            currency:              optional, for reporting
+            notes:                 free-form admin notes
+        """
+        if tranid in self.records:
+            # Duplicate add is almost certainly a bug; surface it loudly
+            # rather than silently overwriting.
+            print(f"AF WARNING: tranid {tranid} already exists; "
+                  f"add_record ignored. Use mark_* to update state.")
+            return
+
+        ls_norm = str(ls).strip().lower() if ls else ""
+        if ls_norm not in ("l", "s"):
+            print(f"AF WARNING: ls={ls!r} for tranid {tranid} is not "
+                  f"'l' or 's'; record added anyway but queries may "
+                  f"behave unexpectedly.")
+
+        effect_norm = str(position_effect).strip().lower() \
+            if position_effect else ""
+        if effect_norm not in ("open", "close"):
+            print(f"AF WARNING: position_effect={position_effect!r} for "
+                  f"tranid {tranid} is not 'open' or 'close'; record "
+                  f"added anyway but queries may behave unexpectedly.")
+
+        self.records[tranid] = {
+            "tranid": tranid,
+            "portfolio": portfolio,
+            "investment": investment,
+            "location": location,
+            "ls": ls_norm,
+            "position_effect": effect_norm,
+            "trade_qty": float(qty) if qty is not None else 0.0,
+            "trade_amount": float(currency_amount) if currency_amount is not None else 0.0,
+            "trade_date": trade_date,
+            "expected_settle_date": expected_settle_date,
+            "currency": currency,
+            # Current administrative state
+            "status": self.UNSETTLED,
+            "settled_qty": 0.0,
+            "settled_amount": 0.0,
+            "last_status_date": trade_date,
+            "notes": notes,
         }
-        self.records[tranid] = new_record
-        print(f"Record for TranID {tranid} added to SMF.")
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} added "
+              f"({portfolio}/{investment} {ls_norm}/{effect_norm} "
+              f"qty={qty}).")
 
-    def update_record_status(self, tranid, new_status, portfolio):
-        record = self.records.get(tranid, {})
-        if record and record.get('portfolio') == portfolio:
-            self.records[tranid]['status'] = new_status
-            print(f"Status of record {tranid} updated to {new_status}.")
+    def mark_settled(self, tranid, settle_date, qty=None, amount=None):
+        """
+        Mark a tranid as (partially or fully) settled.
+
+        Args:
+            tranid:      which trade
+            settle_date: when this settlement occurred
+            qty:         qty that settled in this event. None means
+                         full remaining (typical case for bonds).
+            amount:      local that settled in this event. None means
+                         proportional to qty.
+
+        After this call:
+            - settled_qty is incremented (capped at trade_qty)
+            - settled_amount is incremented (capped at trade_amount)
+            - status -> PartiallySettled if not fully settled yet,
+                        Settled if cumulative settled_qty == trade_qty
+            - last_status_date = settle_date
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_settled called for unknown tranid "
+                  f"{tranid}; ignored.")
+            return
+
+        if record["status"] in self.CLOSED_STATUSES \
+                and record["status"] != self.PARTIALLY_SETTLED:
+            print(f"AF WARNING: tranid {tranid} already in terminal "
+                  f"status {record['status']}; mark_settled ignored.")
+            return
+
+        # Figure out how much is settling
+        remaining_qty    = record["trade_qty"]    - record["settled_qty"]
+        remaining_amount = record["trade_amount"] - record["settled_amount"]
+
+        if qty is None:
+            settling_qty = remaining_qty
         else:
-            print(f"Record not found for TranID {tranid} with portfolio {portfolio}.")
+            settling_qty = float(qty)
 
-    def query_records(self, portfolio, **filters):
-        return [record for record in self if record.get('portfolio', '').strip().lower() == portfolio.lower() and
-                all(record.get(k, '').strip().lower() == v.lower() for k, v in filters.items())]
+        if amount is None:
+            # Proportional to qty
+            if record["trade_qty"] != 0:
+                settling_amount = record["trade_amount"] * \
+                                  (settling_qty / record["trade_qty"])
+            else:
+                settling_amount = remaining_amount
+        else:
+            settling_amount = float(amount)
 
-    def calculate_net_positions(self, portfolio, investment, date, status='Settled'):
-        cache_key = (portfolio, investment, date)
-        if cache_key in self.position_cache:
-            return self.position_cache[cache_key]
+        # Apply
+        record["settled_qty"]    += settling_qty
+        record["settled_amount"] += settling_amount
+        record["last_status_date"] = settle_date
 
-        net_positions = {}
-        for record in self.query_records(portfolio, investment=investment, status=status):
-            location = record['location']
-            position_key = f"{record['position']}_{record['position_effect']}"
-            if location not in net_positions:
-                net_positions[location] = {}
-            if position_key not in net_positions[location]:
-                net_positions[location][position_key] = 0
-            effect_multiplier = 1 if record['position_effect'] == 'open' else -1
-            net_positions[location][position_key] += record['qty'] * effect_multiplier
+        # Determine new status. Use a small tolerance so float rounding
+        # doesn't keep a record stuck in PartiallySettled forever.
+        TOL = 1e-9
+        if abs(record["settled_qty"] - record["trade_qty"]) <= TOL:
+            record["status"] = self.SETTLED
+            # Snap to exact to avoid lingering float dust
+            record["settled_qty"]    = record["trade_qty"]
+            record["settled_amount"] = record["trade_amount"]
+        else:
+            record["status"] = self.PARTIALLY_SETTLED
 
-        self.position_cache[cache_key] = net_positions
-        return net_positions
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} {record['status']} "
+              f"(settled_qty={record['settled_qty']}/"
+              f"{record['trade_qty']}).")
 
-    def cleanup_records(self, retention_period_days=365):
-        """ Clean up records that have been fully settled and net to zero, and are older than the retention period. """
+    def mark_failed(self, tranid, fail_date, reason=None):
+        """Mark a tranid as failed (e.g. settlement broke). Settled
+        portions remain in settled_qty/amount."""
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_failed called for unknown tranid "
+                  f"{tranid}; ignored.")
+            return
+        record["status"] = self.FAILED
+        record["last_status_date"] = fail_date
+        if reason:
+            existing = record.get("notes") or ""
+            sep = " | " if existing else ""
+            record["notes"] = f"{existing}{sep}FAILED ({fail_date}): {reason}"
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} FAILED.")
+
+    def mark_cancelled(self, tranid, cancel_date, reason=None):
+        """Mark a tranid as cancelled. Settled portions remain (a
+        cancellation after partial settlement is meaningful state)."""
+        record = self.records.get(tranid)
+        if record is None:
+            print(f"AF WARNING: mark_cancelled called for unknown "
+                  f"tranid {tranid}; ignored.")
+            return
+        record["status"] = self.CANCELLED
+        record["last_status_date"] = cancel_date
+        if reason:
+            existing = record.get("notes") or ""
+            sep = " | " if existing else ""
+            record["notes"] = f"{existing}{sep}CANCELLED ({cancel_date}): {reason}"
+        self._invalidate_cache()
+        print(f"AF: tranid {tranid} CANCELLED.")
+
+    # ------------------------------------------------------------------
+    # Core query -- entitled position
+    # ------------------------------------------------------------------
+
+    def entitled_position(self, portfolio, investment,
+                          location=None, ls=None):
+        """
+        What's the net entitled position right now for accrual / coupon
+        / reporting purposes?
+
+        Computed from each matching record's SETTLED_QTY (not trade_qty).
+        Only settled portions count toward entitlement. Opens add,
+        closes subtract.
+
+        Args:
+            portfolio:  required
+            investment: required
+            location:   if provided, only this location; if None, every
+                        location with non-zero entitlement included
+            ls:         if provided, only this side ('l' or 's'); if
+                        None, both sides included separately
+
+        Returns:
+            dict keyed by (location, ls) -> net entitled qty
+
+            Locations/sides with net zero ARE included in the returned
+            dict (caller can filter if they want only non-zero).
+        """
+        cache_key = ("entitled_position", portfolio, investment,
+                     location, ls)
+        if cache_key in self._query_cache:
+            return self._query_cache[cache_key]
+
+        ls_filter = str(ls).strip().lower() if ls else None
+
+        # Aggregate: (location, ls) -> qty
+        result = {}
+        for record in self.records.values():
+            if record["portfolio"] != portfolio:  continue
+            if record["investment"] != investment: continue
+            if location is not None and record["location"] != location:
+                continue
+            if ls_filter is not None and record["ls"] != ls_filter:
+                continue
+
+            # A trade's contribution to entitlement IS its signed settled
+            # quantity. Buy/cover are positive, sell/short negative -- the
+            # sign is stored in the record, exactly as the accounting
+            # journals express it. No open/close concept: a trade is a
+            # trade, and only the SETTLED portion counts.
+            contrib = record["settled_qty"]
+
+            key = (record["location"], record["ls"])
+            result[key] = result.get(key, 0.0) + contrib
+
+        self._query_cache[cache_key] = result
+        return result
+
+    def entitled_position_total(self, portfolio, investment,
+                                location=None, ls=None):
+        """
+        Single signed number instead of the dict. Signs are already
+        carried in each record's settled_qty (buy/cover +, sell/short -),
+        so this is a straight sum -- a flat long-and-short book nets to
+        zero on its own.
+        """
+        positions = self.entitled_position(portfolio, investment,
+                                           location, ls)
+        return sum(positions.values())
+
+    # ------------------------------------------------------------------
+    # Decision-support query -- would this settlement close net to zero?
+    # ------------------------------------------------------------------
+
+    def settlement_causes_full_close(self, tranid, hypothetical_qty=None):
+        """
+        Would marking THIS tranid as fully settled cause net entitled
+        position to drop to zero for its (portfolio, investment,
+        location, ls) bucket?
+
+        Used by the settlement rule to decide whether to relieve any
+        outstanding accrued interest as part of the settlement entry --
+        same way a coupon rule would, since economically the settlement
+        is a payment flow that closes the accrued claim.
+
+        Args:
+            tranid:           which trade is settling
+            hypothetical_qty: how much qty would settle in this call.
+                              None means the remaining unsettled qty
+                              (typical full-settle case).
+
+        Returns:
+            True if this settlement would bring (location, ls) net
+            entitled qty to zero (within tolerance). False otherwise.
+
+            Also returns False if tranid is unknown -- caller should
+            not act on a missing record.
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            return False
+
+        # What would settle if this call goes through? (signed)
+        if hypothetical_qty is None:
+            settling_qty = record["trade_qty"] - record["settled_qty"]
+        else:
+            settling_qty = float(hypothetical_qty)
+
+        this_contrib = settling_qty  # already signed
+
+        # Current net for this bucket BEFORE this settlement (signed sum)
+        current_net = 0.0
+        for r in self.records.values():
+            if r["portfolio"] != record["portfolio"]:  continue
+            if r["investment"] != record["investment"]: continue
+            if r["location"] != record["location"]:   continue
+            if r["ls"] != record["ls"]:         continue
+            current_net += r["settled_qty"]
+
+        projected_net = current_net + this_contrib
+
+        TOL = 1e-9
+        return (abs(current_net) > TOL and
+                abs(projected_net) <= TOL)
+    # ------------------------------------------------------------------
+    # Subscription queries -- for proof, recon, ops, reporting
+    # ------------------------------------------------------------------
+
+    def lifecycle(self, tranid):
+        """
+        Return current state of a single tranid as a dict, or None if
+        not found. For proof engine, recon reports, ops dashboards.
+        """
+        record = self.records.get(tranid)
+        if record is None:
+            return None
+        # Return a copy so callers can't accidentally mutate AF state
+        return dict(record)
+
+    def exceptions(self, portfolio, include_partials=True):
+        """
+        Return list of records in non-clean administrative states:
+        Failed, Cancelled, and (if include_partials) PartiallySettled
+        past their expected_settle_date.
+
+        For proof engine "is administrative state healthy?" pillar,
+        ops dashboards, recon reports.
+        """
+        results = []
         today = datetime.now()
+
+        for record in self.records.values():
+            if record["portfolio"] != portfolio:
+                continue
+
+            status = record["status"]
+
+            if status in (self.FAILED, self.CANCELLED):
+                results.append(dict(record))
+                continue
+
+            if include_partials and status == self.PARTIALLY_SETTLED:
+                # Past expected settle date? Then it's an exception.
+                expected = self._parse_date(
+                    record.get("expected_settle_date"))
+                if expected is not None and expected < today:
+                    results.append(dict(record))
+
+        return results
+
+    def pending_settlement(self, portfolio, as_of_date):
+        """
+        Return records still expecting settlement as of the given date:
+        status in {Unsettled, PartiallySettled} AND expected_settle_date
+        <= as_of_date.
+
+        I.e. "what should have settled by now but hasn't?"
+        """
+        as_of = self._parse_date(as_of_date)
+        if as_of is None:
+            print(f"AF WARNING: pending_settlement got unparseable "
+                  f"as_of_date={as_of_date!r}; returning empty list.")
+            return []
+
+        results = []
+        for record in self.records.values():
+            if record["portfolio"] != portfolio:
+                continue
+            if record["status"] not in self.OPEN_STATUSES:
+                continue
+            expected = self._parse_date(record.get("expected_settle_date"))
+            if expected is not None and expected <= as_of:
+                results.append(dict(record))
+
+        return results
+
+    # ------------------------------------------------------------------
+    # Retention-driven cleanup
+    # ------------------------------------------------------------------
+
+    def cleanup_records(self, retention_period_days=365, as_of=None):
+        """
+        Remove records older than retention_period_days, measured from
+        last_status_date. Retention-period-driven, NOT netted-to-zero-
+        driven -- residue (accrued balances, settle-close queries) may
+        need historical tranids until retention expires.
+
+        Args:
+            retention_period_days: how long to keep records past their
+                                   last status change
+            as_of:                 reference "today" for retention math
+                                   (defaults to actual now)
+        """
+        today = self._parse_date(as_of) if as_of else datetime.now()
+        if today is None:
+            today = datetime.now()
+
         keys_to_remove = []
         for tranid, record in self.records.items():
-            record_date = datetime.strptime(record['settled_date'], '%Y-%m-%d')
-            if (today - record_date).days > retention_period_days and self.is_fully_settled_and_netted(tranid):
-                keys_to_remove.append(tranid)
+            last = self._parse_date(record.get("last_status_date"))
+            if last is None:
+                # Can't compute age -- leave it alone
+                continue
+            age_days = (today - last).days
+            if age_days > retention_period_days:
+                # Don't delete unless terminal (don't sweep away active
+                # Unsettled or PartiallySettled trades just because
+                # they're old -- those are real exceptions)
+                if record["status"] in self.CLOSED_STATUSES:
+                    keys_to_remove.append(tranid)
 
         for tranid in keys_to_remove:
             del self.records[tranid]
-            print(f"Record {tranid} removed from SMF due to cleanup policy.")
+            print(f"AF: tranid {tranid} removed (retention policy).")
 
-    def is_fully_settled_and_netted(self, tranid):
-        """ Determine if a transaction is fully settled and netted to zero. """
-        record = self.records[tranid]
-        # Assuming there's a way to check if the position is netted to zero (simplified here)
-        return record['status'] == 'Settled' and record['net_position'] == 0
+        if keys_to_remove:
+            self._invalidate_cache()
 
+        return len(keys_to_remove)
+
+    # ------------------------------------------------------------------
+    # Internal helpers
+    # ------------------------------------------------------------------
+
+    def _parse_date(self, val):
+        """
+        Tolerant date parser. Returns datetime or None. Accepts:
+            datetime, date, 'YYYY-MM-DD', 'YYYY-MM-DDTHH:MM:SS', etc.
+        """
+        if val is None:
+            return None
+        if isinstance(val, datetime):
+            return val
+        # date object (not datetime) -> upgrade
+        if hasattr(val, "year") and hasattr(val, "month") \
+                and hasattr(val, "day") and not isinstance(val, datetime):
+            return datetime(val.year, val.month, val.day)
+        s = str(val).strip()
+        if not s:
+            return None
+        # Try a few common formats
+        for fmt in ("%Y-%m-%d",
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%d %H:%M:%S",
+                    "%m/%d/%Y"):
+            try:
+                return datetime.strptime(s, fmt)
+            except ValueError:
+                continue
+        # Last-ditch ISO fromisoformat (handles many variants)
+        try:
+            return datetime.fromisoformat(s.replace("Z", "+00:00"))
+        except (ValueError, AttributeError):
+            return None
 
 class BookkeepingSpace:
     """
@@ -985,7 +1543,7 @@ class BookkeepingSpace:
         self.asset_liability_repository = AssetLiabilityRepository()
         self.revenue_expense_repository = RevenueExpenseCapitalRepository()
         self.stat_repo = StatisticalRepository()
-        self.chores = SettlementChores()
+        self.admin_facility = AdministrativeFacility()
 
 
 
@@ -1003,7 +1561,7 @@ class BookkeepingSpace:
         self.asset_liability_repository.reset()
         self.revenue_expense_repository.reset()
         self.stat_repo.reset()
-        self.chores.reset()
+        self.admin_facility.reset()
 
     """
     BOOKKEEPING SPACE (CONDUCTOR)
@@ -1080,8 +1638,8 @@ class BookkeepingSpace:
             "revenue_expense_repository": copy.deepcopy(
                 self.revenue_expense_repository
             ),
-            "settlement_chores": copy.deepcopy(
-                self.settlement_chores
+            "settlement_admin_facility": copy.deepcopy(
+                self.settlement_admin_facility
             ),
             "sequence_counter": self.sequence_counter,
         }
@@ -1132,11 +1690,11 @@ class BookkeepingSpace:
         ]
 
         # --------------------------------------------------
-        # Restore settlement chores
+        # Restore settlement admin_facility
         # --------------------------------------------------
-        self.settlement_chores = snapshot_state.get(
-            "settlement_chores",
-            SettlementChores()
+        self.settlement_admin_facility = snapshot_state.get(
+            "settlement_admin_facility",
+            AdministrativeFacility()
         )
 
         # --------------------------------------------------
@@ -1173,7 +1731,7 @@ class BookkeepingSpace:
         # self.asset_liability_repository = AssetLiabilityRepository()
         # self.statistical_repository = StatisticalRepository()
         # self.revenue_expense_repository = RevenueExpenseCapitalRepository()
-        # self.settlement_chores = SettlementChores()
+        # self.settlement_admin_facility = AdministrativeFacility()
 
         self.sequence_counter = 0
 
@@ -1252,9 +1810,9 @@ class BookkeepingSpace:
         if not isinstance(je.ibor_date, datetime):
             raise TypeError("Journal entry IBOR date must be datetime")
 
-        # 2️⃣ Business-day adjustment
-        if is_non_business_day(je.ibor_date):
-            je.ibor_date = get_next_business_day(je.ibor_date)
+        # 2️⃣ Business-day adjustment= important! leaving here but not needed now with accrual?
+        # if is_non_business_day(je.ibor_date):
+        #     je.ibor_date = get_next_business_day(je.ibor_date)
 
         # 3️⃣ Assign canonical creation sequence (ONCE)
         if je.sequence_number is None:
@@ -1289,27 +1847,13 @@ class BookkeepingSpace:
     # ============================================================
 
     def get_attribute_field(self, investment, field_type, attribute):
-        """
-        LEGACY-COMPATIBLE READ ACCESSOR.
+        repo = self.asset_liability_repository
+        sub = repo.investment_attributes.get(investment)
+        if not sub:
+            return None
+        attributes = sub.investment_attributes.get(field_type, {})
+        return attributes.get(attribute.lower())
 
-        BookkeepingSpace does NOT store semantic metadata.
-        This method exists solely to preserve existing call sites.
-
-        All reads delegate to the AssetLiabilityRepository,
-        which is the authoritative metadata source.
-        """
-
-        if not hasattr(self, "asset_liability_repository"):
-            raise RuntimeError(
-                "BookkeepingSpace missing asset_liability_repository "
-                "(cannot retrieve investment metadata)"
-            )
-
-        return self.asset_liability_repository.get_attribute_field(
-            investment,
-            field_type,
-            attribute,
-        )
 
     def get_position_space(self, investment):
         """
@@ -1425,6 +1969,7 @@ class AssetLiabilityRepository:
     def __init__(self):
         self.investment_attributes = {}
         self.investment_positions = {}
+        self.pending_settlements = []  # carried-forward out-of-window settles
 
 
         print("🔥 AssetLiabilityRepository CONSTRUCTED")
@@ -1519,9 +2064,9 @@ class AssetLiabilityRepository:
         sub = self.get_position_space(investment)
         return sub.entries
 
-    def get_attribute_field(self, investment, attribute):
-        sub = self.get_attribute_space(investment)
-        return sub.investment_attributes.get("AIF", {}).get(attribute)
+    # def get_attribute_field(self, investment, attribute):
+    #     sub = self.get_attribute_space(investment)
+    #     return sub.investment_attributes.get("AIF", {}).get(attribute)
 
     # ========================================================
     # AGGREGATION
@@ -1608,6 +2153,41 @@ class AssetLiabilitySubspace:
             for key, vals in self.position_state.items()
         }
 
+    def get_position_state_by_account(self):
+        """
+        Return runtime position state keyed by (location, ls, financial_account).
+        Same shape as get_position_state but with financial_account preserved
+        rather than aggregated away. For consumers that need per-account
+        balances (e.g. accrued-interest relief on settlement, which needs
+        the current AccruedInterestReceivable balance, not summed with
+        other accounts).
+
+        Returns:
+            {
+                (location, ls, financial_account): {
+                    "position_qty": float,
+                    "local_cost":   float,
+                    "book_cost":    float,
+                    "notional":     float,
+                }
+            }
+        """
+        result = {}
+        for key, (qty, local, book, notional, oface) in self.entries.items():
+            (_, inv, lotid, tax_date, ls, loc, fa) = key
+            pos_key = (loc, ls, fa)
+            if pos_key not in result:
+                result[pos_key] = {
+                    "position_qty": 0.0,
+                    "local_cost": 0.0,
+                    "book_cost": 0.0,
+                    "notional": 0.0,
+                }
+            result[pos_key]["position_qty"] += qty
+            result[pos_key]["local_cost"] += local
+            result[pos_key]["book_cost"] += book
+            result[pos_key]["notional"] += notional
+        return result
 
     # ========================================================
     # RESET

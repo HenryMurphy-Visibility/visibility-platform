@@ -79,7 +79,7 @@ class EventScheduler:
         return
 
 
-def accrue_interest(sub_ledger, smf, portfolio, investment, current_date, fx_rates_df):
+def accrue_interest(sub_ledger, af, portfolio, investment, current_date, fx_rates_df):
     investment_cache = {}
 
     # Cache investment types and subspaces to minimize redundant accesses
@@ -99,7 +99,7 @@ def accrue_interest(sub_ledger, smf, portfolio, investment, current_date, fx_rat
         if investment_type == "BOND":
             print(f"Processing BOND investment: {investment}")
 
-            net_positions = smf.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
+            net_positions = af.calculate_net_positions(portfolio=portfolio, investment=investment, date=current_date)
             print(f"Net Positions for {investment}: {net_positions}")
 
             for location, positions in net_positions.items():
@@ -244,7 +244,7 @@ import pandas as pd
 
 from datetime import datetime, timedelta
 
-class SettlementChores:
+class AdministrativeFacility:
     def __init__(self):
         self.records = {}  # Manages records by transaction ID
         self.position_cache = {}  # Caching mechanism

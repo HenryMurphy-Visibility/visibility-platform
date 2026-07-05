@@ -18,9 +18,9 @@ import closed_period
 import performance
 import newperformance
 import pandas as pd
-from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, SpaceManager, SettlementChores
+from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, SpaceManager, AdministrativeFacility
 import utilities
-smf =  SettlementChores()
+af =  AdministrativeFacility()
 import logging
 
 logging.basicConfig(level=logging.CRITICAL)
@@ -505,7 +505,7 @@ def prepare_parameters_and_process_events(sub_ledger, general_Ledger, current_pe
 
     elif processing_mode == "Closed Periods":
         process_start_date = current_period_start
-        closed_period.process_closed_periods_mode(space_manager, portfolio_name, process_start_date, smf, scheduler, stat_repo, price_data, fx_data,
+        closed_period.process_closed_periods_mode(space_manager, portfolio_name, process_start_date, af, scheduler, stat_repo, price_data, fx_data,
                                                   mark_daily, aggregate_marks, include_marks, tdate_fx)
 
     elif processing_mode == "Calculate and Report Performance":

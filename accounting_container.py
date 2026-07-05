@@ -15,7 +15,7 @@
 #     │   └── stat_repo.pkl
 #     │
 #     ├── Chores/
-#     │   └── settlement_chores.pkl
+#     │   └── settlement_admin_facility.pkl
 #     │
 #     └── Snapshots/
 #         └── snapshot_{period_name}.pkl
@@ -78,7 +78,7 @@ class AccountingContainer:
 
         self.journals_path = self.outputs_path / "Journals"
         self.statistics_path = self.outputs_path / "Statistics"
-        self.chores_path = self.outputs_path / "Chores"
+        self.admin_facility_path = self.outputs_path / "Chores"
         self.snapshots_path = self.outputs_path / "Snapshots"
 
     # ------------------------------------------------------------------
@@ -96,7 +96,7 @@ class AccountingContainer:
             self.inputs_path / "MarkEvents",
             self.journals_path,
             self.statistics_path,
-            self.chores_path,
+            self.admin_facility_path,
             self.snapshots_path,
         ]:
             p.mkdir(parents=True, exist_ok=True)
@@ -109,7 +109,7 @@ class AccountingContainer:
         *,
         journals,
         stat_repo,
-        settlement_chores,
+        settlement_admin_facility,
         snapshot: Optional[dict] = None,
         adjusting_journals: Optional[list] = None,
     ):
@@ -140,9 +140,9 @@ class AccountingContainer:
             pickle.dump(stat_repo, f)
 
         # ---------------- Settlement Chores ----------------
-        chores_file = self.chores_path / "settlement_chores.pkl"
-        with chores_file.open("wb") as f:
-            pickle.dump(settlement_chores, f)
+        admin_facility_file = self.admin_facility_path / "settlement_admin_facility.pkl"
+        with admin_facility_file.open("wb") as f:
+            pickle.dump(settlement_admin_facility, f)
 
         # ---------------- Snapshot ----------------
         if snapshot is not None:
@@ -177,11 +177,11 @@ class AccountingContainer:
         with stat_file.open("rb") as f:
             return pickle.load(f)
 
-    def hydrate_chores(self):
-        chores_file = self.chores_path / "settlement_chores.pkl"
-        if not chores_file.exists():
+    def hydrate_admin_facility(self):
+        admin_facility_file = self.admin_facility_path / "settlement_admin_facility.pkl"
+        if not admin_facility_file.exists():
             return None
-        with chores_file.open("rb") as f:
+        with admin_facility_file.open("rb") as f:
             return pickle.load(f)
 
     def hydrate_snapshot(self):
@@ -204,5 +204,5 @@ class AccountingContainer:
         return (
             (self.journals_path / "journals.pkl").exists()
             and (self.statistics_path / "stat_repo.pkl").exists()
-            and (self.chores_path / "settlement_chores.pkl").exists()
+            and (self.admin_facility_path / "settlement_admin_facility.pkl").exists()
         )

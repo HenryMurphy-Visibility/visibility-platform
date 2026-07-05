@@ -180,13 +180,13 @@ def prepare_space_for_replay(space, interpretation_ctx):
     assert "asset_liability_repository" in snap_state
     assert "revenue_expense_repository" in snap_state
     assert "stat_repo" in snap_state
-    assert "chores" in snap_state
+    assert "admin_facility" in snap_state
 
     # 🔑 APPLY SNAPSHOT STATE
     space.asset_liability_repository = snap_state["asset_liability_repository"]
     space.revenue_expense_repository = snap_state["revenue_expense_repository"]
     space.stat_repo                  = snap_state["stat_repo"]
-    space.chores                     = snap_state["chores"]
+    space.admin_facility                     = snap_state["admin_facility"]
 
     # Journals must be empty for replay
     space.journal_entries.clear()
@@ -416,6 +416,7 @@ def cph_run_and_materialize(
     replay_start,
     events,
     is_first_calendar_period,
+    af
 ):
     """
     CENTRAL PROCESSING HUB — PURE EXECUTION
@@ -490,6 +491,7 @@ def cph_run_and_materialize(
             qualifying_events=events,
             space=space,
             scheduler=scheduler,
+            af=af
         )
         mark("t_pass1a_schedule_end")
 
@@ -533,6 +535,7 @@ def cph_run_and_materialize(
             qualifying_events=events,
             space=space,
             scheduler=scheduler,
+            af=af
         )
         mark("t_pass1b_schedule_end")
 
@@ -593,6 +596,7 @@ def cph_run_and_materialize(
         qualifying_events=events,
         space=space,
         scheduler=scheduler,
+        af=af
     )
     mark("t_pass2_schedule_end")
 
@@ -637,7 +641,11 @@ def cph_run_and_materialize(
     # ============================================================
     # MATERIALIZE
     # ============================================================
+    from bookkeeping import precedence_fingerprint as _pfp
+    space.admin_facility = af
     mark("t_materialize_start")
+    from bookkeeping import precedence_fingerprint
+
     materialize_period_outputs(
         space=space,
         regular_journals=final_regular_journals,
@@ -646,6 +654,10 @@ def cph_run_and_materialize(
         calendar=calendar,
         period_name=per_period_ctx["period_name"],
         snapshot_kd=per_period_ctx["current_period_cutoff"],
+        precedence_version=scheduler.precedence_version,
+        precedence_fingerprint=_pfp(scheduler.event_type_precedence),
+        af=af,
+
     )
     mark("t_materialize_end")
 

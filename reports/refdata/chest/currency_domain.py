@@ -214,9 +214,9 @@ def settle_single_flow_in(portfolio, payment_currency, location, quantity, local
     return
 
 
-def settle_bond_flow_out(portfolio, payment_currency, investment, location, quantity, local,
+def settle_bond_flows_out(portfolio, payment_currency, investment, location, quantity, local,
                           book, journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
-                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
+                          kdbegin, kdend, af, accrued_local, accrued_book, fx_data):
     principal_flow_fa = "Payable"
     accrue_fa = "AccruedInterestPayable"
     asset_liability_fa = "PurchasedInterest"
@@ -286,9 +286,9 @@ def settle_bond_flow_out(portfolio, payment_currency, investment, location, quan
 
 
     return
-def settle_bond_flow_in(portfolio, payment_currency, investment, location, quantity, local,
+def settle_bond_flows_in(portfolio, payment_currency, investment, location, quantity, local,
                           book, journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
-                          kdbegin, kdend, smf, accrued_local, accrued_book, fx_data):
+                          kdbegin, kdend, af, accrued_local, accrued_book, fx_data):
     principal_flow_fa = "Receivable"
     accrue_fa = "AccruedInterestReceivable"
     asset_liability_fa = "SoldInterest"
@@ -366,7 +366,7 @@ def settle_bond_flow_in(portfolio, payment_currency, investment, location, quant
 
 def settle_multiple_flows_in_out(portfolio, payment_currency,investment, financial_account_in, financial_account_out,
                                  journal_entries, sub_ledger, tranid, transaction, tradedate, settledate,
-                                 kdbegin, kdend, smf, fx_data):
+                                 kdbegin, kdend, af, fx_data):
 
 
     lots = currency_iterator_by_location_and_flow(payment_currency, sub_ledger,
@@ -433,7 +433,7 @@ def settle_multiple_flows_in_out(portfolio, payment_currency,investment, financi
 
 def settle_pay_rec_by_tranid(portfolio, investment, location, quantity, local, book, journal_entries,
                              sub_ledger, tranid, transaction, tradedate, settledate, kdbegin,
-                             kdend, payment_currency, smf, fx_data):
+                             kdend, payment_currency, af, fx_data):
     print(f"Processing settlement event for transaction ID: {tranid}")
 
     # Query receivable balances for the transaction ID

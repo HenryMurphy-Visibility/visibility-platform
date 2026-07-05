@@ -34,9 +34,9 @@ MASTER_QUERY_SPACES = {}  # Global dictionary for optional storage
 
 
 import pandas as pd
-from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, SpaceManager, SettlementChores
+from bookkeeping import BookkeepingSpace, EventScheduler, StatisticalRepository, SpaceManager, AdministrativeFacility
 import utilities
-smf =  SettlementChores()
+af =  AdministrativeFacility()
 import logging
 import query_data
 
@@ -765,7 +765,7 @@ def build_accounting(prepared_data, sub_ledger, scheduler, stat_repo, price_data
         QCoreApplication.processEvents()
 
         closed_period.process_closed_periods_mode(
-            space_manager, portfolio_name, start_date, smf, scheduler,
+            space_manager, portfolio_name, start_date, af, scheduler,
             stat_repo, price_data, fx_data,
             mark_daily, include_marks, None, calendar
         )
@@ -783,7 +783,7 @@ def build_accounting(prepared_data, sub_ledger, scheduler, stat_repo, price_data
             start_date, start_date, cutoff_date, knowledge_date,
             sub_ledger.journal_entries, sub_ledger,
             prepared_data["general_ledger"], prepared_data["tdate_fx"],
-            scheduler, stat_repo, price_data, fx_data, smf,
+            scheduler, stat_repo, price_data, fx_data, af,
             mark_daily, include_marks
         )
 
@@ -799,7 +799,7 @@ def build_accounting(prepared_data, sub_ledger, scheduler, stat_repo, price_data
             start_date, start_date, adj_period_start, knowledge_date,
             sub_ledger.journal_entries, sub_ledger,
             prepared_data["general_ledger"], prepared_data["tdate_fx"],
-            scheduler, stat_repo, price_data, fx_data, smf,
+            scheduler, stat_repo, price_data, fx_data, af,
             mark_daily, include_marks
         )
 
@@ -821,7 +821,7 @@ def build_accounting(prepared_data, sub_ledger, scheduler, stat_repo, price_data
             start_date, start_date, cutoff_date, knowledge_date,
             sub_ledger.journal_entries, sub_ledger,
             prepared_data["general_ledger"], prepared_data["tdate_fx"],
-            scheduler, stat_repo, price_data, fx_data, smf,
+            scheduler, stat_repo, price_data, fx_data, af,
             mark_daily, include_marks
         )
 

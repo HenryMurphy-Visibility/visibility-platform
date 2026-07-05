@@ -468,7 +468,7 @@ def load_events_pkl_to_app(path: str):
 
     return events
 
-def load_events_csv_to_app(path: str):
+def load_events_csv_to_app(path: str, allow_empty: bool = False):
     """
     Load EVENTS CSV and convert to application format.
 
@@ -489,7 +489,9 @@ def load_events_csv_to_app(path: str):
         rows = [dict(r) for r in reader]
 
     if not rows:
-        raise RuntimeError(f"[INGEST ERROR] Event file empty: {path}")
+        if allow_empty:
+            return []
+        raise RuntimeError(f"[INGEST ERROR] No events survived cutoff: {path}")
 
     EVENT_DATE_COLS = (
         "tradedate",
@@ -519,11 +521,7 @@ def load_events_csv_to_app(path: str):
             r["tranid"] = int(r["tranid"])
     return rows
 
-def load_events_csv_to_app_with_cutoff(
-    path: str,
-    *,
-    knowledge_cutoff_date,
-):
+def load_events_csv_to_app_with_cutoff(path: str, *, knowledge_cutoff_date, allow_empty: bool = False):
     """
     Load EVENTS CSV and apply knowledge cutoff BEFORE full normalization.
 
@@ -583,6 +581,8 @@ def load_events_csv_to_app_with_cutoff(
             rows.append(r)
 
     if not rows:
+        if allow_empty:
+            return []
         raise RuntimeError(f"[INGEST ERROR] No events survived cutoff: {path}")
 
     return rows
@@ -794,7 +794,6 @@ from pathlib import Path
 import json
 from datetime import datetime
 
-
 def select_best_qualifying_snapshot(
     *,
     portfolio,
@@ -902,28 +901,32 @@ def load_snapshot_into_space(space, snapshot_path):
 
     space.asset_liability_repository = state["asset_liability_repository"]
     space.stat_repo = state["stat_repo"]
-    space.chores = state["chores"]
+    space.admin_facility = state["admin_facility"]
+    space.deferred_events = state.get("deferred_events", [])
 
     # Revenue/Expense: STATE ONLY (no entries)
     space.revenue_expense_repository = state["revenue_expense_repository"]
-
 
 # ============================================================
 # KERNEL UTILITIES — CADENCE MATERIALIZATION
 # ============================================================
 
-
 from datetime import datetime
+
 def materialize_period_outputs(
-    *,
-    space,
-    regular_journals,
-    adjusting_journals,
-    portfolio: str,
-    calendar: str,
-    period_name: str,
-    snapshot_kd,
+        *,
+        space,
+        regular_journals,
+        adjusting_journals,
+        portfolio: str,
+        calendar: str,
+        period_name: str,
+        snapshot_kd,
+        precedence_version: str = None,
+        precedence_fingerprint: str = None,
+        af=None,
 ):
+
     """
     MATERIALIZE PERIOD ARTIFACTS
     - REGULAR journals
@@ -980,6 +983,8 @@ def materialize_period_outputs(
                 "period_name": period_name,
                 "snapshot_kd": snapshot_kd,
                 "created_at": created_at,
+                "precedence_version": precedence_version,  # ← ADD (write 1)
+                "precedence_fingerprint": precedence_fingerprint,  # ← ADD
                 "journals": list(regular_journals),
             },
             f,
@@ -996,6 +1001,8 @@ def materialize_period_outputs(
                 "period_name": period_name,
                 "snapshot_kd": snapshot_kd,
                 "created_at": created_at,
+                "precedence_version": precedence_version,  # ← ADD (write 1)
+                "precedence_fingerprint": precedence_fingerprint,  # ← ADD
                 "journals": list(adjusting_journals or []),
             },
             f,
@@ -1011,16 +1018,17 @@ def materialize_period_outputs(
             "period_name": period_name,
             "snapshot_kd": snapshot_kd,
             "created_at": created_at,
+            "precedence_version": precedence_version,
+            "precedence_fingerprint": precedence_fingerprint,
             "state": {
                 "asset_liability_repository": space.asset_liability_repository,
                 "stat_repo": space.stat_repo,
-                "chores": space.chores,
-
-                # REQUIRED: Rev/Exp must exist as a real repo
-
-            "revenue_expense_repository": space.revenue_expense_repository,
+                "admin_facility": space.admin_facility,
+                "revenue_expense_repository": space.revenue_expense_repository,
+                "deferred_events": getattr(space, "deferred_events", []),
             },
         }
+
     re_repo = space.revenue_expense_repository
 
     xom_space = re_repo.balance_spaces_library.get("XOM")
@@ -1031,8 +1039,6 @@ def materialize_period_outputs(
         for k, v in xom_space["entries"].items():
             if k[6] == "PriceGainInvestment":
                 print(k, v)
-
-
 
     snapshot_path = snapshots_dir / f"{artifact}.pkl"
     meta_path = snapshots_dir / f"{artifact}.json"
