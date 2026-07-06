@@ -320,6 +320,76 @@
   }
   .spinner.show { display: inline-block; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  /* ── MOBILE ─────────────────────────────────────────────── */
+  @media (max-width: 768px) {
+    /* Collapse the fixed 240px sidebar; stack everything vertically */
+    body {
+      grid-template-columns: 1fr;
+      grid-template-rows: 56px auto 1fr;
+    }
+
+    /* Sidebar becomes a horizontal, scrollable strip under the header */
+    nav {
+      border-right: none;
+      border-bottom: 1px solid var(--border);
+      padding: 10px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      padding: 10px 12px;
+    }
+    .nav-section {
+      width: 100%;
+      padding: 8px 4px 2px;
+    }
+    .nav-item, .nav-link-item {
+      border-left: none;
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 10px 14px;
+      font-size: 0.72em;
+    }
+    .nav-item.active {
+      border-left: none;
+      border-color: #00ff88;
+    }
+
+    /* Main content: tighter padding on small screens */
+    main { padding: 20px 16px; gap: 18px; }
+
+    /* Forms stack to a single column */
+    .form-grid {
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    /* Header: shrink the subtitle so it doesn't wrap awkwardly */
+    header { padding: 0 16px; gap: 10px; }
+    header h1 { font-size: 1.05em; letter-spacing: 2px; }
+    header span { font-size: 0.6em; }
+
+    /* Bigger tap targets for buttons */
+    .btn, .btn-pick {
+      padding: 12px 20px;
+      font-size: 0.78em;
+    }
+    .btn-row { flex-wrap: wrap; gap: 8px; }
+
+    /* Period-picker boxes: larger, easier to tap */
+    .bp-box {
+      min-width: 54px;
+      padding: 10px 10px;
+      font-size: 0.72em;
+    }
+    .bp-wrap { max-height: 260px; }
+
+    /* Tables already scroll horizontally via .table-wrap — nudge font up slightly for legibility */
+    table { font-size: 0.7em; }
+    th, td { padding: 8px 10px; }
+
+    /* Perf block: stack the metric items instead of cramming in a row */
+    .perf-block { gap: 16px; }
+  }
 </style>
 </head>
 <body>
