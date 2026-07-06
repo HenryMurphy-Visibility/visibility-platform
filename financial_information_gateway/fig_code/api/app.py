@@ -278,30 +278,10 @@ def landing():
     </div>
     <div class="divider"></div>
     <div class="welcome">
-        <div class="exclusive">A Glimpse of What's Coming Next</div>
-        <p>Visibility represents thirty-seven years of building and using investment
-        accounting systems — and the rare chance to set all of that experience
-        against a blank page. Not to rebuild what exists, but to build what the
-        work always needed: a system designed from the ground up around how the
-        street actually moves, delivering institutional-strength accounting on an
-        architecture that simply did not exist thirty years ago.</p>
-        <p>What makes that possible now is a convergence — deep domain knowledge,
-        artificial intelligence, and modern languages and architecture arriving
-        at the same moment. Three years ago it became clear that this convergence
-        opened a singular opportunity: to deliver something the industry has long
-        reached for but could never quite grasp, because the means to build it had
-        not yet arrived.</p>
-        <p>And it is more than accounting. Visibility is a platform — a way for a firm
-        to build its own workflows into the system, rather than bending its
-        operations to the workflows embedded in legacy software. The system adapts
-        to the firm; the firm is no longer forced to adapt to the system.</p>
-        <p>You are seeing this early — which means seeing the dynamics creating this
-        opportunity before the demand for systems built this way becomes obvious to
-        everyone. Access to this environment is by invitation only, and you are
-        among the first to see it.</p>
-        <p class="closing">Thank you for your interest.</p>
+        <div class="exclusive">Early Adopter Evaluation Tool</div>
+        <p style="font-style: italic; letter-spacing: 2px; color: var(--accent2);">Charter Firm Access</p>
     </div>
-
+    
     <div class="consoles">
     <a href="/ops" class="console-btn primary"><span class="console-label">OPERATIONS</span><span class="console-desc">Operations</span></a>
     <a href="/fig" class="console-btn primary"><span class="console-label">REPORTING</span><span class="console-desc">Reports</span></a>
