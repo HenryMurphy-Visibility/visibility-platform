@@ -3002,9 +3002,20 @@ async function computeAmounts() {
   const pf     = parseFloat(rec.pricing_factor || 1);
   const cs     = parseFloat(rec.contract_size  || 0);
 
-  // Step 2 — local amount
-  let localAmt = isFuture ? (qty * price * cs * pf) : (qty * price * pf);
+  // Step 2 — computed amount
+  //   Futures: this is NOTIONAL (contract exposure). No cash flow on the trade.
+  //   Cash trades: this is LOCAL amount (cash paid/received).
+  const computedAmt = isFuture ? (qty * price * cs * pf) : (qty * price * pf);
 
+  // ── FUTURES ────────────────────────────────────────────────
+  // Only populate notional. Local/book are user-entered commissions,
+  // default 0. Never overwrite them here — that stomps user overrides.
+  if (isFuture) {
+    document.getElementById('ev-fut-notional').value = computedAmt.toFixed(2);
+    return;
+  }
+
+  // ── CASH TRADES (equity / option) ──────────────────────────
   // Step 3 — FX rate. Distinguish: found w/ rate | USD passthrough | FAILED.
   let fxRate = null, fxFound = false, fxSource = '';
   try {
@@ -3021,14 +3032,8 @@ async function computeAmounts() {
 
   // Foreign currency but NO valid rate → block base, warn loudly, do not guess 1.0
   if (payccy !== 'USD' && (!fxFound || fxRate == null)) {
-    if (isFuture) {
-      document.getElementById('ev-fut-notional').value = localAmt.toFixed(2);
-      document.getElementById('ev-fut-local').value    = localAmt.toFixed(2);
-      document.getElementById('ev-fut-book').value      = '';
-    } else {
-      document.getElementById('ev-local').value = localAmt.toFixed(2);
-      document.getElementById('ev-book').value  = '';        // blocked — not local
-    }
+    document.getElementById('ev-local').value = computedAmt.toFixed(2);
+    document.getElementById('ev-book').value  = '';        // blocked — not local
     if (hint) hint.innerHTML =
       `<span style="color:var(--fail-t)">⚠ FX lookup failed for ${payccy} on ${tradedate} (${fxSource||'no rate'}) — base blocked. Cannot commit until resolved.</span>`;
     return;
@@ -3036,16 +3041,10 @@ async function computeAmounts() {
 
   // USD passthrough or a real foreign rate
   const effectiveRate = (payccy === 'USD') ? 1.0 : fxRate;
-  const baseAmt = localAmt * effectiveRate;
+  const baseAmt = computedAmt * effectiveRate;
 
-  if (isFuture) {
-    document.getElementById('ev-fut-notional').value = localAmt.toFixed(2);
-    document.getElementById('ev-fut-local').value    = localAmt.toFixed(2);
-    document.getElementById('ev-fut-book').value     = baseAmt.toFixed(2);
-  } else {
-    document.getElementById('ev-local').value = localAmt.toFixed(2);
-    document.getElementById('ev-book').value  = baseAmt.toFixed(2);
-  }
+  document.getElementById('ev-local').value = computedAmt.toFixed(2);
+  document.getElementById('ev-book').value  = baseAmt.toFixed(2);
 
   // Always show the FX used — silence must never hide a failure again
   if (hint) {
@@ -3054,7 +3053,6 @@ async function computeAmounts() {
       : `<span style="color:var(--success-t)">FX: ${effectiveRate} (${payccy})</span>`;
   }
 }
-
 /* ════════════════════════════════════════════════════════════════════
    DEPOSIT / WITHDRAW COMPUTATION  (amount → base via FX)
    Currency deposits have no qty/price — the amount is entered directly.

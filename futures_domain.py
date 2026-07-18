@@ -170,16 +170,13 @@ def buy_future(portfolio, investment, location, quantity, local, book, space, tr
     je = Journals(portfolio, investment, tranid, tax_date, ls, location, financial_account, quantity, local, book, notional, 0, tranid,
                       transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
     space.post_journal_entry(je)
-
-
-
     return
 
-
-def sell_future(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
+def sell_future(portfolio, investment, location, quantity, local, book, closing_method,
                 space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
                 tdate_fx, proceeds_notional, price, fx_data
                 ):
+
     # investment_type = subspace.get_attribute_field("AIF", "investment_type") if subspace else None
     # pricing_factor = subspace.get_attribute_field("AIF", "pricing_factor") if subspace else 1.0
     # # Calculate notional if not provided
@@ -217,8 +214,6 @@ def sell_future(portfolio, investment, location, quantity, local, book, closing_
                             "Asset/Liability")
         space.post_journal_entry(invclose)
 
-
-
         currency_local += pgain_local
         currency_book += pgain_book
 
@@ -244,9 +239,9 @@ def sell_future(portfolio, investment, location, quantity, local, book, closing_
                   transaction, tradedate, settledate, kdbegin, kdend, tradedate, "Asset/Liability")
     space.post_journal_entry(je)
 
-def short_future(portfolio, investment, location, quantity, local, book, journal_entries, space, tranid,
+def short_future(portfolio, investment, location, quantity, local, book, space, tranid,
                    transaction,  tradedate, settledate, kdbegin, kdend, payment_currency,
-                  tdate_fx, notional, price):
+                  tdate_fx, notional):
         # Create a new je Open IBM
         if tranid == 8999:
             print("Here")
@@ -254,14 +249,15 @@ def short_future(portfolio, investment, location, quantity, local, book, journal
         financial_account = "Cost"
         ibor_date = tradedate
         tax_date = tradedate
-        je = Journals(portfolio, investment, tranid, tax_date, ls, location, financial_account, -quantity, -local, -book,
+        #cost basis positive if commissions are included-anomaly
+        je = Journals(portfolio, investment, tranid, tax_date, ls, location, financial_account, -quantity, local, book,
                       -notional, 0, tranid,
                       transaction, tradedate, settledate, kdbegin, kdend, ibor_date, "Asset/Liability")
         space.post_journal_entry(je)
 
         return
 
-def cover_future(portfolio, investment, location, quantity, local, book, closing_method, journal_entries,
+def cover_future(portfolio, investment, location, quantity, local, book, closing_method,
                 space, tranid, transaction, tradedate, settledate, kdbegin, kdend, payment_currency,
                 tdate_fx, proceeds_notional, price, fx_data ):
     # investment_type = subspace.get_attribute_field("AIF", "investment_type") if subspace else None

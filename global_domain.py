@@ -359,7 +359,7 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     # ---- Post current market value ----
     mark_value_entry = Journals(
         portfolio, investment, 0, 0, ls, location, 'MarketVal',
-        position_qty, mktval_local, mktval_book, position_notional, None,
+        position_qty, mktval_local, mktval_book, mktval_local + position_notional, None,
         0, "Valuation", mark_date, mark_date, mark_date, mark_date, mark_date,
         "Revenue/Expense/Capital"
     )
@@ -390,7 +390,8 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
     net_unrealized_price_local = unrealized_price_local - prev_price_local
     net_unrealized_price_book  = unrealized_price_book  - prev_price_book
     net_unrealized_fx_book     = mktval_book - position_book_cost - prev_total_gain_book - net_unrealized_price_book
-    net_unrealized_notional    = unrealized_notional - prev_unrl_notional
+    # carry over just the unrealized price gain in local for notional
+    net_unrealized_notional    = net_unrealized_price_local
 
     # ---- Store new unrealized values ----
     stat_repo.add_entry(
@@ -421,7 +422,7 @@ def process_position(portfolio, investment, mark_date, stat_repo, space,
 
     unreal_gl_price_entry = Journals(
         portfolio, investment, 0, 0, ls, location, 'UnrealPriceGLOffset',
-        None, -net_unrealized_price_local, -net_unrealized_price_book, net_unrealized_notional, None,
+        None, -net_unrealized_price_local, -net_unrealized_price_book, -net_unrealized_notional, None,
         0, "Valuation", mark_date, mark_date, mark_date, mark_date, mark_date,
         "Revenue/Expense/Capital"
     )

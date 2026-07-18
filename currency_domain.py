@@ -93,7 +93,6 @@ def currency_iterator_by_location_and_flow(investment, space,
             # Append the location and LS values directly
     return lots
 
-
 def bond_coupon_settle(portfolio, investment, space, tranid,
                        transaction, tradedate, settledate,
                        kdbegin, kdend, payment_currency, fx_pay):
@@ -567,17 +566,17 @@ def settle_multiple_flows_in_out(portfolio, payment_currency,investment, financi
 
     return
 
-def settle_pay_rec_by_tranid(portfolio, investment, location, quantity, local, book, journal_entries,
+def settle_pay_rec_by_tranid(portfolio, investment, location, quantity, local, book,
                              space, tranid, transaction, tradedate, settledate, kdbegin,
                              kdend, payment_currency, af, fx_data):
     print(f"Processing settlement event for transaction ID: {tranid}")
 
     # Query receivable balances for the transaction ID
-    receivables = space.query_futures_balance(tranid, "Receivable", payment_currency, space)
+    receivables = space.query_futures_balance(tranid, "Receivable", payment_currency)
 
     # If no receivables found, query payables
     if not receivables:
-        payables = space.query_balance_by_tranid(tranid, "Payable", payment_currency)
+        payables = space.query_futures_balance(tranid, "Payable", payment_currency)
         entries = payables
         account_type = "Payable"
         ls = "s"

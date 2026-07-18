@@ -15,8 +15,6 @@ from financial_information_gateway.fig_code.compute_classifications import (
     INCOME_ACCOUNTS,
     add_summary_rows,
 )
-
-
 def compute_income(
     portfolio:    str,
     calendar:     str,

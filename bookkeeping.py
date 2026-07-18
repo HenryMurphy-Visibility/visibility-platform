@@ -1861,6 +1861,28 @@ class BookkeepingSpace:
         """
         return self.asset_liability_repository.get_position_space(investment)
 
+    def query_futures_balance(self, tranid, account_type, investment):
+        results = []
+        subspace = self.asset_liability_repository.get_position_space(investment)
+        if not subspace:
+            print(f"No subspace found for investment: {investment}")
+            return results
+
+        print(f"Querying subspace for investment: {investment}")
+        for key, value in subspace.entries.items():
+            portfolio, inv, lotid, tax_date, ls, location, financial_account = key
+
+            if lotid == tranid and financial_account == account_type and inv == investment:
+                # value holds the monetary fields — unpack based on its actual shape
+                quantity, local, book, notional, oface = value
+
+                full_entry = (
+                    portfolio, inv, lotid, tax_date, ls, location, financial_account,
+                    quantity, local, book, notional, oface,
+                )
+                print(f"Match found: {full_entry}")
+                results.append(full_entry)
+        return results
     # ============================================================
     # COMBINED VIEWS (CRITICAL DOMAIN FUNCTIONS)
     # ============================================================
